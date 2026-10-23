@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 build/icon.png
+
+!site/dist/
