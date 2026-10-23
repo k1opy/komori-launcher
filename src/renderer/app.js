@@ -759,7 +759,11 @@ const ACTIONS = {
   toggleMenu: () => { S.menuOpen = !S.menuOpen; render(); },
   pickProfile: async (id) => { S.profiles = await K.profiles.select(id); S.menuOpen = false; render(); },
   play: () => launch(null, false),
-  playServer: () => launch(null, true),
+  playServer: () => {
+    // Без ссылки на сборку сервера кнопка запускает выбранный профиль — говорим об этом явно
+    if (!S.info.serverManifest) toast('Сборка сервера не задана (serverManifestUrl) — запускаю выбранный профиль');
+    launch(null, true);
+  },
   playProfile: (id) => { S.screen = 'home'; if (S.info.serverManifest && id === S.info.serverProfileId) launch(null, true); else launch(id, false); },
   newProfile: () => { S.menuOpen = false; openForm(null); },
   editProfile: (id) => openForm(S.profiles.list.find(p => p.id === id)),
