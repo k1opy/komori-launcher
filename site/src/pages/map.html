@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карта — Komori</title>
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0E0A1A}
+a{color:#D9B8FF}a:hover{color:#F3E6FF}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.55; display: flex; flex-direction: column">
+<!--KOMORI_HEADER-->
+
+<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 48px 24px 72px; display: flex; flex-direction: column; gap: 24px">
+<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(32px, 5vw, 48px); color: #FFFFFF">Карта мира</h1>
+<p style="margin: 0; color: #C7BBE6; max-width: 720px">Живая карта сервера: смотри, где стоят постройки, ищи биомы и следи, кто из игроков сейчас онлайн.</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: stretch">
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column">
+<img src="/assets/hero.jpg" alt="" style="width: 100%; height: 220px; object-fit: cover; display: block; opacity: 0.85">
+<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-size: 20px; color: #FFFFFF">Обычный мир</h2>
+<p style="margin: 0; color: #C7BBE6">Карта открывается в новой вкладке. Колёсиком мыши — приближение, слева — список игроков онлайн.</p>
+<a href="{{K.map}}" target="_blank" rel="noopener" style="align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 14px 22px; min-height: 48px; box-sizing: border-box; border-radius: 12px; background: #8B3DFF; color: #FFFFFF; text-decoration: none; font-weight: 800">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg>
+Открыть карту
+</a>
+</div>
+</div>
+
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-size: 20px; color: #FFFFFF">Сейчас на сервере</h2>
+<span style="color: #B9AED6">{{onlineLine}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{players}}" as="p">
+<span style="display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 10px; background: #1F1638; color: #EFE8FF; font-weight: 600">
+<img src="{{p.head}}" alt="" width="24" height="24" style="width: 24px; height: 24px; border-radius: 4px; image-rendering: pixelated; display: block">{{p.name}}
+</span>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { stats: null };
+}
+mounted() {
+var self = this;
+fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) { self.setState({ stats: d }); }).catch(function () {});
+}
+renderVals() {
+var st = this.state.stats, mc = st && st.mc;
+var list = (mc && mc.list) || [];
+return {
+onlineLine: !st ? 'Проверяем сервер…' : !mc || !mc.online ? 'Сервер сейчас недоступен' : mc.players === 0 ? 'Пока никого нет — заходи первым!' : 'Игроков онлайн: ' + mc.players + ' из ' + mc.max,
+players: list.map(function (n) { return { name: n, head: 'https://mc-heads.net/avatar/' + encodeURIComponent(n) + '/24' }; })
+};
+}
+}
+</script>
+</body>
+</html>

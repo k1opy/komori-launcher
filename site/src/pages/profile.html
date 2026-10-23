@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Профиль — Komori</title>
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0E0A1A}
+a{color:#D9B8FF}a:hover{color:#F3E6FF}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.55; display: flex; flex-direction: column">
+<!--KOMORI_HEADER-->
+
+<sc-if value="{{loading}}">
+<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 64px 24px; color: #B9AED6">Загружаю профиль…</section>
+</sc-if>
+
+<sc-if value="{{notFound}}">
+<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 64px 24px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start">
+<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">{{notFoundTitle}}</h1>
+<p style="margin: 0; color: #C7BBE6">{{notFoundText}}</p>
+<sc-if value="{{K.loggedOut}}">
+<a href="{{K.loginUrl}}" style="padding: 14px 22px; border-radius: 12px; background: #5865F2; color: #FFFFFF; text-decoration: none; font-weight: 800">Войти через Discord</a>
+</sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{ready}}">
+<section style="max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 28px 24px 0">
+<div style="position: relative; border-radius: 20px; overflow: hidden; border: 2px solid {{accent}}; background: #170F2B">
+<img src="/assets/hero.jpg" alt="Баннер профиля" style="width: 100%; height: 220px; object-fit: cover; display: block">
+<div style="padding: 0 28px 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; margin-top: -64px; position: relative">
+<img src="{{p.avatar}}" alt="Аватар {{p.name}}" width="128" height="128" style="width: 128px; height: 128px; border-radius: 22px; background: #2A1E4A; border: 5px solid {{accent}}; box-shadow: 0 0 0 5px #170F2B; display: block; object-fit: cover">
+<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<span style="font-family: 'Unbounded', sans-serif; font-size: 28px; font-weight: 800; color: #FFFFFF">{{p.name}}</span>
+<sc-for list="{{badges}}" as="b">
+<span style="padding: 3px 12px; border-radius: 999px; border: 1px solid {{b.color}}; color: {{b.color}}; font-size: 13px; font-weight: 700">{{b.label}}</span>
+</sc-for>
+</div>
+<span style="color: #D9CCF5">{{statusShown}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 6px">
+<sc-if value="{{own}}">
+<button type="button" onClick="{{toggleEdit}}" style="padding: 12px 18px; min-height: 44px; border-radius: 10px; border: none; background: #8B3DFF; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">{{editLabel}}</button>
+</sc-if>
+<button type="button" onClick="{{share}}" style="padding: 12px 18px; min-height: 44px; border-radius: 10px; border: 1px solid #2E2250; background: #1F1638; color: #EFE8FF; font: inherit; font-weight: 700; cursor: pointer">{{shareLabel}}</button>
+</div>
+</div>
+</div>
+</section>
+
+<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 24px 24px 80px; display: flex; flex-direction: column; gap: 20px">
+
+<sc-if value="{{viewing}}">
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">О себе</h2>
+<p style="margin: 0; color: #E2DAF5; white-space: pre-line">{{bioShown}}</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px">
+<span style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #C7BBE6; font-size: 14px">На сайте с {{p.since}}</span>
+<sc-if value="{{p.discordTag}}"><span style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #C7BBE6; font-size: 14px">Discord: {{p.discordTag}}</span></sc-if>
+<sc-for list="{{linkList}}" as="l">
+<a href="{{l.url}}" target="_blank" rel="noopener nofollow ugc" style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #D9B8FF; font-size: 14px; text-decoration: none">{{l.label}}</a>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{editing}}">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Настройки профиля</h1>
+<p style="margin: 0; color: #C7BBE6">Аватарка и ник берутся из Discord. Профиль видят все — правила сервера действуют и здесь.</p>
+
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="status" style="font-weight: 700; color: #FFFFFF">Статус</label>
+<input id="status" type="text" maxlength="60" value="{{f.status}}" onInput="{{onStatus}}" placeholder="Коротко: чем занят сейчас" style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit">
+<span style="align-self: flex-end; font-size: 13px; color: #B9AED6">{{statusCount}} / 60</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="bio" style="font-weight: 700; color: #FFFFFF">О себе</label>
+<textarea id="bio" rows="5" maxlength="300" onInput="{{onBio}}" placeholder="Расскажи о себе: во что играешь, что строишь, кого ищешь в команду" style="padding: 12px 14px; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit; resize: vertical">{{f.bio}}</textarea>
+<span style="align-self: flex-end; font-size: 13px; color: #B9AED6">{{bioCount}} / 300</span>
+</div>
+</div>
+
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Цвет профиля</h2>
+<div role="radiogroup" aria-label="Цвет профиля" style="display: flex; flex-wrap: wrap; gap: 10px">
+<sc-for list="{{colors}}" as="c">
+<button type="button" role="radio" aria-checked="{{c.on}}" aria-label="{{c.name}}" onClick="{{c.pick}}" style="width: 48px; height: 48px; border-radius: 12px; border: 3px solid {{c.ring}}; background: {{c.hex}}; cursor: pointer"></button>
+</sc-for>
+</div>
+<span style="font-size: 14px; color: #B9AED6">Цвет рамки профиля и аватарки.</span>
+</div>
+
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
+<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Ссылки</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">YouTube<input id="lnYoutube" type="url" value="{{f.youtube}}" onInput="{{onYoutube}}" placeholder="https://youtube.com/@..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">Twitch<input id="lnTwitch" type="url" value="{{f.twitch}}" onInput="{{onTwitch}}" placeholder="https://twitch.tv/..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">TikTok<input id="lnTiktok" type="url" value="{{f.tiktok}}" onInput="{{onTiktok}}" placeholder="https://tiktok.com/@..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
+</div>
+</div>
+
+<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Приватность</h2>
+<label style="display: flex; gap: 10px; align-items: center; color: #E2DAF5"><input id="showDiscord" type="checkbox" checked="{{f.showDiscord}}" onChange="{{onShowDiscord}}" style="width: 18px; height: 18px; accent-color: #8B3DFF">Показывать мой Discord в профиле</label>
+</div>
+
+<sc-if value="{{error}}"><div role="alert" style="padding: 12px 16px; border-radius: 10px; background: #2A1430; color: #FFD6E2; font-weight: 600">{{error}}</div></sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{save}}" style="padding: 14px 24px; min-height: 48px; border-radius: 12px; border: none; background: #8B3DFF; color: #FFFFFF; font: inherit; font-weight: 800; cursor: pointer">{{saveLabel}}</button>
+<button type="button" onClick="{{toggleEdit}}" style="padding: 14px 24px; min-height: 48px; border-radius: 12px; border: 1px solid #2E2250; background: #1F1638; color: #EFE8FF; font: inherit; font-weight: 700; cursor: pointer">Отмена</button>
+</div>
+</div>
+</sc-if>
+</section>
+</sc-if>
+
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { p: null, missing: false, editing: false, f: null, copied: false, saving: false, error: '' };
+}
+mounted() {
+var self = this, k = window.KOMORI || {};
+var m = location.pathname.match(/^\/u\/(\d{5,25})$/);
+var url = m ? '/api/user/' + m[1] : '/api/me';
+if (!m && !k.me) { this.setState({ missing: true }); return; }
+fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+if (!p) self.setState({ missing: true }); else self.setState({ p: p });
+}).catch(function () { self.setState({ missing: true }); });
+}
+renderVals() {
+var self = this, s = this.state, p = s.p, k = window.KOMORI || {};
+var own = !!(p && k.me && k.me.id === p.id);
+var f = s.f || (p ? { status: p.status || '', bio: p.bio || '', accent: p.accent, youtube: (p.links || {}).youtube || '', twitch: (p.links || {}).twitch || '', tiktok: (p.links || {}).tiktok || '', showDiscord: !!p.showDiscord } : {});
+var accent = (s.editing ? f.accent : p && p.accent) || '#B57BFF';
+var COLORS = [['#B57BFF', 'Фиолетовый'], ['#FF7EDB', 'Розовый'], ['#6FA8FF', 'Синий'], ['#5FE0C8', 'Бирюзовый'], ['#7BD88F', 'Зелёный'], ['#FFC857', 'Золотой'], ['#FF8A6B', 'Коралловый']];
+function setF(key) { return function (e) { var n = Object.assign({}, f); n[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; self.setState({ f: n }); }; }
+var links = p ? p.links || {} : {};
+var shown = s.editing ? f : (p || {});
+return {
+loading: !p && !s.missing,
+notFound: s.missing,
+notFoundTitle: k.me || /^\/u\//.test(location.pathname) ? 'Профиль не найден' : 'Войди, чтобы открыть профиль',
+notFoundText: k.me || /^\/u\//.test(location.pathname) ? 'Такого игрока нет или он ещё не заходил на сайт.' : 'Профиль создаётся автоматически при первом входе через Discord.',
+ready: !!p,
+own: own,
+p: p || {},
+accent: accent,
+badges: (p && p.badges) || [],
+statusShown: shown.status || 'Без статуса',
+bioShown: (p && p.bio) || 'Игрок пока ничего не рассказал о себе.',
+linkList: [['youtube', 'YouTube'], ['twitch', 'Twitch'], ['tiktok', 'TikTok']].filter(function (x) { return links[x[0]]; }).map(function (x) { return { url: links[x[0]], label: x[1] }; }),
+viewing: !s.editing, editing: s.editing && own,
+editLabel: s.editing ? 'Готово' : 'Редактировать профиль',
+toggleEdit: function () { self.setState({ editing: !s.editing, f: null, error: '' }); },
+shareLabel: s.copied ? 'Ссылка скопирована' : 'Поделиться',
+share: function () {
+try { navigator.clipboard.writeText(location.origin + '/u/' + p.id); } catch (e) {}
+self.setState({ copied: true }); setTimeout(function () { self.setState({ copied: false }); }, 1500);
+},
+f: f,
+statusCount: (f.status || '').length, bioCount: (f.bio || '').length,
+onStatus: setF('status'), onBio: setF('bio'), onYoutube: setF('youtube'), onTwitch: setF('twitch'), onTiktok: setF('tiktok'), onShowDiscord: setF('showDiscord'),
+colors: COLORS.map(function (c) {
+var on = c[0] === f.accent;
+return { hex: c[0], name: c[1], on: on ? 'true' : 'false', ring: on ? '#FFFFFF' : '#2E2250', pick: function () { self.setState({ f: Object.assign({}, f, { accent: c[0] }) }); } };
+}),
+error: s.error,
+saveLabel: s.saving ? 'Сохраняю…' : 'Сохранить',
+save: function () {
+if (s.saving) return;
+self.setState({ saving: true, error: '' });
+fetch('/api/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+status: f.status, bio: f.bio, accent: f.accent, showDiscord: f.showDiscord,
+links: { youtube: f.youtube, twitch: f.twitch, tiktok: f.tiktok } }) })
+.then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+.then(function (res) {
+if (!res.ok) { self.setState({ saving: false, error: res.d.error || 'Не удалось сохранить' }); return; }
+self.setState({ saving: false, editing: false, f: null, p: res.d });
+}).catch(function () { self.setState({ saving: false, error: 'Нет связи с сайтом, попробуй ещё раз' }); });
+}
+};
+}
+}
+</script>
+</body>
+</html>

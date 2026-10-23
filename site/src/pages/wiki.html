@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вики — Komori</title>
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#0E0A1A}
+a{color:#D9B8FF}a:hover{color:#F3E6FF}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.6">
+
+<!--KOMORI_HEADER-->
+
+<section style="max-width: 1240px; margin: 0 auto; padding: 48px 24px 28px; display: flex; flex-direction: column; gap: 18px">
+<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(32px, 4.5vw, 52px); color: #FFFFFF">Вики Komori</h1>
+<p style="margin: 0; color: #C7BBE6; max-width: 680px; font-size: 18px">Рыбалка, 132 рыбы, снасти, 73 зачарования, магазин игроков, награды за головы, топы и команды.</p>
+<div style="display: flex; align-items: center; gap: 10px; max-width: 560px; padding: 0 14px; border-radius: 12px; border: 1px solid #2E2250; background: #170F2B">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B9AED6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<label for="wikiSearch" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Поиск по вики</label>
+<input id="wikiSearch" type="search" placeholder="Поиск: команда, рыба, зачарование…" style="flex: 1; min-height: 48px; border: none; background: transparent; color: #FFFFFF; font: inherit; outline: none">
+</div>
+</section>
+
+<section style="max-width: 1240px; margin: 0 auto; padding: 0 24px 80px; display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+<nav aria-label="Разделы вики" style="flex: 1 1 240px; background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 8px; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+<button type="button" onClick="{{t.pick}}" aria-current="{{t.current}}" style="display: flex; flex-direction: column; text-align: left; padding: 12px 14px; min-height: 44px; border-radius: 10px; border: none; background: {{t.bg}}; color: {{t.color}}; font: inherit; cursor: pointer">
+<span style="font-weight: 700">{{t.label}}</span>
+<span style="font-size: 13px; color: {{t.sub}}">{{t.hint}}</span>
+</button>
+</sc-for>
+</nav>
+
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+
+<sc-if value="{{showFish}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<img src="/assets/hero.jpg" alt="Fishing Update" style="width: 100%; aspect-ratio: 16 / 7; object-fit: cover; display: block; border-radius: 20px; border: 1px solid #2E2250">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Рыбалка</h2>
+<p style="margin: 0; color: #C7BBE6">Своя система рыбалки Komori. При поклёвке на экране запускается мини-игра, улов зависит от биома, а за пойманную рыбу ты получаешь очки рыбака и рыбацкие монеты с продажи.</p>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Мини-игра</h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+<div style="background: #1F1638; border-radius: 14px; padding: 16px">
+<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">5 шкал</div>
+<div style="color: #C7BBE6; font-size: 15px">Ползунок бегает вверх-вниз. Жми <b style="color: #FFFFFF">F</b>, когда он в зелёной зоне, — переходишь к следующей шкале.</div>
+</div>
+<div style="background: #1F1638; border-radius: 14px; padding: 16px">
+<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">3 жизни</div>
+<div style="color: #C7BBE6; font-size: 15px">Промах откатывает на шкалу назад, промах на первой шкале отнимает жизнь.</div>
+</div>
+<div style="background: #1F1638; border-radius: 14px; padding: 16px">
+<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">90 секунд</div>
+<div style="color: #C7BBE6; font-size: 15px">Не успел пройти все шкалы — рыба уходит.</div>
+</div>
+<div style="background: #1F1638; border-radius: 14px; padding: 16px">
+<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #FFC857">Бонус 10%</div>
+<div style="color: #C7BBE6; font-size: 15px">Иногда появляется бонусная точка. Попади в неё и закончи игру — получишь сокровище.</div>
+</div>
+</div>
+</div>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Ранги рыбы</h3>
+<p style="margin: 0; color: #C7BBE6">Чем выше ранг, тем реже рыба, больше очков и дороже продажа.</p>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 420px; border-collapse: collapse; font-size: 15px">
+<thead><tr style="text-align: left; color: #B9AED6"><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Ранг</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Очки рыбака</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Продажа</th></tr></thead>
+<tbody>
+<sc-for list="{{fishRanks}}" as="r" hint-placeholder-count="5">
+<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839"><span style="display: inline-flex; width: 36px; height: 36px; border-radius: 10px; border: 2px solid {{r.color}}; color: {{r.color}}; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-weight: 800">{{r.rank}}</span></td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.xp}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.sell}} монет</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Ранги рыбака</h3>
+<p style="margin: 0; color: #C7BBE6">Все начинают с ранга D. Удача повышает шанс редкой рыбы (ранга B и выше).</p>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 15px">
+<thead><tr style="text-align: left; color: #B9AED6"><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Ранг</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Очков до следующего</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Удача</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Шанс бонуса</th></tr></thead>
+<tbody>
+<sc-for list="{{anglerRanks}}" as="r" hint-placeholder-count="6">
+<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839; font-family: 'Unbounded', sans-serif; font-weight: 800; color: {{r.color}}">{{r.rank}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.need}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.luck}}%</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.bonus}}%</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<p style="margin: 0; color: #C7BBE6; font-size: 15px">Очки сбрасываются после повышения. На SS очки копятся дальше: каждые 1000 дают ещё +1% удачи.</p>
+</div>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Биомы</h3>
+<p style="margin: 0; color: #C7BBE6">Улов зависит от биома, где ты <b style="color: #FFFFFF">стоишь</b> в момент заброса (не где поплавок). Биомы Terralith тоже учитываются. Равнины, леса и горы — это «Умеренные». Снежная тайга считается снежным биомом, обычная — умеренным.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{biomeChips}}" as="b" hint-placeholder-count="9">
+<span style="padding: 8px 14px; border-radius: 999px; background: #1F1638; color: #EFE8FF; font-weight: 600">{{b.name}} <span style="color: #B9AED6">· {{b.count}}</span></span>
+</sc-for>
+</div>
+<p style="margin: 0; color: #B9AED6; font-size: 14px">Число — сколько видов рыбы в биоме. У каждого биома свои рыбы, всего 132 вида.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showFishList}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Рыбы</h2>
+<p style="margin: 0; color: #C7BBE6">132 вида. Выбери биом. В игре свой прогресс смотри в <code style="color: #FF9FD8">/kf catalog</code>.</p>
+<div role="tablist" aria-label="Биом" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{biomeTabs}}" as="b" hint-placeholder-count="9">
+<button type="button" role="tab" aria-selected="{{b.selected}}" onClick="{{b.pick}}" style="padding: 9px 16px; min-height: 44px; border-radius: 999px; border: 1px solid {{b.border}}; background: {{b.bg}}; color: {{b.color}}; font: inherit; font-weight: 700; cursor: pointer">{{b.name}}</button>
+</sc-for>
+</div>
+<sc-if value="{{fishEmpty}}" hint-placeholder-val="{{ false }}">
+<div style="background: #130D24; border: 1px dashed #4A3A78; border-radius: 18px; padding: 24px; color: #C7BBE6">В горных биомах рыбы пока нет — она появится в следующих обновлениях.</div>
+</sc-if>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px">
+<sc-for list="{{fishList}}" as="f" hint-placeholder-count="15">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #130D24; border: 1px solid #2E2250">
+<span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; border: 2px solid {{f.color}}; color: {{f.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 800">{{f.rank}}</span>
+<span style="font-weight: 600; color: #EFE8FF">{{f.name}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showGear}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Удочки и снасти</h2>
+<p style="margin: 0; color: #C7BBE6">Всё покупается в <code style="color: #FF9FD8">/kf shop</code> за рыбацкие монеты — их даёт продажа рыбы. Удочку ранга X можно купить, когда твой ранг рыбака X или выше. Shift + ПКМ с удочкой открывает её меню, куда ставятся снасти.</p>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Удочки</h3>
+<p style="margin: 0; color: #C7BBE6; font-size: 15px">Каждая удочка C–SS ускоряет прокачку ранга на 30%. Общий потолок ускорения — 60%. Удочка D — обычная, из крафта.</p>
+<div style="overflow-x: auto">
+<table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 15px">
+<thead><tr style="text-align: left; color: #B9AED6"><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Удочка</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Цена</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Слоты</th></tr></thead>
+<tbody>
+<sc-for list="{{rods}}" as="r" hint-placeholder-count="6">
+<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839; font-weight: 800; color: {{r.color}}">{{r.name}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5; white-space: nowrap">{{r.price}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.slots}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+
+<sc-for list="{{partGroups}}" as="pg" hint-placeholder-count="6">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">{{pg.title}}</h3>
+<span style="color: #B9AED6; font-size: 14px">{{pg.note}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px">
+<sc-for list="{{pg.items}}" as="p" hint-placeholder-count="3">
+<div style="background: #1F1638; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; gap: 10px"><span style="font-weight: 800; color: #FFFFFF">{{p.name}}</span><span style="color: #FFC857; font-weight: 700; white-space: nowrap">{{p.price}}</span></div>
+<span style="color: #C7BBE6; font-size: 15px">{{p.effect}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{showEnch}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Зачарования</h2>
+<p style="margin: 0; color: #C7BBE6">73 собственных зачарования. Тир влияет на редкость: 1 — частые, 3 — редкие.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Стол зачарований</div><div style="color: #C7BBE6; font-size: 15px">Тир 2 — с кнопки от 10 уровней, тир 3 — от 30. Особые в столе не выпадают.</div></div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Книги</div><div style="color: #C7BBE6; font-size: 15px">Особые зачарования — только книгами: лут, рыбалка, торговля с библиотекарями (у каждого биома свои).</div></div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Загадочная книга</div><div style="color: #C7BBE6; font-size: 15px">ПКМ — выбор одной из 5 случайных книг. Одно бесплатное обновление списка.</div></div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Кафедра расчарования</div><div style="color: #C7BBE6; font-size: 15px">Пустая кафедра с книжными полками слева и справа. Снимает зачарование в книгу за 5/10/15 минут (по тиру), тратит книгу с пером.</div></div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Наковальня</div><div style="color: #C7BBE6; font-size: 15px">Ограничения «Слишком дорого» нет.</div></div>
+</div>
+<div role="tablist" aria-label="Предмет" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{enchFilters}}" as="ef" hint-placeholder-count="6">
+<button type="button" role="tab" aria-selected="{{ef.selected}}" onClick="{{ef.pick}}" style="padding: 9px 16px; min-height: 44px; border-radius: 999px; border: 1px solid {{ef.border}}; background: {{ef.bg}}; color: {{ef.color}}; font: inherit; font-weight: 700; cursor: pointer">{{ef.label}} <span style="opacity: 0.75">{{ef.count}}</span></button>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px">
+<sc-for list="{{enchList}}" as="e" hint-placeholder-count="12">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-family: 'Unbounded', sans-serif; font-size: 16px; font-weight: 700; color: {{e.color}}">{{e.name}}</span>
+<span style="color: #B9AED6; font-weight: 700">{{e.max}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<span style="padding: 2px 9px; border-radius: 999px; background: #1F1638; color: {{e.color}}; font-size: 12px; font-weight: 700">Тир {{e.tier}}</span>
+<sc-if value="{{e.special}}" hint-placeholder-val="{{ false }}"><span style="padding: 2px 9px; border-radius: 999px; background: #3A1840; color: #FF9FD8; font-size: 12px; font-weight: 700">Особое</span></sc-if>
+<span style="padding: 2px 9px; border-radius: 999px; background: #1F1638; color: #C7BBE6; font-size: 12px; font-weight: 600">{{e.types}}</span>
+</div>
+<span style="color: #D9CCF5; font-size: 15px">{{e.desc}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showEcon}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Экономика</h2>
+<p style="margin: 0; color: #C7BBE6">Деньги сервера — <b style="color: #FFFFFF">AR</b>. Их тратят в магазине игроков и на награды за головы. Рыбацкие монеты — отдельная валюта только для рыбалки.</p>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Магазин игроков</h3><code style="color: #FF9FD8; font-weight: 700">/ks</code></div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px">
+<div style="background: #1F1638; border-radius: 14px; padding: 14px 16px"><div style="font-weight: 800; color: #FFFFFF">Выставить лот</div><div style="color: #C7BBE6; font-size: 15px">Возьми предмет в руку: <code style="color: #FF9FD8">/ks add &lt;цена&gt; [кол-во]</code>. Цена за весь лот.</div></div>
+<div style="background: #1F1638; border-radius: 14px; padding: 14px 16px"><div style="font-weight: 800; color: #FFFFFF">Слоты</div><div style="color: #C7BBE6; font-size: 15px">Покупаются: 1, 2, 4, 8 AR, дальше по 16 AR за каждый.</div></div>
+<div style="background: #1F1638; border-radius: 14px; padding: 14px 16px"><div style="font-weight: 800; color: #FFFFFF">7 дней</div><div style="color: #C7BBE6; font-size: 15px">Столько лот висит в продаже, потом переходит во вкладку «Не продалось».</div></div>
+<div style="background: #1F1638; border-radius: 14px; padding: 14px 16px"><div style="font-weight: 800; color: #FFFFFF">Без налога</div><div style="color: #C7BBE6; font-size: 15px">Продавец получает всю сумму, даже если был офлайн.</div></div>
+</div>
+</div>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Награды за головы</h3><code style="color: #FF9FD8; font-weight: 700">/bounty</code><span style="color: #B9AED6; font-size: 14px">или /hunt</span></div>
+<div style="display: flex; flex-direction: column; gap: 0">
+<sc-for list="{{bountyRules}}" as="b" hint-placeholder-count="6">
+<div style="display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #221839">
+<span style="flex: 0 0 auto; width: 8px; height: 8px; margin-top: 9px; border-radius: 2px; background: #B57BFF"></span>
+<span style="color: #E2DAF5">{{b.t}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline"><h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Починка опытом</h3><code style="color: #FF9FD8; font-weight: 700">/mending &lt;уровни&gt;</code></div>
+<p style="margin: 0; color: #C7BBE6">Тратит уровни опыта на починку всех предметов с Починкой в инвентаре — как если бы ты собирал опыт.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showTops}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Топы</h2>
+<p style="margin: 0; color: #C7BBE6">Меню топов открывается командой <code style="color: #FF9FD8">/topmenu</code>.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+<sc-for list="{{tops}}" as="t" hint-placeholder-count="5">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-weight: 800; color: {{t.color}}; font-size: 18px">{{t.name}}</span>
+<span style="color: #C7BBE6; font-size: 15px">{{t.stat}}</span>
+</div>
+</sc-for>
+</div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline">
+<code style="color: #FF9FD8; font-weight: 700">/topmenu kills</code>
+<span style="color: #E2DAF5">Топ по убийствам игроков — только в чате, в меню его нет.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showCmd}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Команды</h2>
+<p style="margin: 0; color: #C7BBE6">Команды с пометкой <span style="padding: 1px 8px; border-radius: 999px; background: #3A2A10; color: #FFD48A; font-size: 13px; font-weight: 700">уточнить</span> — черновик, их ещё нужно сверить с сервером.</p>
+<sc-for list="{{cmdGroups}}" as="grp" hint-placeholder-count="4">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 4px">
+<h3 style="margin: 0 0 8px; font-size: 20px; color: #FFFFFF">{{grp.title}}</h3>
+<sc-for list="{{grp.rows}}" as="c" hint-placeholder-count="5">
+<div style="display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #221839">
+<code style="flex: 0 0 230px; color: #FF9FD8; font-weight: 700">{{c.cmd}}</code>
+<span style="flex: 1 1 240px; color: #E2DAF5">{{c.desc}}</span>
+<sc-if value="{{c.check}}" hint-placeholder-val="{{ false }}">
+<span style="padding: 1px 8px; border-radius: 999px; background: #3A2A10; color: #FFD48A; font-size: 13px; font-weight: 700">уточнить</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{showDonate}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Донат: K.Oins, VIP, питомцы</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">K.Oins</h3>
+<p style="margin: 0; color: #C7BBE6">Донатная валюта. Покупается на сайте от 100 штук, 1 K.Oin = 0,5 ₽. Тратится на префикс (500), роль в Discord (1000) и кейс с питомцами (100).</p>
+</div>
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
+<h3 style="margin: 0; font-size: 20px; color: #FFFFFF">VIP</h3>
+<p style="margin: 0; color: #C7BBE6">На 1, 3 или 6 месяцев. [Что даёт VIP — список возможностей.]</p>
+</div>
+</div>
+<img src="/assets/hero.jpg" alt="Питомец — летучая мышь" style="width: 100%; aspect-ratio: 16 / 6; object-fit: cover; border-radius: 20px; border: 1px solid #2E2250; display: block">
+<h3 style="margin: 0; font-size: 22px; color: #FFFFFF">Питомцы</h3>
+<p style="margin: 0; color: #C7BBE6">Шесть рангов. Получить — из кейса с питомцами или купить случайного питомца нужного ранга.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px">
+<sc-for list="{{petRanks}}" as="r" hint-placeholder-count="6">
+<div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<span style="width: 48px; height: 48px; border-radius: 12px; border: 2px solid {{r.color}}; color: {{r.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 800">{{r.rank}}</span>
+<span style="font-size: 14px; color: #C7BBE6">[Питомцы и бонусы ранга]</span>
+</div>
+</sc-for>
+</div>
+<a href="Donate.dc.html" style="align-self: flex-start; padding: 14px 22px; border-radius: 12px; background: #8B3DFF; color: #FFFFFF; text-decoration: none; font-weight: 700">Открыть донат</a>
+</div>
+</sc-if>
+
+</div>
+</section>
+
+<!--KOMORI_FOOTER-->
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'fish', biome: 0, ef: 'all' };
+}
+renderVals() {
+var self = this;
+var rc = { D: '#A9A2C0', C: '#7BD88F', B: '#6FA8FF', A: '#C99BFF', S: '#FFC857', SS: '#FF7EDB' };
+var tierColor = { 1: '#7BD88F', 2: '#6FA8FF', 3: '#FFC857' };
+var tabs = [
+{ id: 'fish', label: 'Рыбалка', hint: 'мини-игра, ранги, биомы' },
+{ id: 'fishlist', label: 'Рыбы', hint: '132 вида по биомам' },
+{ id: 'gear', label: 'Удочки и снасти', hint: 'цены и эффекты' },
+{ id: 'ench', label: 'Зачарования', hint: '73 зачарования' },
+{ id: 'econ', label: 'Экономика', hint: 'магазин, награды, починка' },
+{ id: 'tops', label: 'Топы', hint: 'рейтинги игроков' },
+{ id: 'cmd', label: 'Команды', hint: 'все команды игрока' }
+];
+var FISH = [["Снежные",[["Йормунганд","S"],["Аврора","A"],["Нарвал","A"],["Багряная форель","B"],["Ледяная щука","B"],["Арктический голец","C"],["Палтус","C"],["Сиг","C"],["Хариус","C"],["Корюшка","D"],["Мойва","D"],["Навага","D"],["Пикша","D"]]],["Океан",[["Левиафан","S"],["Золотой марлин","A"],["Рыба капля","A"],["Барракуда","B"],["Рифовый окунь","B"],["Рыба меч","B"],["Камбала","C"],["Морской лещ","C"],["Мурена","C"],["Тунец","C"],["Анчоус","D"],["Морской карась","D"],["Сардина","D"],["Сельдь","D"],["Скумбрия","D"]]],["Умеренные",[["Рыба феникс","S"],["Золотой кои","A"],["Лесной стример","A"],["Лиственный жерех","B"],["Лиственный сом","B"],["Рассветная форель","B"],["Карп","C"],["Линь","C"],["Судак","C"],["Щука","C"],["Голавль","D"],["Красноперка","D"],["Окунь","D"],["Плотва","D"],["Уклейка","D"]]],["Пустыня",[["Себек","S"],["Песчаная змеерыба","A"],["Рыба мираж","A"],["Золотая арована","B"],["Нильский окунь","B"],["Рыба Голиаф","B"],["Клариас","C"],["Лабео","C"],["Слоновая рыба","C"],["Тилапия","C"],["Аплохейлус","D"],["Бычок","D"],["Гамбузия","D"],["Киллифиш","D"],["Щенок пустыни","D"]]],["Джунгли",[["Йара","S"],["Арапайма","A"],["Самоцветный дискус","A"],["Красная пиранья","B"],["Тукунаре","B"],["Электрический угорь","B"],["Кардинальная тетра","C"],["Оскар","C"],["Паку","C"],["Скалярия","C"],["Барбус","D"],["Гуппи","D"],["Данио","D"],["Меченосец","D"],["Неоновая тетра","D"]]],["Болото",[["Лернейская гидра","S"],["Блуждающий огонёк","A"],["Топяной оборотень","A"],["Аллигаторовый панцирник","B"],["Ведьмин сом","B"],["Змееголов","B"],["Вьюн","C"],["Налим","C"],["Сом","C"],["Угорь","C"],["Верховка","D"],["Гольян","D"],["Горчак","D"],["Ротан","D"],["Серебряный карась","D"]]],["Грибные",[["Лох-Несс","S"],["Грибоглаз","A"],["Колпачок фей","A"],["Грибной сом","B"],["Спороносный угорь","B"],["Ёрш","C"],["Елец","C"],["Подуст","C"],["Язь","C"],["Белоглазка","D"],["Пескарь","D"],["Подкаменщик","D"],["Ряпушка","D"],["Чехонь","D"]]],["Пещеры",[["Василиск","S"],["Кристальный призрак","A"],["Лазуритовая рыба","A"],["Светящийся следопыт","B"],["Сталактитовый иглобрюх","B"],["Хрустальная тень","B"],["Амблиопсис","C"],["Безглазка","C"],["Люцифуга","C"],["Слепая тетра","C"],["Гарра","D"],["Молли","D"],["Слепой сомик","D"],["Слепой угорь","D"],["Фреатихт","D"]]],["Глубокая тьма",[["Кракен бездны","S"],["Сумеречный призрак","A"],["Тенерыба","A"],["Призрачный скат","B"],["Телескопическая рыба","B"],["Тёмная дракон-рыба","B"],["Большерот","C"],["Мешкорот","C"],["Рыба удильщик","C"],["Рыба-гадюка","C"],["Макрурус","D"],["Рыба топорик","D"],["Угольная рыба","D"],["Фонарик","D"],["Циклотон","D"]]]];
+var ENCH = [["Адреналин",1,3,"поножи",0,"При низком здоровье даёт Скорость."],["Антигравитация",2,3,"меч/топор/копьё/лук/ботинки",1,"Подбрасывает цель левитацией."],["Бриз",3,3,"меч",1,"Запускает ветряной заряд при замахе (кд 5 сек)."],["Бульдозер",3,3,"кирка/лопата",1,"Ломает блоки вокруг добытого: ур.1 — один ниже, ур.2 — крестом (выше, ниже, левее, правее), ур.3 — область 3x3. При приседании не работает."],["Вечная мерзлота",2,1,"шлем/нагрудник/поножи/ботинки",1,"Замораживает атакующего."],["Галлюцинации",1,3,"меч/топор/копьё",0,"Вызывает тошноту, мобы вокруг начинают бить друг друга."],["Глаза Эндера",3,1,"шлем",1,"Эндермены не нападают на вас."],["Головокружение",1,3,"меч/топор/копьё",0,"Дезориентирует цель."],["Гравитация",3,3,"меч/топор/лук",0,"Стягивает и подбрасывает мобов вокруг цели (кд 0,8 сек)."],["Гром",3,4,"меч/топор/копьё",0,"Бьёт молнией в цель и наносит урон окружающим (откат 180 сек)."],["Губка",2,1,"нагрудник",0,"Связан с водой."],["Драконий",3,1,"элитры",1,"Огненная атака в стиле дракона (кд 1,5 сек)."],["Жатва",2,1,"мотыга",1,"Мотыга не ломает несозревший урожай: срезаются только созревшие культуры."],["Заземление",3,1,"ботинки",0,"Даёт иммунитет к левитации, в ответ бьёт молнией."],["Заморозка",1,3,"лук",0,"Замораживает цель стрелой."],["Заражение",2,3,"нагрудник",0,"Вызывает мобов против атакующего."],["Засев",2,1,"мотыга",1,"После сбора урожая на его месте сразу вырастает новый росток. Тратится одно семя (плод) собранной культуры."],["Иглы",2,2,"копьё",1,"Вонзает иглы (стрелы) в цель (кд 30 сек)."],["Извержение",3,3,"шлем",0,"Огненный выброс в ответ на урон."],["Измельчение",2,1,"кирка/топор/лопата/мотыга",0,"Дробит блоки."],["Искусность",2,1,"меч/топор/копьё",1,"Метательная атака при использовании предмета."],["Исцеление",2,1,"лук",0,"Стрела лечит цель."],["Каменный леденец",2,1,"кирка",0,"Руда при добыче восстанавливает сытость и с шансом даёт короткий бафф (дроп сохраняется)."],["Критичность",2,2,"копьё",0,"С шансом наносит критический удар с двойным уроном."],["Кровопийца",2,5,"меч/копьё",0,"Возвращает здоровье за нанесённый урон."],["Крылья",3,1,"нагрудник",1,"Двойной прыжок: ваша настоящая элитра из инвентаря сама надевается вместо нагрудника, при приземлении всё возвращается на места. Износ в полёте идёт на элитру."],["Крюк",3,1,"лук",0,"Стрела работает как крюк."],["Лунный",2,1,"элитры",0,"Эффект при приседании в полёте (кд 1 сек)."],["Магнетизм",2,1,"кирка/топор/лопата/мотыга",1,"Добытые блоки сразу попадают в инвентарь, при полном инвентаре падают под ноги. Содержимое хранилищ выпадает как в ваниле, сам контейнер идёт в инвентарь."],["Магнитное поле",1,1,"шлем/нагрудник/поножи/ботинки",0,"Приседание притягивает предметы, железных големов, вагонетки и мобов с железом (радиус растёт с числом частей). Полный комплект: двойной прыжок включает левитацию."],["Метель",3,3,"меч",1,"Запускает ледяной заряд при замахе (кд 7 сек)."],["Метеор",3,2,"меч",1,"Запускает метеорит при использовании (кд 6 сек). Взрыв не ломает блоки."],["Морская походка",2,1,"поножи",1,"Эффект в воде."],["Нестабильность",2,5,"нагрудник",0,"Взрыв рядом при ударе по вам, урон 5 (откат 180 сек)."],["Нитро",2,5,"лук",1,"Стрела взрывается через время. Взрыв наносит урон, но не ломает блоки."],["Ночной глаз",2,1,"шлем",0,"Даёт ночное зрение."],["Обморожение",1,5,"меч/копьё/топор",0,"Замораживает цель при ударе."],["Огненная поступь",3,3,"ботинки",0,"Позволяет ходить по лаве."],["Отталкивание",1,3,"поножи",0,"Отталкивает атакующего."],["Перелом",1,4,"топор",1,"Ломает броню цели."],["Плавка",3,1,"кирка/топор/лопата/мотыга",1,"Сразу переплавляет добытые блоки."],["Пламя",3,3,"меч",1,"Запускает огненный шар при замахе (кд 5 сек)."],["Планирование",3,1,"ботинки",1,"Медленное падение в воздухе."],["Побег",2,1,"ботинки",0,"При низком здоровье телепортирует вас прочь от врага."],["Поглощение",1,3,"нагрудник",0,"При получении урона (шанс; откат 180 сек) даёт поглощение и гасит удар."],["Подъём",2,2,"элитры",0,"Помогает набирать высоту в полёте."],["Пожирание",1,4,"меч/топор/копьё",1,"Убийство моба даёт 1 ед. сытости (откат 5 сек) и поглощает дроп. При полной сытости работает как обычно."],["Покоритель волн",3,2,"ботинки",1,"Позволяет бегать по воде."],["Прокол",2,1,"копьё",0,"Пробивающий удар (кд 4 сек)."],["Противоядие",1,4,"нагрудник",0,"Защищает от отравления, иссушения и слепоты."],["Прыгучесть",1,3,"поножи",0,"Усиливает прыжок."],["Разряд",2,3,"нагрудник",1,"Наносит ответный урон врагам вокруг при ударе по вам (откат 180 сек)."],["Расплав",1,3,"шлем/нагрудник/поножи/ботинки",1,"Поджигает атакующего."],["Рикошет",3,3,"лук",0,"Стрела отскакивает на другую цель рядом."],["Рывок",2,1,"ботинки",1,"При начале бега даёт Скорость II на 10 сек (откат 15 сек)."],["Самонаведение",3,1,"лук",0,"Стрела летит в цель."],["Скопление",2,3,"кирка/топор",1,"Ломает за раз связанные одинаковые блоки. Кирка: 5 / 10 / 15 блоков руды и камня, топор: 20 / 50 / 128 блоков дерева. Тратит прочность за каждый блок. При приседании не работает."],["Скрытность",2,3,"поножи",0,"Когда после удара остаётся 1-3 ХП: на 15 сек невидимость (мобы не видят), Скорость IV и Слабость II. Откат 180 сек."],["Солнечный",2,1,"элитры",0,"Эффект при приседании в полёте (кд 1 сек)."],["Талант",2,5,"кирка/топор/меч/копьё",0,"Увеличивает получаемый опыт."],["Телосложение",1,5,"шлем",0,"При низком здоровье даёт Сопротивление."],["Токсичность",1,1,"шлем/нагрудник/поножи/ботинки",0,"Атакующий получает яд и иссушение."],["Торможение",2,1,"элитры",0,"Снижает получаемый урон."],["Тьма",1,4,"меч/топор/копьё",0,"Накладывает слепоту на цель."],["Тяга",2,1,"элитры",0,"Усиливает ускорение элитрами."],["Увядание",3,3,"меч/топор/копьё",1,"Накладывает иссушение на цель."],["Улей",2,3,"нагрудник",0,"При ударе по вам вызывает пчёл, которые атакуют обидчика."],["Фантом",2,1,"меч",0,"Даёт невидимость после удара и усиливает урон."],["Черепа",3,2,"меч",1,"Запускает череп иссушителя (кд 5 сек)."],["Чума",2,5,"шлем/нагрудник/поножи/ботинки",0,"Накладывает негативные эффекты на атакующих."],["Шипы",2,1,"нагрудник",1,"Вонзает шипы (стрелы) в атакующего."],["Яд",1,5,"меч/топор/копьё/лук",1,"Накладывает яд и иссушение."],["Ярость",2,5,"нагрудник",0,"При низком здоровье даёт Силу (кд 6 сек)."]];
+var ROMAN = ['', 'I', 'I–II', 'I–III', 'I–IV', 'I–V'];
+var filters = [
+{ id: 'all', label: 'Все', words: null },
+{ id: 'melee', label: 'Оружие', words: ['меч', 'топор', 'копьё'] },
+{ id: 'bow', label: 'Лук', words: ['лук'] },
+{ id: 'armor', label: 'Броня', words: ['шлем', 'нагрудник', 'поножи', 'ботинки'] },
+{ id: 'tools', label: 'Инструменты', words: ['кирка', 'лопата', 'мотыга', 'топор'] },
+{ id: 'elytra', label: 'Элитры', words: ['элитры'] }
+];
+function match(e, f) {
+if (!f.words) return true;
+var ts = e[3].split('/');
+for (var i = 0; i < f.words.length; i++) { if (ts.indexOf(f.words[i]) >= 0) return true; }
+return false;
+}
+var curF = filters.filter(function (f) { return f.id === self.state.ef; })[0] || filters[0];
+var cur = FISH[this.state.biome] || FISH[0];
+function chip(on) { return { bg: on ? '#8B3DFF' : '#170F2B', border: on ? '#8B3DFF' : '#2E2250', color: on ? '#FFFFFF' : '#C7BBE6', selected: on ? 'true' : 'false' }; }
+function part(name, price, effect) { return { name: name, price: price + ' мон.', effect: effect }; }
+function row(c, d, check) { return { cmd: c, desc: d, check: !!check }; }
+return {
+tabs: tabs.map(function (t) {
+var on = t.id === self.state.tab;
+return { label: t.label, hint: t.hint, current: on ? 'page' : 'false',
+bg: on ? '#8B3DFF' : 'transparent', color: on ? '#FFFFFF' : '#EFE8FF', sub: on ? '#EBDDFF' : '#B9AED6',
+pick: function () { self.setState({ tab: t.id }); } };
+}),
+showFish: this.state.tab === 'fish',
+showFishList: this.state.tab === 'fishlist',
+showGear: this.state.tab === 'gear',
+showEnch: this.state.tab === 'ench',
+showEcon: this.state.tab === 'econ',
+showTops: this.state.tab === 'tops',
+showCmd: this.state.tab === 'cmd',
+showDonate: this.state.tab === 'donate',
+fishRanks: [['D', 3, 10], ['C', 5, 25], ['B', 9, 60], ['A', 18, 150], ['S', 36, 400]].map(function (r) { return { rank: r[0], xp: r[1], sell: r[2], color: rc[r[0]] }; }),
+anglerRanks: [['D', '190', 0, 0], ['C', '560', 1, 0], ['B', '1250', 2, 0], ['A', '2500', 3, 0.5], ['S', '5000', 4, 1], ['SS', 'последний ранг', 5, 2]].map(function (r) { return { rank: r[0], need: r[1], luck: r[2], bonus: r[3], color: rc[r[0]] }; }),
+biomeChips: FISH.map(function (b) { return { name: b[0], count: b[1].length }; }),
+biomeTabs: FISH.map(function (b, i) {
+var c = chip(i === self.state.biome);
+c.name = b[0]; c.pick = function () { self.setState({ biome: i }); };
+return c;
+}),
+fishList: cur[1].map(function (f) { return { name: f[0], rank: f[1], color: rc[f[1]] }; }),
+fishEmpty: cur[1].length === 0,
+rods: [
+['Удочка D', 'крафт', 'Нет слотов и бонусов', 'D'],
+['Удочка рыбака C', '500 мон.', 'Наживка', 'C'],
+['Удочка рыбака B', '1 500 мон.', 'Наживка, крючок, 1 модификатор', 'B'],
+['Удочка рыбака A', '3 500 мон.', 'Наживка, крючок, леска, 1 модификатор', 'A'],
+['Удочка рыбака S', '7 000 мон.', 'Наживка, крючок, леска, поплавок, 2 модификатора', 'S'],
+['Удочка рыбака SS', '14 000 мон.', 'Наживка, крючок, леска, поплавок, грузик, 3 модификатора', 'SS']
+].map(function (r) { return { name: r[0], price: r[1], slots: r[2], color: rc[r[3]] }; }),
+partGroups: [
+{ title: 'Наживка', note: 'тратится по 1 за поимку', items: [part('Червь', 4, '+15% к шансу рыбы рангов D и C'), part('Ракушка', 6, '+20% к шансу океанской рыбы'), part('Золотая наживка', 20, '+10% к шансу рыбы рангов A и S')] },
+{ title: 'Крючки', note: 'на 150 поимок', items: [part('Железный крючок', 150, '+1 жизнь в мини-игре'), part('Острый крючок', 400, 'Зелёная зона шире на 1 клетку'), part('Золотой крючок', 600, '+5% к шансу бонусной точки')] },
+{ title: 'Лески', note: 'на 150 поимок', items: [part('Нейлоновая леска', 150, 'Ползунок двигается медленнее'), part('Прочная леска', 300, '+15 секунд на игру'), part('Шёлковая леска', 700, 'Ползунок медленнее и +10 секунд')] },
+{ title: 'Поплавки', note: 'на 150 поимок', items: [part('Светящийся поплавок', 800, 'Бонусная зона шире на 1 клетку'), part('Тяжёлый поплавок', 1200, '+2% к шансу редкой рыбы')] },
+{ title: 'Грузики', note: 'на 150 поимок', items: [part('Свинцовый грузик', 1000, '+10% очков рыбака'), part('Глубинный грузик', 1500, '+12% к шансу рыбы рангов B, A и S')] },
+{ title: 'Модификаторы', note: 'вечные', items: [part('Монетка удачи', 3000, '+3% к шансу редкой рыбы'), part('Двойной улов', 5000, '10% шанс поймать вторую рыбу'), part('Бережливость', 2500, '25% шанс не потратить наживку'), part('Нюх на клады', 3500, '+5% к шансу бонусной точки')] }
+],
+enchFilters: filters.map(function (f) {
+var c = chip(f.id === curF.id);
+c.label = f.label; c.count = ENCH.filter(function (e) { return match(e, f); }).length;
+c.pick = function () { self.setState({ ef: f.id }); };
+return c;
+}),
+enchList: ENCH.filter(function (e) { return match(e, curF); }).map(function (e) {
+return { name: e[0], tier: e[1], max: ROMAN[e[2]] || '', types: e[3].split('/').join(', '), special: !!e[4], desc: e[5], color: tierColor[e[1]] };
+}),
+bountyRules: [
+'Назначь награду за голову любого игрока, который заходил на сервер. Минимум 25 AR.',
+'Можно сделать анонимный заказ: имя скрыто, сверху берётся 20 AR.',
+'Охотник сдаёт голову цели во вкладке «Заказы» и сразу получает награду, голова уходит заказчику.',
+'Заказ живёт 7 дней. Не выполнен — 100% возврата. Отменишь сам — вернётся 90%.',
+'Если цель убила заказчика, она может сдать его голову и забрать награду себе.',
+'Нельзя заказать себя или выполнить свой же заказ. Подделать голову не выйдет: проверяется по игроку, а не по названию.'
+].map(function (t) { return { t: t }; }),
+tops: [
+['Онлайн', 'Время на сервере', '#7CE0FF'],
+['Смерти', 'Количество смертей', '#FF8A8A'],
+['Баланс', 'Сколько AR на счету', '#8CFF9E'],
+['Рыбалка', 'Ранг и очки рыбака', '#7FDBFF'],
+['Охотники', 'Выполненные заказы на головы', '#FFB366']
+].map(function (t) { return { name: t[0], stat: t[1], color: t[2] }; }),
+cmdGroups: [
+{ title: 'Рыбалка', rows: [
+row('/kf catalog', 'Каталог: какие рыбы ты поймал по биомам и рангам'),
+row('/kf shop', 'Магазин рыбака: продажа рыбы, удочки и снасти'),
+row('/kf balance', 'Сколько у тебя рыбацких монет'),
+row('Shift + ПКМ удочкой', 'Меню удочки — поставить снасти')
+] },
+{ title: 'Экономика', rows: [
+row('/ks', 'Магазин игроков'),
+row('/ks add <цена> [кол-во]', 'Выставить предмет из руки на продажу'),
+row('/bounty', 'Награды за головы (также /hunt)'),
+row('/mending <уровни>', 'Починить предметы с Починкой за уровни опыта')
+] },
+{ title: 'Топы', rows: [
+row('/topmenu', 'Меню всех топов'),
+row('/topmenu kills', 'Топ убийств игроков в чат')
+] },
+{ title: 'Общие', rows: [
+row('/msg <ник> <текст>', 'Личное сообщение', true),
+row('/r <текст>', 'Ответить на последнее личное сообщение', true),
+row('/link <код>', 'Привязать ник к аккаунту на сайте', true)
+] }
+],
+petRanks: ['D', 'C', 'B', 'A', 'S', 'SS'].map(function (r) { return { rank: r, color: rc[r] }; })
+};
+}
+}
+</script>
+</body>
+</html>
