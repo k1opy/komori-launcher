@@ -242,3 +242,6 @@ body.theme-light .main:has(.hero) .win-btn:hover{background:#1F1638}
 .empty-skin{min-height:120px;min-width:240px;justify-content:center;align-items:center}
 .skinbox{flex-wrap:wrap}
 .tag.warn{background:var(--warnbg);color:var(--warn)}
+/* ===== Вход: вкладки и ошибки формы ===== */
+.login-tabs{align-self:flex-start}
+.field-error{color:var(--err);font-size:13px;font-weight:700}

@@ -4,6 +4,7 @@
   "serverManifestUrl": "https://raw.githubusercontent.com/k1opy/komori-launcher/main/server/komori-server.json",
   "trustedHosts": [],
   "crashWebhookUrl": "",
+  "yggdrasilDefaultUrl": "https://littleskin.cn/api/yggdrasil",
   "skinServerUrl": "https://komori-skins.k1opygg05.workers.dev",
   "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
   "newsUrl": "",

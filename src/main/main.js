@@ -20,7 +20,7 @@ const pkg = require('../../package.json');
 const DEV = app.isPackaged ? !!pkg.komoriDev : process.argv.includes('--dev');
 
 function loadConfig() {
-  const def = { msClientId: '', server: { name: 'Komori', host: 'mc.komori.fun', port: 25565 } };
+  const def = { msClientId: '', yggdrasilDefaultUrl: 'https://littleskin.cn/api/yggdrasil', server: { name: 'Komori', host: 'mc.komori.fun', port: 25565 } };
   const candidates = [path.join(app.getPath('userData'), 'komori.config.json'), path.join(__dirname, '..', '..', 'komori.config.json')];
   for (const c of candidates) {
     try { return Object.assign(def, JSON.parse(fs.readFileSync(c, 'utf8'))); } catch {}
@@ -100,7 +100,7 @@ ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl) }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl), yggDefault: CONFIG.yggdrasilDefaultUrl }));
 
 // ---------- настройки и профили ----------
 ipcMain.handle('link:open', (e, id) => { const l = LINKS[String(id)]; if (l) shell.openExternal(l.url); return !!l; });
@@ -135,9 +135,18 @@ ipcMain.handle('accounts:dev', (e, name) => {
   return store.upsertAccount(auth.devAccount(String(name || '').trim(), hasMicrosoft() ? 'offline' : 'dev'));
 });
 
+// ===== Yggdrasil-вход (LittleSkin, Ely.by и др.) =====
+// Как и офлайн-аккаунты: только когда в лаунчере есть Microsoft-аккаунт с купленной игрой (или DEV-сборка).
+ipcMain.handle('accounts:ygg', async (e, { login, password, serverUrl }) => {
+  if (!offlineAllowed()) throw new Error('Вход через Yggdrasil доступен после входа через Microsoft с купленной игрой');
+  const acc = await auth.authenticateYggdrasil(login, password, serverUrl || CONFIG.yggdrasilDefaultUrl);
+  return store.upsertAccount(acc);
+});
+
 ipcMain.handle('accounts:rename', async (e, { id, name }) => {
   const acc = store.getAccountSecret(id);
   if (!acc) throw new Error('Аккаунт не найден');
+  if (acc.type === 'yggdrasil') throw new Error('Ник этого аккаунта меняется на сайте сервера авторизации');
   name = String(name || '').trim();
   if (!auth.NAME_RE.test(name)) throw new Error('Ник: 3–16 символов, латиница, цифры и _');
   if (acc.type === 'dev' || acc.type === 'offline') {
@@ -210,6 +219,12 @@ async function launchGame(settings, profileId, join) {
     const fresh = await auth.ensureFresh(CONFIG.msClientId, acc);
     if (fresh !== acc) { store.upsertAccount(fresh); acc = fresh; }
   }
+  // Yggdrasil: та же проверка, что у офлайн-аккаунтов, + обновление токена перед запуском
+  if (acc.type === 'yggdrasil') {
+    if (!offlineAllowed()) throw new Error('Yggdrasil-аккаунт работает только при входе через Microsoft. Войди через Microsoft заново.');
+    const fresh = await auth.refreshYggdrasil(acc);
+    if (fresh !== acc) { const sel = store.getAccounts().selected; store.upsertAccount(fresh); store.selectAccount(sel); acc = fresh; }
+  }
 
   const progress = makeProgress();
   let joinTarget = join ? { host: CONFIG.server.host, port: CONFIG.server.port } : null;
@@ -248,7 +263,12 @@ async function launchGame(settings, profileId, join) {
   // п.2: офлайн-аккаунт + сервер скинов -> подключаем authlib-injector, чтобы игра брала скины с сервера Komori
   const extraJvm = [];
   const skinServer = skinServerUrl();
-  if (acc.type !== 'microsoft' && skinServer) {
+  if (acc.type === 'yggdrasil') {
+    // Yggdrasil: authlib-injector с адресом сервера авторизации аккаунта (скины тоже берутся оттуда)
+    const jar = await authlib.ensure(root, t => { if (settings.showConsole) send('game:log', t); });
+    if (!jar) throw new Error('Не удалось скачать authlib-injector — без него Yggdrasil-аккаунт не запустится');
+    extraJvm.push(`-javaagent:${jar}=${auth.yggBase(acc.serverUrl)}`);
+  } else if ((acc.type === 'offline' || acc.type === 'dev') && skinServer) {
     send('game:progress', { stage: 'Скины', done: 0, total: 1 });
     await offlineskin.syncIfNeeded(acc, skinServer);
     const jar = await authlib.ensure(root, t => { if (settings.showConsole) send('game:log', t); });
@@ -444,6 +464,7 @@ function offAccount(id) {
   const acc = store.getAccountSecret(id || accs.selected);
   if (!acc) throw new Error('Аккаунт не найден');
   if (acc.type === 'microsoft') throw new Error('Это аккаунт Microsoft');
+  if (acc.type === 'yggdrasil') throw new Error('Скин этого аккаунта меняется на сайте сервера авторизации');
   return acc;
 }
 ipcMain.handle('skin:offline:get', (e, id) => offlineskin.info(offAccount(id), skinServerUrl()));

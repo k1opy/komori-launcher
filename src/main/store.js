@@ -135,7 +135,8 @@ function getAccounts() {
   const data = rawAccounts();
   return {
     selected: data.selected,
-    list: data.list.map(a => ({ id: a.id, type: a.type, name: a.name, uuid: a.uuid }))
+    // server — только для Yggdrasil-аккаунтов (адрес сервера авторизации), токены наружу не отдаём
+    list: data.list.map(a => ({ id: a.id, type: a.type, name: a.name, uuid: a.uuid, server: a.type === 'yggdrasil' ? a.serverUrl : undefined }))
   };
 }
 

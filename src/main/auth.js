@@ -222,5 +222,99 @@ function dashed(hex) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+// ===== Yggdrasil: сторонние серверы авторизации (LittleSkin, Ely.by и др.) =====
+// Отдельный тип аккаунта рядом с Microsoft. Доступен только когда в лаунчере есть Microsoft-аккаунт
+// с купленной игрой (проверка в main.js). Пароль нигде не сохраняется — только accessToken/clientToken.
+const YGG_TIMEOUT = 10000;
+
+function yggBase(serverUrl) {
+  let u;
+  try { u = new URL(String(serverUrl || '').trim()); } catch { throw new Error('Неверный URL сервера авторизации'); }
+  if (u.protocol !== 'https:') throw new Error('URL сервера авторизации должен начинаться с https://');
+  return u.href.replace(/\/+$/, '');
+}
+
+// Запрос к Yggdrasil с таймаутом и понятными ошибками
+async function yggRequest(base, pathName, body) {
+  let res;
+  try {
+    res = await fetch(base + pathName, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': UA },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(YGG_TIMEOUT)
+    });
+  } catch (e) {
+    if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) throw new Error('Сервер авторизации не отвечает (10 секунд). Попробуй позже.');
+    throw new Error('Сервер авторизации недоступен. Проверь URL и интернет.');
+  }
+  if (res.status === 204) return null;
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) {
+    const msg = data && (data.errorMessage || data.error) || '';
+    if (res.status === 401 || res.status === 403 || /Invalid credentials|ForbiddenOperation/i.test(msg)) {
+      const e = new Error(pathName.includes('authenticate') ? 'Неверный логин или пароль' : 'Сессия истекла — войди заново');
+      e.code = 'auth';
+      throw e;
+    }
+    if (res.status === 429) throw new Error('Слишком много попыток входа, подожди минуту');
+    throw new Error('Сервер авторизации ответил ошибкой ' + res.status + (msg ? ': ' + msg : ''));
+  }
+  if (!data || typeof data !== 'object') throw new Error('Сервер авторизации прислал непонятный ответ');
+  return data;
+}
+
+// API Location Indication: сервер может указать настоящий адрес API в заголовке
+async function yggResolve(serverUrl) {
+  const base = yggBase(serverUrl);
+  try {
+    const res = await fetch(base, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(YGG_TIMEOUT) });
+    const loc = res.headers.get('x-authlib-injector-api-location');
+    if (loc) return yggBase(new URL(loc, base).href);
+  } catch {}
+  return base;
+}
+
+function dashedUuid(id) {
+  const h = String(id || '').replace(/-/g, '').toLowerCase();
+  if (!/^[0-9a-f]{32}$/.test(h)) return null;
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+async function authenticateYggdrasil(email, password, serverUrl) {
+  email = String(email || '').trim();
+  if (!email) throw new Error('Введи email или логин');
+  if (!password) throw new Error('Введи пароль');
+  const base = await yggResolve(serverUrl);
+  const data = await yggRequest(base, '/authserver/authenticate', {
+    username: email, password: String(password), clientToken: crypto.randomUUID().replace(/-/g, ''),
+    agent: { name: 'Minecraft', version: 1 }, requestUser: false
+  });
+  const prof = data.selectedProfile || (Array.isArray(data.availableProfiles) && data.availableProfiles[0]);
+  if (!data.accessToken || !data.clientToken) throw new Error('Сервер авторизации прислал неполный ответ');
+  if (!prof) throw new Error('На этом аккаунте нет персонажа — создай его на сайте сервера авторизации');
+  const uuid = dashedUuid(prof.id);
+  if (!uuid || !prof.name) throw new Error('Сервер авторизации прислал неверный профиль');
+  return {
+    id: 'ygg-' + new URL(base).hostname + '-' + uuid.replace(/-/g, '').slice(0, 12),
+    type: 'yggdrasil', name: String(prof.name).slice(0, 32), uuid,
+    mcToken: data.accessToken, refreshToken: data.clientToken, serverUrl: base
+  };
+}
+
+// Перед запуском: токен ещё действует? Если нет — обновляем (refresh).
+async function refreshYggdrasil(acc) {
+  const base = yggBase(acc.serverUrl);
+  try {
+    await yggRequest(base, '/authserver/validate', { accessToken: acc.mcToken, clientToken: acc.refreshToken });
+    return acc;
+  } catch (e) { if (e.code !== 'auth') throw e; }
+  const data = await yggRequest(base, '/authserver/refresh', { accessToken: acc.mcToken, clientToken: acc.refreshToken });
+  if (!data.accessToken) throw new Error('Сессия истекла — войди заново');
+  return Object.assign({}, acc, { mcToken: data.accessToken, refreshToken: data.clientToken || acc.refreshToken,
+    name: (data.selectedProfile && data.selectedProfile.name) || acc.name });
+}
+
 module.exports = { startDeviceCode, loginMicrosoft, ensureFresh, changeMicrosoftName, devAccount, offlineUuid, NAME_RE,
-  getSkinInfo, uploadSkin, resetSkin, setCape, checkSkinPng };
+  getSkinInfo, uploadSkin, resetSkin, setCape, checkSkinPng, authenticateYggdrasil, refreshYggdrasil, yggBase };

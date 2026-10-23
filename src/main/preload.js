@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('komori', {
     select: (id) => ipcRenderer.invoke('accounts:select', id),
     remove: (id) => ipcRenderer.invoke('accounts:remove', id),
     dev: (name) => ipcRenderer.invoke('accounts:dev', name),
+    ygg: (login, password, serverUrl) => ipcRenderer.invoke('accounts:ygg', { login, password, serverUrl }),
     rename: (id, name) => ipcRenderer.invoke('accounts:rename', { id, name }),
     msStart: () => ipcRenderer.invoke('auth:ms:start'),
     msCancel: () => ipcRenderer.invoke('auth:ms:cancel'),

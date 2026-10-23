@@ -45,7 +45,7 @@ function buildArgs(ctx) {
     auth_session: `token:${token}:${uuid}`,
     auth_xuid: account.xuid || '0',
     clientid: account.clientId || '0',
-    user_type: account.type === 'microsoft' ? 'msa' : 'legacy',
+    user_type: account.type === 'microsoft' ? 'msa' : account.type === 'yggdrasil' ? 'mojang' : 'legacy',
     user_properties: '{}',
     version_type: 'Komori',
     natives_directory: install.nativesDir,

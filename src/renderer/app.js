@@ -10,6 +10,8 @@ const S = {
   busy: false, prog: null, running: [], // running — id профилей, в которых сейчас идёт игра
   vType: 'release', vSearch: '', vInstalling: null,
   sTab: 'general', renaming: null, msCode: null, devName: '',
+  // Вкладки входа: microsoft | offline | ygg. Пароль Yggdrasil живёт только в памяти до нажатия «Войти».
+  loginTab: 'microsoft', ygg: { login: '', pass: '', url: '', error: '', busy: false },
   log: '', form: null,
   skin: { loading: false, info: null, error: null, forId: null, busy: false },
   update: null, crash: null,
@@ -92,7 +94,7 @@ function renderSide() {
     `<button type="button" data-act="nav" data-id="${id}" class="${S.screen === id ? 'on' : ''}" ${S.screen === id ? 'aria-current="page"' : ''}>${svg}${label}</button>`).join('');
   const a = selectedAccount();
   $('#accChip').innerHTML = a
-    ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : 'Microsoft'}</span></span>`
+    ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : a.type === 'yggdrasil' ? 'Yggdrasil' : 'Microsoft'}</span></span>`
     : `<span class="avatar">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
   $('#devBadge').classList.toggle('hidden', !S.info.dev);
   // п.4–5: кнопки Discord и «Сайт» в боковой панели, скрыты если ссылки пустые
@@ -328,6 +330,20 @@ async function modsLoadInstalled() {
 
 function sw(on, act) { return `<button type="button" role="switch" aria-checked="${on}" class="switch ${on ? 'on' : ''}" data-act="${act}"></button>`; }
 
+function hostOf(u) { try { return new URL(u).hostname; } catch { return String(u || ''); } }
+
+// ===== Форма входа Yggdrasil =====
+function yggForm() {
+  const Y = S.ygg;
+  return `<div class="codebox">
+    <div class="field"><label for="yggLogin">Email или логин</label><input class="input" id="yggLogin" autocomplete="username" value="${esc(Y.login)}"></div>
+    <div class="field"><label for="yggPass">Пароль</label><input class="input" id="yggPass" type="password" autocomplete="current-password" value="${esc(Y.pass)}"></div>
+    <div class="field"><label for="yggUrl">URL сервера авторизации</label><input class="input" id="yggUrl" placeholder="${esc(S.info.yggDefault || '')}" value="${esc(Y.url)}"></div>
+    ${Y.error ? `<span class="field-error" role="alert">${esc(Y.error)}</span>` : ''}
+    <div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn" data-act="yggLogin" ${Y.busy ? 'disabled' : ''}>${Y.busy ? 'Вхожу…' : 'Войти'}</button>
+    <span class="note">Пароль не сохраняется — лаунчер хранит только токен входа. Пусто в URL = ${esc(hostOf(S.info.yggDefault))}.</span></div></div>`;
+}
+
 function viewSettings() {
   const st = S.settings || {};
   const tabList = [['general', 'Общие'], ['java', 'Java и память'], ['account', 'Аккаунт']];
@@ -363,10 +379,10 @@ function viewSettings() {
       const renaming = S.renaming === a.id;
       return `<div class="acc-row ${on ? 'on' : ''}">
         <span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span>
-        <span class="t"><b>${esc(a.name)}</b><span>${a.type === 'dev' ? 'Тестовый вход (только DEV-сборка)' : a.type === 'offline' ? 'Офлайн-аккаунт (работает при входе Microsoft)' : 'Аккаунт Microsoft'}</span></span>
+        <span class="t"><b>${esc(a.name)}</b><span>${a.type === 'dev' ? 'Тестовый вход (только DEV-сборка)' : a.type === 'offline' ? 'Офлайн-аккаунт (работает при входе Microsoft)' : a.type === 'yggdrasil' ? 'Yggdrasil · ' + esc(hostOf(a.server)) : 'Аккаунт Microsoft'}</span></span>
         ${a.type === 'dev' ? '<span class="tag dev">DEV</span>' : ''}
         ${on ? '<span class="tag ok">Активный</span>' : `<button type="button" class="btn" data-act="useAccount" data-id="${esc(a.id)}">Использовать</button>`}
-        <button type="button" class="btn2" data-act="renameStart" data-id="${esc(a.id)}">Сменить ник</button>
+        ${a.type === 'yggdrasil' ? '' : `<button type="button" class="btn2" data-act="renameStart" data-id="${esc(a.id)}">Сменить ник</button>`}
         <button type="button" class="btn-ghost" data-act="removeAccount" data-id="${esc(a.id)}">Удалить</button>
       </div>${renaming ? `<div class="codebox"><div class="field"><label for="newNick">Новый ник</label><input class="input" id="newNick" maxlength="16" value="${esc(a.name)}"></div>
         <span class="note">${a.type === 'microsoft' ? 'Ник Microsoft-аккаунта меняется в Mojang, не чаще раза в 30 дней.' : '3–16 символов: латиница, цифры и _.'}</span>
@@ -378,12 +394,19 @@ function viewSettings() {
     const dev = (hasMs || S.info.dev) ? `<div class="codebox" style="border-color:${hasMs ? 'var(--line4)' : '#8A6A2A'}"><div class="field"><label for="devName">${hasMs ? 'Офлайн-аккаунт' : 'DEV: тестовый вход'}</label><input class="input" id="devName" maxlength="16" placeholder="${hasMs ? 'Ник для офлайн-аккаунта' : 'Ник для теста'}" value="${esc(S.devName)}"></div>
       <div style="display:flex;gap:8px;align-items:center"><button type="button" class="${hasMs ? 'btn2' : 'btn-dev'}" data-act="devLogin">${hasMs ? '+ Добавить офлайн-аккаунт' : 'Войти для теста'}</button><span class="note">${hasMs ? 'Доступно, потому что ты вошёл через Microsoft с купленной игрой.' : 'Есть только в тестовой сборке.'}</span></div></div>`
       : `<span class="note">Офлайн-аккаунты можно добавить после входа через Microsoft.</span>`;
+    // ===== Вкладки входа: Microsoft / Офлайн / Yggdrasil =====
+    const gate = hasMs || S.info.dev;
+    const ltabs = [['microsoft', 'Microsoft'], ['offline', 'Офлайн'], ['ygg', 'Yggdrasil']].map(([id, l]) =>
+      `<button type="button" class="${S.loginTab === id ? 'on' : ''}" data-act="loginTab" data-id="${id}">${l}</button>`).join('');
+    let login;
+    if (S.loginTab === 'offline') login = dev;
+    else if (S.loginTab === 'ygg') login = gate ? yggForm() : `<span class="note">Вход через Yggdrasil (LittleSkin, Ely.by и др.) доступен после входа через Microsoft с купленной игрой.</span>`;
+    else login = `${code}<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn-ms" data-act="msLogin">${MS_LOGO}Войти через Microsoft</button></div>
+      ${S.info.hasMsClient ? '' : '<span class="note">Вход Microsoft заработает, когда в komori.config.json будет указан msClientId и Mojang одобрит доступ к API.</span>'}`;
     body = `<div style="display:flex;flex-direction:column;gap:12px">${rows || '<div class="note">Аккаунтов пока нет.</div>'}
       ${skinPanel()}
-      ${code}
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn-ms" data-act="msLogin">${MS_LOGO}Войти через Microsoft</button></div>
-      ${S.info.hasMsClient ? '' : '<span class="note">Вход Microsoft заработает, когда в komori.config.json будет указан msClientId и Mojang одобрит доступ к API.</span>'}
-      ${dev}</div>`;
+      <div class="theme-seg login-tabs" role="tablist" aria-label="Способ входа">${ltabs}</div>
+      ${login}</div>`;
   }
   return `<section class="page"><h1>Настройки</h1><div class="tabs" role="tablist">${tabs}</div>${body}</section>`;
 }
@@ -462,6 +485,7 @@ function skinPanel() {
         <button type="button" class="chip ${variant === 'classic' ? 'on' : ''}" data-act="skinVariant" data-id="classic">Классическая (4 px)</button>
         <button type="button" class="chip ${variant === 'slim' ? 'on' : ''}" data-act="skinVariant" data-id="slim">Тонкая (3 px)</button></div></div>`;
 
+  if (a.type === 'yggdrasil') return `<div class="panel" style="padding:16px;gap:6px"><b style="color:var(--title)">Скин</b><span class="note">Скин этого аккаунта задаётся на сайте ${esc(hostOf(a.server))} — в игре он подтянется автоматически.</span></div>`;
   // ===== п.2: офлайн-аккаунт — скин хранится в лаунчере и на сервере скинов Komori =====
   if (a.type !== 'microsoft') {
     const status = !info.server
@@ -502,6 +526,7 @@ async function loadSkin(force) {
   if (!force && S.skin.forId === a.id && S.skin.info) return;
   S.skin = { loading: true, info: null, error: null, forId: a.id, busy: false };
   render();
+  if (a.type === 'yggdrasil') { S.skin.loading = false; render(); return; }
   try { S.skin.info = a.type === 'microsoft' ? await K.accounts.skinGet(a.id) : await K.accounts.offSkinGet(a.id); }
   catch (e) { S.skin.error = errText(e); }
   S.skin.loading = false;
@@ -827,6 +852,18 @@ const ACTIONS = {
     catch (e) { toast(errText(e)); }
     render();
   },
+  loginTab: (id) => { S.loginTab = id; render(); },
+  yggLogin: async () => {
+    const Y = S.ygg;
+    if (Y.busy) return;
+    Y.error = ''; Y.busy = true; render();
+    try {
+      S.accounts = await K.accounts.ygg(Y.login.trim(), Y.pass, Y.url.trim());
+      S.ygg = { login: '', pass: '', url: '', error: '', busy: false };
+      toast('Вход выполнен', true);
+    } catch (e) { Y.error = errText(e); Y.pass = ''; Y.busy = false; }
+    render();
+  },
   devLogin: async () => {
     try { S.accounts = await K.accounts.dev(S.devName.trim()); S.devName = ''; toast('Аккаунт добавлен', true); }
     catch (e) { toast(errText(e)); }
@@ -878,6 +915,9 @@ document.addEventListener('input', (ev) => {
   if (t.id === 'vSearch') { S.vSearch = t.value; render(); }
   else if (t.id === 'modsQuery') { S.mods.query = t.value; clearTimeout(modsSearchTimer); modsSearchTimer = setTimeout(() => modsSearch(true), 400); }
   else if (t.id === 'devName') { S.devName = t.value; }
+  else if (t.id === 'yggLogin') { S.ygg.login = t.value; }
+  else if (t.id === 'yggPass') { S.ygg.pass = t.value; }
+  else if (t.id === 'yggUrl') { S.ygg.url = t.value; }
   else if (t.id === 'fName' && S.form) { S.form.name = t.value; }
   else if (t.id === 'fRam' && S.form) {
     S.form.ram = Number(t.value);
@@ -896,6 +936,7 @@ document.addEventListener('change', async (ev) => {
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && S.form) { S.form = null; renderForm(); }
   if (ev.key === 'Enter' && ev.target.id === 'devName') ACTIONS.devLogin();
+  if (ev.key === 'Enter' && ['yggLogin', 'yggPass', 'yggUrl'].includes(ev.target.id)) ACTIONS.yggLogin();
   if (ev.key === 'Enter' && ev.target.id === 'newNick' && S.renaming) ACTIONS.renameSave(S.renaming);
 });
 
