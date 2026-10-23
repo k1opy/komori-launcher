@@ -1,9 +1,12 @@
-# Автосборка Komori Launcher: при пуше тега v* GitHub собирает установщик на Windows
-# и публикует его в Releases (вместе с latest.yml для автообновления).
+# Автосборка Komori Launcher: при пуше в ветку release (или тега v*) GitHub собирает установщик
+# на Windows и публикует его в Releases с тегом v<версия из package.json> (+ latest.yml для автообновления).
+# Выпустить новую версию: поднять "version" в package.json, закоммитить в main, затем
+#   git push origin main:release
 name: Release
 
 on:
   push:
+    branches: [release]
     tags: ['v*']
   workflow_dispatch:
 
