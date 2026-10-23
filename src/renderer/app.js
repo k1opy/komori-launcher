@@ -12,7 +12,7 @@ const S = {
   sTab: 'general', renaming: null, msCode: null, devName: '',
   // Вкладки входа: microsoft | offline | ygg. Пароль Yggdrasil живёт только в памяти до нажатия «Войти».
   loginTab: 'microsoft', ygg: { login: '', pass: '', url: '', error: '', busy: false },
-  log: '', form: null, lastLog: null, ping: null,
+  log: '', form: null, lastLog: null, ping: null, logsOpen: false,
   skin: { loading: false, info: null, error: null, forId: null, busy: false },
   update: null, crash: null,
   srv: { status: null, loading: false, built: null, warnings: [], profileId: null, busy: false },
@@ -142,14 +142,14 @@ function floatServer() {
     <div class="float-head">Сервер<span class="grow"></span><button type="button" data-act="pingNow" title="Обновить" aria-label="Обновить статус"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button></div>
     <div class="srv-line"><span class="dot ${dot}"></span><b>${esc(S.info.server.host)}</b><span class="n">${esc(n)}</span></div>
     ${names}
-    <div class="srv-actions"><button type="button" class="srv-join" data-act="playServer">Играть на ${esc(S.info.server.name || 'Komori')}</button>${icons ? `<div class="srv-links">${icons}</div>` : ''}</div>
+    ${icons ? `<div class="srv-links">${icons}</div>` : ''}
   </div>`;
 }
 
 // Плашка логов: живой вывод игры или хвост последнего лога выбранной сборки
-function logLines() {
+function logLines(n) {
   const raw = S.log || (S.lastLog && S.lastLog.text) || '';
-  return raw.split(/\r?\n/).filter(l => l.trim()).slice(-9).map(l => {
+  return raw.split(/\r?\n/).filter(l => l.trim()).slice(-(n || (S.logsOpen ? 12 : 2))).map(l => {
     const t = l.replace(/^\[(\d\d:\d\d:\d\d)\] \[[^\]]*?\/(\w+)\]: /, '$1  ');
     const cls = /ERROR|FATAL|Exception/.test(l) ? 'e' : /WARN/.test(l) ? 'w' : '';
     return `<div class="${cls}">${esc(t)}</div>`;
@@ -158,7 +158,7 @@ function logLines() {
 function floatLogs() {
   const live = S.running.length > 0;
   const body = logLines();
-  return `<div class="float logs ${live ? 'live' : ''}">
+  return `<div class="float logs ${live ? 'live' : ''} ${S.logsOpen ? 'open' : ''}" data-act="toggleLogs" role="button" tabindex="0" aria-expanded="${S.logsOpen}" title="${S.logsOpen ? 'Свернуть' : 'Развернуть'}">
     <div class="float-head">${live ? '<span class="dot"></span>' : ''}Логи Minecraft<span class="grow"></span><button type="button" data-act="openLog" title="Открыть лог" aria-label="Открыть лог"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg></button></div>
     <div class="logbox" id="logbox">${body || '<span class="empty-log">Здесь появятся последние строки игры после запуска.</span>'}</div>
   </div>`;
@@ -172,12 +172,15 @@ function viewHome() {
       <img class="home-logo" src="assets/logo.svg" alt="">
       <h1 class="home-word">KOMORI</h1>
       <p class="home-sub">MINECRAFT LAUNCHER</p>
-      <button type="button" class="play ${ps.cls}" data-act="play">${PLAY_SVG}${ps.label}</button>
-      <div class="pwrap">
-        ${p ? `<button type="button" class="pselect" data-act="toggleMenu" aria-expanded="${S.menuOpen}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"><span class="t"><b>${esc(p.name)}</b><span>${esc(profMeta(p))}</span></span>${CHEVRON}</button>`
-          : `<button type="button" class="pselect" data-act="newProfile"><span class="t"><b>+ Создать сборку</b></span></button>`}
-        ${S.menuOpen ? homeMenu(p) : ''}
+      <div class="play-row">
+        <button type="button" class="play ${ps.cls}" data-act="play">${PLAY_SVG}<span class="pl"><span>${ps.label}</span>${p ? `<small>${esc(p.name)}</small>` : ''}</span></button>
+        <div class="pwrap">
+          ${p ? `<button type="button" class="psq ${S.menuOpen ? 'on' : ''}" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"></button>`
+            : `<button type="button" class="psq" data-act="newProfile" aria-label="Создать сборку" title="Создать сборку">+</button>`}
+          ${S.menuOpen ? homeMenu(p) : ''}
+        </div>
       </div>
+      <button type="button" class="play-srv" data-act="playServer"><span class="dot ${!S.ping ? 'wait' : S.ping.online ? '' : 'off'}"></span>Играть на ${esc(S.info.server.name || 'Komori')}</button>
       ${progressHtml()}
     </div>
     <div class="floats">${floatServer()}${floatLogs()}</div>
@@ -822,6 +825,7 @@ const ACTIONS = {
   pickProfile: async (id) => { S.profiles = await K.profiles.select(id); S.menuOpen = false; S.log = ''; render(); loadLastLog(); },
   play: () => launch(null, !!(S.info.serverManifest && S.profiles.selected === S.info.serverProfileId)),
   pingNow: () => refreshPing(true),
+  toggleLogs: () => { S.logsOpen = !S.logsOpen; render(); },
   openLog: () => K.game.openLog(),
   playServer: () => {
     // Без ссылки на сборку сервера кнопка запускает выбранный профиль — говорим об этом явно
