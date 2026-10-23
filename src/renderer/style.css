@@ -1,3 +1,6 @@
+/* Шрифты лежат в лаунчере (fonts/, лицензия OFL) — работают без интернета */
+@font-face{font-family:'Montserrat';src:url(fonts/Montserrat.woff) format('woff');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Inter';src:url(fonts/Inter.woff) format('woff');font-weight:100 900;font-display:swap}
 :root{
   --bg0:#08060F; --bg:#0E0A1A; --side:#0B0816; --card:#140E26; --card2:#110C20; --line:#241A40; --line2:#1C1532;
   --chip:#1F1638; --accent:#8B3DFF; --accent2:#9D5BFF; --text:#EFE8FF; --muted:#B9AED6; --dim:#8F84AD;

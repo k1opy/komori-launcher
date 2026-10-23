@@ -22,7 +22,7 @@
         var on = n.id === k.page;
         return { label: n.label, href: n.href, current: on ? 'page' : 'false', bg: on ? '#8B3DFF' : 'transparent', color: on ? '#FFFFFF' : '#C7BBE6' };
       }),
-      discord: cfg.discord, launcher: cfg.launcher, map: cfg.map,
+      discord: cfg.discord, launcher: cfg.launcher, map: cfg.map, social: cfg.social || [],
       flash: k.flash || '', flashJoin: k.flash === 'Сначала зайди на наш сервер Discord, потом войди на сайт.'
     };
   };

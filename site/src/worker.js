@@ -17,7 +17,12 @@ const CFG = {
   discordInvite: 'https://discord.gg/cQDMCZvUgp',
   launcher: 'https://github.com/k1opy/komori-launcher/releases/latest/download/Komori-Launcher-Setup.exe',
   map: 'http://80.249.144.187:8197/',
-  mcHost: 'mc.komori.fun'
+  mcHost: 'mc.komori.fun',
+  social: [
+    { name: 'Telegram', url: 'https://t.me/komorifun' },
+    { name: 'YouTube', url: 'https://www.youtube.com/@komorifun' },
+    { name: 'TikTok', url: 'https://www.tiktok.com/@_k1opy_' }
+  ]
 };
 const SESSION_DAYS = 30;
 const ROLE_REFRESH_MS = 30 * 60 * 1000;
@@ -67,11 +72,11 @@ async function route(req, env, ctx) {
     const me = await currentUser(req, env, ctx);
     const flash = { notmember: 'Сначала зайди на наш сервер Discord, потом войди на сайт.', denied: 'Вход отменён.', error: 'Не получилось войти через Discord, попробуй ещё раз.' }[url.searchParams.get('login')] || '';
     const boot = { me: me ? { id: me.id, name: displayName(me), avatar: avatarUrl(me) } : null, page, flash,
-      cfg: { discord: CFG.discordInvite, launcher: CFG.launcher, map: CFG.map } };
+      cfg: { discord: CFG.discordInvite, launcher: CFG.launcher, map: CFG.map, social: CFG.social } };
     const html = PAGES[page].replace('<!--BOOT-->', '<script>window.KOMORI=' + JSON.stringify(boot).replace(/</g, '\\u003c') + ';</script>');
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY } });
   }
-  return new Response(PAGES['main'].replace('<!--BOOT-->', '<script>window.KOMORI={page:"",cfg:' + JSON.stringify({ discord: CFG.discordInvite, launcher: CFG.launcher, map: CFG.map }) + '};</script>'), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', ...SECURITY } });
+  return new Response(PAGES['main'].replace('<!--BOOT-->', '<script>window.KOMORI={page:"",cfg:' + JSON.stringify({ discord: CFG.discordInvite, launcher: CFG.launcher, map: CFG.map, social: CFG.social }) + '};</script>'), { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', ...SECURITY } });
 }
 
 const SECURITY = {

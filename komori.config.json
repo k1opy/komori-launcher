@@ -8,7 +8,23 @@
   "skinServerUrl": "https://komori-skins.k1opygg05.workers.dev",
   "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
   "newsUrl": "",
-  "discordUrl": "",
-  "websiteUrl": "",
-  "socialLinks": []
+  "discordUrl": "https://discord.gg/cQDMCZvUgp",
+  "websiteUrl": "https://komori-site.k1opygg05.workers.dev",
+  "socialLinks": [
+    {
+      "name": "Telegram",
+      "icon": "telegram",
+      "url": "https://t.me/komorifun"
+    },
+    {
+      "name": "YouTube",
+      "icon": "youtube",
+      "url": "https://www.youtube.com/@komorifun"
+    },
+    {
+      "name": "TikTok",
+      "icon": "tiktok",
+      "url": "https://www.tiktok.com/@_k1opy_"
+    }
+  ]
 }
