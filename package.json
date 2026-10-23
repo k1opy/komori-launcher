@@ -11,7 +11,7 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "dist": "electron-builder --win nsis --publish never",
-    "dist:dev": "electron-builder --win nsis --publish never -c.extraMetadata.komoriDev=true -c.productName=\"Komori Launcher DEV\" -c.appId=fun.komori.launcher.dev -c.nsis.artifactName=\"Komori-Launcher-DEV-Setup-${version}.${ext}\" -c.win.signAndEditExecutable=false -c.publish=null",
+    "dist:dev": "electron-builder --win nsis --publish never -c.extraMetadata.komoriDev=true -c.productName=\"Komori Launcher DEV\" -c.appId=fun.komori.launcher.dev -c.nsis.artifactName=\"Komori-Launcher-DEV-Setup-${version}.${ext}\" -c.win.signAndEditExecutable=false",
     "release": "electron-builder --win nsis --publish always"
   },
   "dependencies": {
