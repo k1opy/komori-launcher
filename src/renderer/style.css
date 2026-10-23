@@ -153,13 +153,14 @@ body.theme-light .home{background:radial-gradient(ellipse 60% 55% at 50% 42%,rgb
 .vrow .st{font-size:13px;color:var(--muted)}
 .empty{padding:28px;text-align:center;color:var(--dim)}
 
-.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
 .pcard{display:flex;gap:14px;align-items:center;padding:16px;border-radius:14px;border:1px solid var(--line);background:var(--card);min-width:0}
 .pcard.on{border-color:var(--accent);background:var(--sel)}
 .pcard .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .pcard .t b{color:var(--title);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pcard .t span{font-size:13px;color:var(--text2)}
-.pcard .t small{font-size:12px;color:var(--dim)}
+.pcard .t span{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .t small{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .icon-btn{flex:0 0 auto}
 .icon-btn{width:40px;height:40px;flex:0 0 40px;border-radius:10px;border:none;background:var(--chip);color:var(--text);display:flex;align-items:center;justify-content:center}
 .icon-btn.primary{background:var(--accent);color:#fff}
 .icon-btn:hover{filter:brightness(1.15)}
