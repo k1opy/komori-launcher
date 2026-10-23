@@ -69,6 +69,16 @@ contextBridge.exposeInMainWorld('komori', {
     build: (profileId) => ipcRenderer.invoke('server:build', profileId),
     save: (manifest) => ipcRenderer.invoke('server:save', manifest)
   },
+  crash: {
+    send: (note) => ipcRenderer.invoke('crash:send', note),
+    openLog: () => ipcRenderer.invoke('crash:openLog')
+  },
+  update: {
+    state: () => ipcRenderer.invoke('update:state'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onState: on('update:state')
+  },
   game: {
     launch: (profileId, join) => ipcRenderer.invoke('game:launch', { profileId, join }),
     openLog: () => ipcRenderer.invoke('game:openLog'),

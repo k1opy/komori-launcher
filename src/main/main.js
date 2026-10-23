@@ -28,6 +28,9 @@ function loadConfig() {
   return def;
 }
 const CONFIG = loadConfig();
+const updater = require('./updater');
+const crash = require('./crash');
+let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
 CONFIG.trustedHosts = Array.isArray(CONFIG.trustedHosts) ? CONFIG.trustedHosts.filter(h => /^[A-Za-z0-9.\-]+$/.test(String(h))) : [];
 curseforge.setKey(CONFIG.curseforgeApiKey);
@@ -54,7 +57,14 @@ function createWindow() {
   win.on('unmaximize', () => send('win:state', { maximized: false }));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  updater.init({
+    enabled: app.isPackaged && !DEV,
+    onState: s => send('update:state', s),
+    isGameRunning: () => !!game
+  });
+});
 app.on('window-all-closed', () => app.quit());
 
 // ---------- окно ----------
@@ -62,7 +72,7 @@ ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged }));
 
 // ---------- настройки и профили ----------
 ipcMain.handle('settings:get', () => store.getSettings());
@@ -204,17 +214,44 @@ ipcMain.handle('game:launch', async (e, { profileId, join }) => {
   });
 
   send('game:progress', { stage: 'Запуск', done: 1, total: 1 });
+  const launchTime = Date.now();
   game = launch(java.javaw, args, gameDir,
     text => { if (settings.showConsole) send('game:log', text); },
     (code, err) => {
       game = null;
-      send('game:exit', { code, error: err || null });
+      let crashInfo = null;
+      if (err || (code !== 0 && code !== null)) {
+        // Вылет: запоминаем всё для отчёта админам.
+        lastCrash = { gameDir, launchTime, code: err ? -1 : code, profile, version: id, launcherVersion: app.getVersion(), playerName: acc.name, javaPath: java.javaw };
+        const rep = crash.collect(lastCrash);
+        crashInfo = { reason: rep.reason, hasCrashReport: !!rep.crashFile, canReport: crash.validWebhook(CONFIG.crashWebhookUrl) };
+      }
+      send('game:exit', { code, error: err || null, crash: crashInfo });
       if (win && !win.isDestroyed() && settings.minimizeOnLaunch) win.restore();
     });
   store.touchProfile(profile.id);
   if (settings.minimizeOnLaunch && win) setTimeout(() => win && !win.isDestroyed() && win.minimize(), 1500);
   return { ok: true, version: id };
 });
+
+// ---------- отчёт о вылете ----------
+ipcMain.handle('crash:send', async (e, note) => {
+  if (!lastCrash) throw new Error('Нет данных о последнем вылете');
+  const report = crash.collect(lastCrash);
+  await crash.send(CONFIG.crashWebhookUrl, lastCrash, report, String(note || '').slice(0, 1000));
+  return true;
+});
+ipcMain.handle('crash:openLog', () => {
+  if (!lastCrash) return null;
+  const rep = crash.collect(lastCrash);
+  const f = rep.crashFile || path.join(lastCrash.gameDir, 'logs', 'latest.log');
+  return fs.existsSync(f) ? shell.openPath(f) : shell.openPath(lastCrash.gameDir);
+});
+
+// ---------- обновление лаунчера ----------
+ipcMain.handle('update:state', () => updater.getState());
+ipcMain.handle('update:check', () => updater.check());
+ipcMain.handle('update:install', () => updater.install());
 
 // ---------- ядра ----------
 ipcMain.handle('loaders:list', async (e, { loader, mcVersion }) => {

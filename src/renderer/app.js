@@ -12,6 +12,7 @@ const S = {
   sTab: 'general', renaming: null, msCode: null, devName: '',
   log: '', form: null,
   skin: { loading: false, info: null, error: null, forId: null, busy: false },
+  update: null, crash: null,
   srv: { status: null, loading: false, built: null, warnings: [], profileId: null, busy: false },
   manual: null,
   mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', hits: [], total: 0, offset: 0,
@@ -71,6 +72,11 @@ function renderSide() {
     ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : 'Microsoft'}</span></span>`
     : `<span class="avatar">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
   $('#devBadge').classList.toggle('hidden', !S.info.dev);
+  const u = S.update || {};
+  const ub = $('#updBanner');
+  if (u.state === 'ready') { ub.innerHTML = `<b>Обновление ${esc(u.version)} готово</b><button type="button" class="btn" data-act="updInstall">Перезапустить</button>`; ub.classList.remove('hidden'); }
+  else if (u.state === 'downloading') { ub.innerHTML = `<span>Скачиваю обновление ${esc(u.version)}… ${u.percent || 0}%</span><div class="bar"><div style="width:${u.percent || 0}%"></div></div>`; ub.classList.remove('hidden'); }
+  else ub.classList.add('hidden');
 }
 
 function playState() {
@@ -305,6 +311,7 @@ function viewSettings() {
       <div class="prow"><span>Показывать консоль игры</span>${sw(!!st.showConsole, 'toggleConsole')}</div>
       <div class="prow"><span>Папка игры</span><span style="display:flex;gap:10px;align-items:center"><code>${esc(st.gameDir)}</code><button type="button" class="btn2" data-act="openGameDir">Открыть</button></span></div>
       <div class="prow"><span>Версия лаунчера</span><span>${esc(S.info.version)}${S.info.dev ? ' · DEV' : ''}</span></div>
+      <div class="prow"><span>Обновления</span><span style="display:flex;gap:10px;align-items:center"><span class="note">${esc(updText())}</span>${S.update && S.update.state !== 'off' ? `<button type="button" class="btn2" data-act="updCheck">Проверить</button>` : ''}${S.update && S.update.state === 'ready' ? `<button type="button" class="btn" data-act="updInstall">Установить</button>` : ''}</span></div>
     </div>
     ${st.showConsole ? `<div class="console" id="console">${esc(S.log || 'Здесь появится вывод игры после запуска.')}</div>` : ''}`;
   } else if (S.sTab === 'java') {
@@ -345,6 +352,31 @@ function viewSettings() {
       ${dev}</div>`;
   }
   return `<section class="page"><h1>Настройки</h1><div class="tabs" role="tablist">${tabs}</div>${body}</section>`;
+}
+
+// ---------- обновления и вылеты ----------
+function updText() {
+  const u = S.update;
+  if (!u || u.state === 'off') return S.info.dev ? 'В DEV-сборке автообновление выключено' : 'Работает в установленной версии лаунчера';
+  return { checking: 'Проверяю…', latest: 'Установлена последняя версия', downloading: 'Скачиваю ' + (u.version || '') + '… ' + (u.percent || 0) + '%', ready: 'Версия ' + u.version + ' скачана — установится при перезапуске', error: 'Ошибка: ' + (u.error || '') }[u.state] || '';
+}
+
+function renderCrash() {
+  const m = $('#crash');
+  const c = S.crash;
+  if (!c) { m.classList.add('hidden'); m.innerHTML = ''; return; }
+  const title = c.error ? 'Игра не запустилась' : 'Игра вылетела';
+  m.innerHTML = `<div class="dialog" role="dialog" aria-label="${title}" style="width:600px">
+    <div class="dialog-head"><h2>${title}</h2><button type="button" class="icon-btn" data-act="crashClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+    <div class="panel" style="padding:14px;gap:6px"><span class="note">Код выхода: ${esc(c.code)}</span><b style="color:#fff;user-select:text">${esc(c.error || c.reason || 'Причина не определена — подробности в логе')}</b></div>
+    ${c.sent ? `<div class="codebox" style="border-color:#2E7D4F"><b style="color:#9FE3B4">Отчёт отправлен админам</b><span class="note">Спасибо! Админы посмотрят лог в Discord.</span></div>`
+      : c.canReport ? `<div class="field"><label for="crashNote">Что ты делал перед вылетом? (необязательно)</label><textarea id="crashNote" class="input" rows="3" maxlength="1000" placeholder="Например: зашёл в Незер, открыл сундук…">${esc(c.note)}</textarea></div>
+        <span class="note">Админам уйдут: ник, профиль, версия, ядро, список модов и логи игры. Пароли и токены не отправляются.</span>`
+      : `<span class="note">Отправка отчётов не настроена. Открой лог и отправь его админам в Discord вручную.</span>`}
+    <div class="dialog-foot"><button type="button" class="btn2" data-act="crashLog">Открыть лог</button>
+      <div style="display:flex;gap:8px"><button type="button" class="btn2" data-act="crashClose">Закрыть</button>
+      ${c.canReport && !c.sent ? `<button type="button" class="btn" data-act="crashSend" ${c.sending ? 'disabled' : ''}>${c.sending ? 'Отправляю…' : 'Отправить админам'}</button>` : ''}</div></div></div>`;
+  m.classList.remove('hidden');
 }
 
 // ---------- сборка сервера (админ, DEV) ----------
@@ -655,6 +687,17 @@ const ACTIONS = {
   },
   sTab: (id) => { S.sTab = id; render(); if (id === 'account') loadSkin(); if (id === 'server' && !S.srv.status) srvLoad(); },
   srvLoad: () => srvLoad(),
+  updCheck: async () => { try { S.update = await K.update.check(); } catch (e) { toast(errText(e)); } render(); },
+  updInstall: async () => { try { await K.update.install(); } catch (e) { toast(errText(e)); } },
+  crashClose: () => { S.crash = null; renderCrash(); },
+  crashLog: () => K.crash.openLog(),
+  crashSend: async () => {
+    const c = S.crash; if (!c) return;
+    const t = $('#crashNote'); if (t) c.note = t.value;
+    c.sending = true; renderCrash();
+    try { await K.crash.send(c.note); c.sent = true; } catch (e) { toast(errText(e)); }
+    c.sending = false; renderCrash();
+  },
   srvBuild: async (pid) => {
     const sel = $('#srvProfile');
     const id = (sel && sel.value) || pid;
@@ -766,12 +809,12 @@ K.game.onLog((text) => {
   const c = $('#console');
   if (c) { c.textContent = S.log; c.scrollTop = c.scrollHeight; }
 });
-K.game.onExit(({ code, error }) => {
+K.game.onExit(({ code, error, crash }) => {
   S.inGame = false;
-  if (error) toast('Не удалось запустить игру: ' + error);
-  else if (code && code !== 0) toast('Игра закрылась с ошибкой (код ' + code + '). Лог: папка профиля → komori-launch.log');
-  render();
+  if (crash) S.crash = { code: error ? -1 : code, error: error || '', reason: crash.reason, canReport: crash.canReport, hasCrashReport: crash.hasCrashReport, note: '', sending: false, sent: false };
+  render(); renderCrash();
 });
+K.update.onState((st) => { S.update = st; renderSide(); if (S.screen === 'settings') render(); });
 K.accounts.onMsDone((accs) => { S.accounts = accs; S.msCode = null; toast('Вход выполнен', true); render(); });
 K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
 
@@ -781,6 +824,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
     S.settings = await K.settings.get();
     S.profiles = await K.profiles.get();
     S.accounts = await K.accounts.get();
+    S.update = await K.update.state();
   } catch (e) { toast(errText(e)); }
   render();
   loadVersions();

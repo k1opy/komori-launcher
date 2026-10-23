@@ -3,6 +3,7 @@
   "curseforgeApiKey": "",
   "serverManifestUrl": "",
   "trustedHosts": [],
+  "crashWebhookUrl": "",
   "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
   "newsUrl": ""
 }

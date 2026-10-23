@@ -1,7 +1,7 @@
 {
   "name": "komori-launcher",
   "productName": "Komori Launcher",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Komori Launcher — лаунчер Minecraft сервера Komori",
   "main": "src/main/main.js",
   "author": "Komori",
@@ -10,11 +10,13 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "dist": "electron-builder --win nsis",
-    "dist:dev": "electron-builder --win nsis -c.extraMetadata.komoriDev=true -c.productName=\"Komori Launcher DEV\" -c.appId=fun.komori.launcher.dev -c.nsis.artifactName=\"Komori-Launcher-DEV-Setup-${version}.${ext}\""
+    "dist": "electron-builder --win nsis --publish never",
+    "dist:dev": "electron-builder --win nsis --publish never -c.extraMetadata.komoriDev=true -c.productName=\"Komori Launcher DEV\" -c.appId=fun.komori.launcher.dev -c.nsis.artifactName=\"Komori-Launcher-DEV-Setup-${version}.${ext}\"",
+    "release": "electron-builder --win nsis --publish always"
   },
   "dependencies": {
-    "adm-zip": "0.5.16"
+    "adm-zip": "0.5.16",
+    "electron-updater": "6.3.9"
   },
   "devDependencies": {
     "electron": "33.2.1",
@@ -25,6 +27,7 @@
     "productName": "Komori Launcher",
     "directories": { "output": "dist", "buildResources": "build" },
     "files": ["src/**/*", "build/icon.ico", "komori.config.json", "package.json"],
+    "publish": [{ "provider": "github", "owner": "k1opy", "repo": "komori-launcher", "releaseType": "release" }],
     "win": { "target": ["nsis"], "icon": "build/icon.ico" },
     "nsis": {
       "oneClick": false,
