@@ -241,3 +241,4 @@ body.theme-light .main:has(.hero) .win-btn:hover{background:#1F1638}
 .skin-flat{width:128px;height:auto;image-rendering:pixelated;background:repeating-conic-gradient(var(--line) 0 25%,transparent 0 50%) 0 0/16px 16px;border-radius:6px}
 .empty-skin{min-height:120px;min-width:240px;justify-content:center;align-items:center}
 .skinbox{flex-wrap:wrap}
+.tag.warn{background:var(--warnbg);color:var(--warn)}

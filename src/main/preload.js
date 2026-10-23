@@ -87,6 +87,8 @@ contextBridge.exposeInMainWorld('komori', {
   game: {
     launch: (profileId, join) => ipcRenderer.invoke('game:launch', { profileId, join }),
     openLog: () => ipcRenderer.invoke('game:openLog'),
+    running: () => ipcRenderer.invoke('game:running'),
+    onRunning: on('game:running'),
     onProgress: on('game:progress'),
     onLog: on('game:log'),
     onExit: on('game:exit')

@@ -7,7 +7,7 @@ const S = {
   settings: null, profiles: { list: [], selected: null }, accounts: { list: [], selected: null },
   versions: null, versionsError: null,
   screen: 'home', menuOpen: false,
-  busy: false, prog: null, inGame: false,
+  busy: false, prog: null, running: [], // running — id профилей, в которых сейчас идёт игра
   vType: 'release', vSearch: '', vInstalling: null,
   sTab: 'general', renaming: null, msCode: null, devName: '',
   log: '', form: null,
@@ -108,7 +108,8 @@ function renderSide() {
 }
 
 function playState() {
-  if (S.inGame) return { cls: 'ingame', label: 'В игре' };
+  // Несколько игр: «В игре» только если запущен именно выбранный профиль
+  if (S.running.includes(S.profiles.selected)) return { cls: 'ingame', label: 'В игре' };
   if (S.busy) return { cls: 'busy', label: 'Запуск…' };
   return { cls: '', label: 'Играть' };
 }
@@ -149,7 +150,7 @@ function viewHome() {
 function viewProfiles() {
   const cards = S.profiles.list.map(p => `<div class="pcard ${p.id === S.profiles.selected ? 'on' : ''}">
     <img class="pix" src="${iconSrc(p.icon)}" alt="" width="52" height="52">
-    <div class="t"><b>${esc(p.name)}${p.managed ? ' <span class="tag ok">Сервер</span>' : ''}</b><span>${esc(profMeta(p))}</span><small>${p.managed ? 'Сборку задают админы, обновляется сама' : 'Последний запуск: ' + esc(ago(p.lastPlayed))}</small></div>
+    <div class="t"><b>${esc(p.name)}${p.managed ? ' <span class="tag ok">Сервер</span>' : ''}${S.running.includes(p.id) ? ' <span class="tag warn">Запущен</span>' : ''}</b><span>${esc(profMeta(p))}</span><small>${p.managed ? 'Сборку задают админы, обновляется сама' : 'Последний запуск: ' + esc(ago(p.lastPlayed))}</small></div>
     ${p.managed ? '' : `<button type="button" class="icon-btn" data-act="editProfile" data-id="${esc(p.id)}" aria-label="Изменить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>`}
     <button type="button" class="icon-btn" data-act="openProfileDir" data-id="${esc(p.id)}" aria-label="Открыть папку"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h6l2 2h10v11H3z"/></svg></button>
     <button type="button" class="icon-btn primary" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg></button>
@@ -685,13 +686,14 @@ async function loadVersions() {
 }
 
 async function launch(profileId, join) {
-  if (S.busy || S.inGame) return;
+  if (S.busy) return;
+  const target = join && S.info.serverManifest ? S.info.serverProfileId : (profileId || S.profiles.selected);
+  if (S.running.includes(target)) { toast('Этот профиль уже запущен. Для второй игры выбери другой профиль.'); return; }
   S.busy = true; S.prog = { stage: 'Подготовка', done: 0, total: 0 }; S.menuOpen = false; S.log = '';
   render();
   try {
     if (profileId) S.profiles = await K.profiles.select(profileId);
     await K.game.launch(profileId || S.profiles.selected, !!join);
-    S.inGame = true;
     S.profiles = await K.profiles.get();
   } catch (e) {
     toast(errText(e));
@@ -907,8 +909,8 @@ K.game.onLog((text) => {
   const c = $('#console');
   if (c) { c.textContent = S.log; c.scrollTop = c.scrollHeight; }
 });
+K.game.onRunning((ids) => { S.running = ids || []; render(); });
 K.game.onExit(({ code, error, crash }) => {
-  S.inGame = false;
   if (crash) S.crash = { code: error ? -1 : code, error: error || '', reason: crash.reason, canReport: crash.canReport, hasCrashReport: crash.hasCrashReport, note: '', sending: false, sent: false };
   render(); renderCrash();
 });
@@ -924,6 +926,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
     S.profiles = await K.profiles.get();
     S.accounts = await K.accounts.get();
     S.update = await K.update.state();
+    S.running = await K.game.running();
   } catch (e) { toast(errText(e)); }
   render();
   loadVersions();

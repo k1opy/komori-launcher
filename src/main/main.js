@@ -60,7 +60,11 @@ function publicLinks() {
 }
 
 let win = null;
-let game = null; // запущенный процесс игры
+// ===== Несколько игр одновременно =====
+// profileId -> { child, gameDir }. Один профиль — одна копия игры (иначе они делят папку, моды и настройки).
+const games = new Map();
+const preparing = new Set(); // профили, которые сейчас готовятся к запуску
+function sendRunning() { send('game:running', [...games.keys()]); }
 let msLogin = null; // { cancelled }
 
 function send(channel, data) { if (win && !win.isDestroyed()) win.webContents.send(channel, data); }
@@ -86,7 +90,7 @@ app.whenReady().then(() => {
   updater.init({
     enabled: app.isPackaged && !DEV,
     onState: s => send('update:state', s),
-    isGameRunning: () => !!game
+    isGameRunning: () => games.size > 0
   });
 });
 app.on('window-all-closed', () => app.quit());
@@ -184,8 +188,17 @@ ipcMain.handle('versions:install', async (e, id) => {
 });
 
 ipcMain.handle('game:launch', async (e, { profileId, join }) => {
-  if (game) throw new Error('Игра уже запущена');
   const settings = store.getSettings();
+  // Какой профиль запускаем (для «Играть на Komori» — профиль сервера)
+  const targetId = join && CONFIG.serverManifestUrl ? serverpack.SERVER_PROFILE_ID : (profileId || store.getProfiles().selected);
+  if (games.has(targetId)) throw new Error('Этот профиль уже запущен. Для второй игры выбери другой профиль.');
+  if (preparing.has(targetId)) throw new Error('Этот профиль уже запускается');
+  preparing.add(targetId);
+  try { return await launchGame(settings, profileId, join); }
+  finally { preparing.delete(targetId); }
+});
+
+async function launchGame(settings, profileId, join) {
   const root = settings.gameDir;
 
   const accs = store.getAccounts();
@@ -249,10 +262,11 @@ ipcMain.handle('game:launch', async (e, { profileId, join }) => {
 
   send('game:progress', { stage: 'Запуск', done: 1, total: 1 });
   const launchTime = Date.now();
-  game = launch(java.javaw, args, gameDir,
-    text => { if (settings.showConsole) send('game:log', text); },
+  const child = launch(java.javaw, args, gameDir,
+    text => { if (settings.showConsole) send('game:log', games.size > 1 ? prefixLines(profile.name, text) : text); },
     (code, err) => {
-      game = null;
+      games.delete(profile.id);
+      sendRunning();
       let crashInfo = null;
       if (err || (code !== 0 && code !== null)) {
         // Вылет: запоминаем всё для отчёта админам.
@@ -260,13 +274,20 @@ ipcMain.handle('game:launch', async (e, { profileId, join }) => {
         const rep = crash.collect(lastCrash);
         crashInfo = { reason: rep.reason, hasCrashReport: !!rep.crashFile, canReport: crash.validWebhook(CONFIG.crashWebhookUrl) };
       }
-      send('game:exit', { code, error: err || null, crash: crashInfo });
-      if (win && !win.isDestroyed() && settings.minimizeOnLaunch) win.restore();
+      send('game:exit', { profileId: profile.id, name: profile.name, code, error: err || null, crash: crashInfo });
+      // Окно лаунчера возвращаем, когда закрылась последняя игра
+      if (!games.size && win && !win.isDestroyed() && settings.minimizeOnLaunch) win.restore();
     });
+  games.set(profile.id, { child, gameDir });
+  sendRunning();
   store.touchProfile(profile.id);
   if (settings.minimizeOnLaunch && win) setTimeout(() => win && !win.isDestroyed() && win.minimize(), 1500);
-  return { ok: true, version: id };
-});
+  return { ok: true, version: id, profileId: profile.id };
+}
+
+// Когда идут несколько игр, строки консоли подписываем названием профиля
+function prefixLines(name, text) { return text.replace(/^(?=.)/gm, `[${name}] `); }
+ipcMain.handle('game:running', () => [...games.keys()]);
 
 // ---------- отчёт о вылете ----------
 ipcMain.handle('crash:send', async (e, note) => {
