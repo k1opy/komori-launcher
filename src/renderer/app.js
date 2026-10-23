@@ -24,7 +24,6 @@ const S = {
 // ---------- утилиты ----------
 const $ = (sel) => document.querySelector(sel);
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function iconSrc(name) { return 'assets/icons/' + encodeURIComponent(name || 'grass') + '.png'; }
 function errText(e) { return String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); }
 const LOADER_NAMES = { vanilla: 'Vanilla', fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge', quilt: 'Quilt' };
 const TYPE_NAMES = { release: 'Релиз', snapshot: 'Снапшот', old_beta: 'Бета', old_alpha: 'Альфа' };
@@ -124,10 +123,10 @@ function progressHtml() {
 function homeMenu(p) {
   const srvId = S.info.serverManifest ? S.info.serverProfileId : null;
   const list = S.profiles.list.slice().sort((a, b) => (b.id === srvId) - (a.id === srvId));
-  const item = x => `<button type="button" data-act="pickProfile" data-id="${esc(x.id)}" class="${x.id === (p && p.id) ? 'on' : ''}"><img class="pix" src="${iconSrc(x.icon)}" alt="" width="28" height="28"><span class="t"><b>${esc(x.name)}${x.id === srvId ? ' <span class="tag ok">Сервер</span>' : ''}</b><span>${esc(profMeta(x))}</span></span></button>`;
+  const item = x => `<button type="button" data-act="pickProfile" data-id="${esc(x.id)}" class="${x.id === (p && p.id) ? 'on' : ''}">${profIcon(x.icon, 28)}<span class="t"><b>${esc(x.name)}${x.id === srvId ? ' <span class="tag ok">Сервер</span>' : ''}</b><span>${esc(profMeta(x))}</span></span></button>`;
   const srvMissing = srvId && !list.some(x => x.id === srvId);
   const rows = list.length + 1 + (srvMissing ? 1 : 0);
-  const html = `${srvMissing ? `<button type="button" data-act="playServer"><img class="pix" src="assets/logo.svg" alt="" width="28" height="28"><span class="t"><b>${esc(S.info.server.name || 'Komori')} <span class="tag ok">Сервер</span></b><span>Установить сборку сервера и играть</span></span></button>` : ''}
+  const html = `${srvMissing ? `<button type="button" data-act="playServer"><img src="assets/logo.svg" alt="" width="28" height="28"><span class="t"><b>${esc(S.info.server.name || 'Komori')} <span class="tag ok">Сервер</span></b><span>Установить сборку сервера и играть</span></span></button>` : ''}
     ${list.map(item).join('')}
     <button type="button" data-act="newProfile" class="new"><span class="t"><b>+ Новая сборка</b></span></button>`;
   return { html, height: Math.min(12 + rows * 50, 320) };
@@ -179,7 +178,7 @@ function viewHome() {
       <div class="play-row ${S.menuOpen ? 'open' : ''}">
         <button type="button" class="play ${ps.cls}" data-act="play" tabindex="${S.menuOpen ? -1 : 0}">${PLAY_SVG}<span class="pl"><span>${ps.label}</span>${p ? `<small>${esc(p.name)}</small>` : ''}</span></button>
         ${p ? `<div class="picker" style="--h:${menu.height}px">
-          <button type="button" class="psq" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"></button>
+          <button type="button" class="psq" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}">${profIcon(p.icon, 40)}</button>
           <div class="plist" role="listbox" aria-label="Сборки">${menu.html}</div>
         </div>` : `<div class="picker"><button type="button" class="psq" data-act="newProfile" aria-label="Создать сборку" title="Создать сборку">+</button></div>`}
       </div>
@@ -192,7 +191,7 @@ function viewHome() {
 
 function viewProfiles() {
   const cards = S.profiles.list.map(p => `<div class="pcard ${p.id === S.profiles.selected ? 'on' : ''}">
-    <img class="pix" src="${iconSrc(p.icon)}" alt="" width="52" height="52">
+    ${profIcon(p.icon, 52)}
     <div class="t"><b>${esc(p.name)}${p.managed ? ' <span class="tag ok">Сервер</span>' : ''}${S.running.includes(p.id) ? ' <span class="tag warn">Запущен</span>' : ''}</b><span>${esc(profMeta(p))}</span><small>${p.managed ? 'Сборку задают админы, обновляется сама' : 'Последний запуск: ' + esc(ago(p.lastPlayed))}</small></div>
     ${p.managed ? '' : `<button type="button" class="icon-btn" data-act="editProfile" data-id="${esc(p.id)}" aria-label="Изменить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>`}
     <button type="button" class="icon-btn" data-act="openProfileDir" data-id="${esc(p.id)}" aria-label="Открыть папку"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h6l2 2h10v11H3z"/></svg></button>
@@ -215,7 +214,7 @@ function viewVersions() {
     const list = versionsFiltered();
     body = list.length ? list.slice(0, 400).map((v, i) => {
       const installing = S.vInstalling === v.id;
-      return `<div class="vrow"><img class="pix" src="${iconSrc(TYPE_ICONS[v.type])}" alt="" width="30" height="30">
+      return `<div class="vrow">${profIcon(TYPE_ICONS[v.type], 30)}
         <span class="t"><b>${esc(v.id)}</b><span style="color:${TYPE_COLORS[v.type]}">${TYPE_NAMES[v.type]}${i === 0 && !S.vSearch ? ' · последняя' : ''} · ${esc((v.releaseTime || '').slice(0, 10))}</span></span>
         <span class="st">${v.installed ? 'Установлена' : ''}</span>
         <button type="button" class="btn2" data-act="installVersion" data-id="${esc(v.id)}" ${S.busy ? 'disabled' : ''}>${installing ? 'Скачиваю…' : v.installed ? 'Проверить' : 'Скачать'}</button>
@@ -260,7 +259,7 @@ function viewMods() {
     if (M.needKey) {
       list = `<div class="empty">Каталог CurseForge ещё не настроен.<br>Получи бесплатный ключ API на console.curseforge.com и впиши его в komori.config.json → curseforgeApiKey.</div>`;
     } else if (M.needLoader && !isPack) {
-      list = `<div class="empty">У профиля «${esc(p.name)}» нет ядра, а моды работают только с ним.<br>Создай профиль с Fabric, Forge, NeoForge или Quilt.<br><br><button type="button" class="btn" data-act="newProfile">+ Новый профиль</button></div>`;
+      list = `<div class="empty">У сборки «${esc(p.name)}» нет ядра, а моды работают только с ним.<br>Создай сборку с Fabric, Forge, NeoForge или Quilt.<br><br><button type="button" class="btn" data-act="newProfile">+ Новый профиль</button></div>`;
     } else if (M.error) {
       list = `<div class="empty">${esc(M.error)}<br><br><button type="button" class="btn2" data-act="mRetry">Повторить</button></div>`;
     } else if (!M.hits.length) {
@@ -674,7 +673,7 @@ function openForm(profile, preset) {
   const mc = p.mcVersion || (preset && preset.mcVersion) || 'latest-release';
   if (preset && preset.type) mcType = preset.type;
   else if (S.versions) { const f = S.versions.versions.find(v => v.id === mc); if (f) mcType = f.type; }
-  S.form = { id: p.id || null, name: p.name || (preset ? 'Minecraft ' + preset.mcVersion : 'Новый профиль'), icon: p.icon || 'orb', loader: p.loader || 'vanilla', loaderVersion: p.loaderVersion || '', mcVersion: mc, mcType, ram: p.ram || 0, lv: null };
+  S.form = { id: p.id || null, name: p.name || (preset ? 'Minecraft ' + preset.mcVersion : 'Новая сборка'), icon: p.icon || 'orb', loader: p.loader || 'vanilla', loaderVersion: p.loaderVersion || '', mcVersion: mc, mcType, ram: p.ram || 0, lv: null };
   if (!S.versions) loadVersions();
   renderForm();
   loadLoaderVersions();
@@ -704,7 +703,7 @@ function renderForm() {
   const f = S.form;
   const m = $('#modal');
   if (!f) { m.classList.add('hidden'); m.innerHTML = ''; return; }
-  const icons = ICONS.map(i => `<button type="button" class="${f.icon === i ? 'on' : ''}" data-act="fIcon" data-id="${i}" aria-label="${i}"><img class="pix" src="${iconSrc(i)}" alt=""></button>`).join('');
+  const icons = ICONS.map(i => `<button type="button" class="${f.icon === i ? 'on' : ''}" data-act="fIcon" data-id="${i}" aria-label="${i}">${profIcon(i, 34)}</button>`).join('');
   const loaders = Object.keys(LOADER_NAMES).map(l => `<button type="button" class="${f.loader === l ? 'on' : ''}" data-act="fLoader" data-id="${l}">${LOADER_NAMES[l]}</button>`).join('');
   let lvBox;
   if (f.loader === 'vanilla') lvBox = `<div class="pick-list empty" style="display:flex;align-items:center;justify-content:center">Чистый Minecraft — ядро не нужно</div>`;
@@ -720,9 +719,9 @@ function renderForm() {
     const list = latest.concat(S.versions.versions.filter(v => v.type === f.mcType).map(v => ({ id: v.id, label: v.id })));
     vers = list.map(v => `<button type="button" class="${f.mcVersion === v.id ? 'on' : ''}" data-act="fVersion" data-id="${esc(v.id)}"><span>${esc(v.label)}</span></button>`).join('');
   } else if (S.versionsError) vers = `<div class="empty">${esc(S.versionsError)}</div>`;
-  m.innerHTML = `<div class="dialog" role="dialog" aria-label="${f.id ? 'Изменить профиль' : 'Новый профиль'}">
-    <div class="dialog-head"><h2>${f.id ? 'Изменить профиль' : 'Новый профиль'}</h2><button type="button" class="icon-btn" data-act="fClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
-    <div style="display:flex;gap:14px;align-items:flex-end"><img class="pix" src="${iconSrc(f.icon)}" alt="" width="64" height="64" style="padding:6px;border-radius:12px;background:var(--side);border:2px solid #8B3DFF">
+  m.innerHTML = `<div class="dialog" role="dialog" aria-label="${f.id ? 'Изменить сборку' : 'Новая сборка'}">
+    <div class="dialog-head"><h2>${f.id ? 'Изменить сборку' : 'Новая сборка'}</h2><button type="button" class="icon-btn" data-act="fClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+    <div style="display:flex;gap:14px;align-items:flex-end">${profIcon(f.icon, 64)}
       <div class="field" style="flex:1"><label for="fName">Название</label><input class="input" id="fName" maxlength="32" value="${esc(f.name)}"></div></div>
     <div class="field"><label>Иконка</label><div class="icon-grid">${icons}</div></div>
     <div class="field"><label>Ядро</label><div class="seg">${loaders}</div></div>
@@ -731,9 +730,9 @@ function renderForm() {
       <div class="field"><label>Версия ${esc(LOADER_NAMES[f.loader])}</label><div class="chips" style="min-height:36px"></div>${lvBox}</div>
     </div>
     <div style="display:flex;gap:16px;align-items:center">
-      <div class="field" style="flex:1"><label for="fRam" id="fRamLabel">Память профиля: ${f.ram ? f.ram + ' ГБ' : 'как в настройках (' + ((S.settings && S.settings.ram) || 4) + ' ГБ)'}</label>
-        <input type="range" id="fRam" min="0" max="16" step="1" value="${f.ram || 0}" aria-label="Память профиля"></div>
-      ${f.id ? `<button type="button" class="btn-ghost" data-act="fDelete">Удалить профиль</button>` : ''}
+      <div class="field" style="flex:1"><label for="fRam" id="fRamLabel">Память сборки: ${f.ram ? f.ram + ' ГБ' : 'как в настройках (' + ((S.settings && S.settings.ram) || 4) + ' ГБ)'}</label>
+        <input type="range" id="fRam" min="0" max="16" step="1" value="${f.ram || 0}" aria-label="Память сборки"></div>
+      ${f.id ? `<button type="button" class="btn-ghost" data-act="fDelete">Удалить сборку</button>` : ''}
     </div>
     <div class="dialog-foot"><span style="color:var(--text2)">${esc(LOADER_NAMES[f.loader])}${f.loader !== 'vanilla' ? ' ' + esc(f.loaderVersion || '(авто)') : ''} · ${esc(mcLabel(f.mcVersion))}</span>
       <div style="display:flex;gap:8px"><button type="button" class="btn2" data-act="fClose">Отмена</button><button type="button" class="btn" data-act="fSave">${f.id ? 'Сохранить' : 'Создать'}</button></div></div>
@@ -754,7 +753,7 @@ async function loadVersions() {
 async function launch(profileId, join) {
   if (S.busy) return;
   const target = join && S.info.serverManifest ? S.info.serverProfileId : (profileId || S.profiles.selected);
-  if (S.running.includes(target)) { toast('Этот профиль уже запущен. Для второй игры выбери другой профиль.'); return; }
+  if (S.running.includes(target)) { toast('Эта сборка уже запущена. Для второй игры выбери другую сборку.'); return; }
   S.busy = true; S.prog = { stage: 'Подготовка', done: 0, total: 0 }; S.menuOpen = false; S.log = '';
   render();
   try {
@@ -846,7 +845,7 @@ const ACTIONS = {
   openLog: () => K.game.openLog(),
   playServer: () => {
     // Без ссылки на сборку сервера кнопка запускает выбранный профиль — говорим об этом явно
-    if (!S.info.serverManifest) toast('Сборка сервера не задана (serverManifestUrl) — запускаю выбранный профиль');
+    if (!S.info.serverManifest) toast('Сборка сервера не задана (serverManifestUrl) — запускаю выбранную сборку');
     launch(null, true);
   },
   playProfile: (id) => { S.screen = 'home'; if (S.info.serverManifest && id === S.info.serverProfileId) launch(null, true); else launch(id, false); },
@@ -980,7 +979,7 @@ document.addEventListener('input', (ev) => {
   else if (t.id === 'fRam' && S.form) {
     S.form.ram = Number(t.value);
     const l = $('#fRamLabel');
-    if (l) l.textContent = 'Память профиля: ' + (S.form.ram ? S.form.ram + ' ГБ' : 'как в настройках (' + ((S.settings && S.settings.ram) || 4) + ' ГБ)');
+    if (l) l.textContent = 'Память сборки: ' + (S.form.ram ? S.form.ram + ' ГБ' : 'как в настройках (' + ((S.settings && S.settings.ram) || 4) + ' ГБ)');
   }
   else if (t.id === 'ram') { const l = $('#ramLabel'); if (l) l.textContent = t.value + ' ГБ'; }
 });

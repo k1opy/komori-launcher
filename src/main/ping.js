@@ -2,6 +2,7 @@
 /* Пинг Minecraft-сервера напрямую (Server List Ping), без сторонних сайтов.
  * Отдаёт { online, players, max, version, ms }. Результат кэшируется на 30 секунд. */
 const net = require('net');
+const dns = require('dns').promises;
 
 function varint(n) {
   const out = [];
@@ -56,9 +57,21 @@ function rawPing(host, port, timeout = 5000) {
 }
 
 let cache = null;
+// Как сам Minecraft: сначала SRV-запись _minecraft._tcp (хостинги часто прячут порт за ней)
+async function resolve(host, port) {
+  if (port && port !== 25565) return { host, port };
+  try {
+    const r = await dns.resolveSrv('_minecraft._tcp.' + host);
+    if (r && r[0]) return { host: r[0].name, port: r[0].port };
+  } catch {}
+  return { host, port: 25565 };
+}
+
 async function ping(host, port) {
   if (cache && cache.key === host + ':' + port && Date.now() - cache.at < 30000) return cache.value;
-  const value = await rawPing(host, port || 25565);
+  const t = await resolve(host, port);
+  let value = await rawPing(t.host, t.port);
+  if (!value.online) value = await rawPing(t.host, t.port, 8000); // второй шанс медленному серверу
   cache = { key: host + ':' + port, at: Date.now(), value };
   return value;
 }
