@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('komori', {
     onStep: on('mods:step')
   },
   server: {
+    ping: () => ipcRenderer.invoke('server:ping'),
     status: () => ipcRenderer.invoke('server:status'),
     build: (profileId) => ipcRenderer.invoke('server:build', profileId),
     save: (manifest) => ipcRenderer.invoke('server:save', manifest)
@@ -88,6 +89,7 @@ contextBridge.exposeInMainWorld('komori', {
   game: {
     launch: (profileId, join) => ipcRenderer.invoke('game:launch', { profileId, join }),
     openLog: () => ipcRenderer.invoke('game:openLog'),
+    lastLog: () => ipcRenderer.invoke('game:lastLog'),
     running: () => ipcRenderer.invoke('game:running'),
     onRunning: on('game:running'),
     onProgress: on('game:progress'),

@@ -31,6 +31,7 @@ const CONFIG = loadConfig();
 const updater = require('./updater');
 const offlineskin = require('./offlineskin');
 const authlib = require('./authlib');
+const { ping } = require('./ping');
 const crash = require('./crash');
 let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
@@ -248,7 +249,7 @@ async function launchGame(settings, profileId, join) {
   const mc = await versions.resolveId(root, profile.mcVersion);
   const gameDir = path.join(root, 'instances', profile.id);
   const id = await loaders.ensureLoader(root, profile.loader, mc, profile.loaderVersion, progress,
-    text => { if (settings.showConsole) send('game:log', text); });
+    text => { send('game:log', text); });
   const install = await versions.installVersion(root, id, gameDir, progress);
 
   let logConfigPath = null;
@@ -265,13 +266,13 @@ async function launchGame(settings, profileId, join) {
   const skinServer = skinServerUrl();
   if (acc.type === 'yggdrasil') {
     // Yggdrasil: authlib-injector с адресом сервера авторизации аккаунта (скины тоже берутся оттуда)
-    const jar = await authlib.ensure(root, t => { if (settings.showConsole) send('game:log', t); });
+    const jar = await authlib.ensure(root, t => { send('game:log', t); });
     if (!jar) throw new Error('Не удалось скачать authlib-injector — без него Yggdrasil-аккаунт не запустится');
     extraJvm.push(`-javaagent:${jar}=${auth.yggBase(acc.serverUrl)}`);
   } else if ((acc.type === 'offline' || acc.type === 'dev') && skinServer) {
     send('game:progress', { stage: 'Скины', done: 0, total: 1 });
     await offlineskin.syncIfNeeded(acc, skinServer);
-    const jar = await authlib.ensure(root, t => { if (settings.showConsole) send('game:log', t); });
+    const jar = await authlib.ensure(root, t => { send('game:log', t); });
     if (jar) extraJvm.push(`-javaagent:${jar}=${skinServer}`);
   }
   const args = buildArgs({
@@ -283,7 +284,7 @@ async function launchGame(settings, profileId, join) {
   send('game:progress', { stage: 'Запуск', done: 1, total: 1 });
   const launchTime = Date.now();
   const child = launch(java.javaw, args, gameDir,
-    text => { if (settings.showConsole) send('game:log', games.size > 1 ? prefixLines(profile.name, text) : text); },
+    text => { send('game:log', games.size > 1 ? prefixLines(profile.name, text) : text); },
     (code, err) => {
       games.delete(profile.id);
       sendRunning();
@@ -494,6 +495,25 @@ ipcMain.handle('mods:openFolder', async (e, { profileId, type }) => {
   const d = path.join(ctx.dir, modrinth.FOLDERS[TYPES.includes(type) ? type : 'mod']);
   fs.mkdirSync(d, { recursive: true });
   return shell.openPath(d);
+});
+
+// Плашка «Сервер» на главной: онлайн и игроки
+ipcMain.handle('server:ping', () => ping(CONFIG.server.host, CONFIG.server.port).catch(() => ({ online: false })));
+
+// Плашка «Логи Minecraft»: хвост последнего лога выбранной сборки, когда игра не запущена
+ipcMain.handle('game:lastLog', () => {
+  const profiles = store.getProfiles();
+  const d = path.join(store.getSettings().gameDir, 'instances', profiles.selected || '');
+  for (const f of [path.join(d, 'logs', 'latest.log'), path.join(d, 'komori-launch.log')]) {
+    try {
+      const st = fs.statSync(f);
+      const size = Math.min(st.size, 16384);
+      const fd = fs.openSync(f, 'r'); const b = Buffer.alloc(size);
+      fs.readSync(fd, b, 0, size, st.size - size); fs.closeSync(fd);
+      return { text: b.toString('utf8'), at: st.mtimeMs };
+    } catch {}
+  }
+  return { text: '', at: 0 };
 });
 
 ipcMain.handle('game:openLog', () => {

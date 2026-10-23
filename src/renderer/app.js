@@ -12,7 +12,7 @@ const S = {
   sTab: 'general', renaming: null, msCode: null, devName: '',
   // Вкладки входа: microsoft | offline | ygg. Пароль Yggdrasil живёт только в памяти до нажатия «Войти».
   loginTab: 'microsoft', ygg: { login: '', pass: '', url: '', error: '', busy: false },
-  log: '', form: null,
+  log: '', form: null, lastLog: null, ping: null,
   skin: { loading: false, info: null, error: null, forId: null, busy: false },
   update: null, crash: null,
   srv: { status: null, loading: false, built: null, warnings: [], profileId: null, busy: false },
@@ -54,11 +54,10 @@ function toast(msg, ok) {
 
 // ---------- иконки меню ----------
 const NAV = [
-  ['home', 'Главная', '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>'],
-  ['profiles', 'Профили', '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>'],
-  ['versions', 'Версии', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>'],
-  ['mods', 'Моды', '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3h4v3a2 2 0 1 0 0 0h4v4h-3a2 2 0 1 1 0 4h3v4h-4v-3a2 2 0 1 0-4 0v3H6v-4h3a2 2 0 1 0 0-4H6V6h4z"/></svg>'],
-  ['settings', 'Настройки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>']
+  ['home', 'Главная', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V20h-5v-6h-6v6H4z"/></svg>'],
+  ['profiles', 'Сборки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>'],
+  ['versions', 'Версии', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>'],
+  ['mods', 'Каталог', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>']
 ];
 const PLAY_SVG = '<svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg>';
 const CHEVRON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>';
@@ -97,11 +96,7 @@ function renderSide() {
     ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : a.type === 'yggdrasil' ? 'Yggdrasil' : 'Microsoft'}</span></span>`
     : `<span class="avatar">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
   $('#devBadge').classList.toggle('hidden', !S.info.dev);
-  // п.4–5: кнопки Discord и «Сайт» в боковой панели, скрыты если ссылки пустые
-  const L = links(), sl = $('#sideLinks');
-  const sideBtns = [L.discord, L.website].filter(Boolean);
-  sl.innerHTML = sideBtns.map(l => `<button type="button" data-act="openLink" data-id="${esc(l.id)}">${linkIcon(l.icon, 'ico')}${esc(l.name)}</button>`).join('');
-  sl.classList.toggle('hidden', !sideBtns.length);
+  $('#gearBtn').classList.toggle('on', S.screen === 'settings');
   const u = S.update || {};
   const ub = $('#updBanner');
   if (u.state === 'ready') { ub.innerHTML = `<b>Обновление ${esc(u.version)} готово</b><button type="button" class="btn" data-act="updInstall">Перезапустить</button>`; ub.classList.remove('hidden'); }
@@ -124,28 +119,68 @@ function progressHtml() {
   return `<div class="progress"><div class="row"><b>${esc(txt)}</b><span>${pct}%</span></div><div class="bar"><div style="width:${pct}%"></div></div></div>`;
 }
 
+// Komori-сервер первым в списке; если его сборки ещё нет — пункт «Установить и играть»
+function homeMenu(p) {
+  const srvId = S.info.serverManifest ? S.info.serverProfileId : null;
+  const list = S.profiles.list.slice().sort((a, b) => (b.id === srvId) - (a.id === srvId));
+  const item = x => `<button type="button" data-act="pickProfile" data-id="${esc(x.id)}" class="${x.id === (p && p.id) ? 'on' : ''}"><img class="pix" src="${iconSrc(x.icon)}" alt="" width="28" height="28"><span class="t"><b>${esc(x.name)}${x.id === srvId ? ' <span class="tag ok">Сервер</span>' : ''}</b><span>${esc(profMeta(x))}</span></span></button>`;
+  const srvMissing = srvId && !list.some(x => x.id === srvId);
+  return `<div class="pmenu">${srvMissing ? `<button type="button" data-act="playServer"><img class="pix" src="assets/logo.svg" alt="" width="28" height="28"><span class="t"><b>${esc(S.info.server.name || 'Komori')} <span class="tag ok">Сервер</span></b><span>Установить сборку сервера и играть</span></span></button><div class="sep"></div>` : ''}
+    ${list.map(item).join('')}<div class="sep"></div>
+    <button type="button" data-act="newProfile"><span class="t"><b>+ Новая сборка</b></span></button></div>`;
+}
+
+// Плашка сервера: статус, онлайн, кнопка входа и ссылки
+function floatServer() {
+  const pg = S.ping, L = links();
+  const dot = !pg ? 'wait' : pg.online ? '' : 'off';
+  const n = !pg ? 'проверяю…' : pg.online ? `${pg.players} / ${pg.max}` : 'офлайн';
+  const names = pg && pg.online && pg.names && pg.names.length ? `<div class="srv-heads">${pg.names.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '';
+  const icons = [L.discord, L.website].concat(L.social || []).filter(Boolean)
+    .map(l => `<button type="button" class="srv-ico" data-act="openLink" data-id="${esc(l.id)}" title="${esc(l.name)}" aria-label="${esc(l.name)}">${linkIcon(l.icon, 'ico')}</button>`).join('');
+  return `<div class="float">
+    <div class="float-head">Сервер<span class="grow"></span><button type="button" data-act="pingNow" title="Обновить" aria-label="Обновить статус"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button></div>
+    <div class="srv-line"><span class="dot ${dot}"></span><b>${esc(S.info.server.host)}</b><span class="n">${esc(n)}</span></div>
+    ${names}
+    <div class="srv-actions"><button type="button" class="srv-join" data-act="playServer">Играть на ${esc(S.info.server.name || 'Komori')}</button>${icons ? `<div class="srv-links">${icons}</div>` : ''}</div>
+  </div>`;
+}
+
+// Плашка логов: живой вывод игры или хвост последнего лога выбранной сборки
+function logLines() {
+  const raw = S.log || (S.lastLog && S.lastLog.text) || '';
+  return raw.split(/\r?\n/).filter(l => l.trim()).slice(-9).map(l => {
+    const t = l.replace(/^\[(\d\d:\d\d:\d\d)\] \[[^\]]*?\/(\w+)\]: /, '$1  ');
+    const cls = /ERROR|FATAL|Exception/.test(l) ? 'e' : /WARN/.test(l) ? 'w' : '';
+    return `<div class="${cls}">${esc(t)}</div>`;
+  }).join('');
+}
+function floatLogs() {
+  const live = S.running.length > 0;
+  const body = logLines();
+  return `<div class="float logs ${live ? 'live' : ''}">
+    <div class="float-head">${live ? '<span class="dot"></span>' : ''}Логи Minecraft<span class="grow"></span><button type="button" data-act="openLog" title="Открыть лог" aria-label="Открыть лог"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg></button></div>
+    <div class="logbox" id="logbox">${body || '<span class="empty-log">Здесь появятся последние строки игры после запуска.</span>'}</div>
+  </div>`;
+}
+
 function viewHome() {
   const p = selectedProfile();
   const ps = playState();
-  const menu = S.menuOpen ? `<div class="pmenu">${S.profiles.list.map(x =>
-    `<button type="button" data-act="pickProfile" data-id="${esc(x.id)}" class="${x.id === (p && p.id) ? 'on' : ''}"><img class="pix" src="${iconSrc(x.icon)}" alt="" width="28" height="28"><span class="t"><b>${esc(x.name)}</b><span>${esc(profMeta(x))}</span></span></button>`).join('')}
-    <button type="button" data-act="newProfile"><span class="t"><b>+ Новый профиль</b></span></button></div>` : '';
-  return `<section class="hero">
-    <img class="hero-img" src="assets/hero.jpg" alt="">
-    <div class="hero-fade"></div>
-    <div class="hero-body">
-      <h1><span class="k">K</span>omori</h1>
-      <p>Любая версия Minecraft.<br>Твои профили.</p>
-      <div class="play-row">
-        <button type="button" class="play ${ps.cls}" data-act="play">${PLAY_SVG}${ps.label}</button>
-        <button type="button" class="play-more" data-act="toggleMenu" aria-label="Выбрать профиль">${CHEVRON}</button>
+  return `<section class="home">
+    <div class="home-center">
+      <img class="home-logo" src="assets/logo.svg" alt="">
+      <h1 class="home-word">KOMORI</h1>
+      <p class="home-sub">MINECRAFT LAUNCHER</p>
+      <button type="button" class="play ${ps.cls}" data-act="play">${PLAY_SVG}${ps.label}</button>
+      <div class="pwrap">
+        ${p ? `<button type="button" class="pselect" data-act="toggleMenu" aria-expanded="${S.menuOpen}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"><span class="t"><b>${esc(p.name)}</b><span>${esc(profMeta(p))}</span></span>${CHEVRON}</button>`
+          : `<button type="button" class="pselect" data-act="newProfile"><span class="t"><b>+ Создать сборку</b></span></button>`}
+        ${S.menuOpen ? homeMenu(p) : ''}
       </div>
-      ${p ? `<button type="button" class="pselect" data-act="toggleMenu"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="34" height="34"><span class="t"><b>${esc(p.name)}</b><span>${esc(profMeta(p))}</span></span>${CHEVRON}</button>` : ''}
-      ${menu}
       ${progressHtml()}
     </div>
-    <div class="server-pill"><span class="dot"></span><b>${esc(S.info.server.host)}</b><button type="button" data-act="playServer">Играть на Komori</button></div>
-    ${links().social.length ? `<div class="social-home">${links().social.map(l => `<button type="button" data-act="openLink" data-id="${esc(l.id)}" title="${esc(l.name)}" aria-label="${esc(l.name)}">${linkIcon(l.icon)}</button>`).join('')}</div>` : ''}
+    <div class="floats">${floatServer()}${floatLogs()}</div>
   </section>`;
 }
 
@@ -157,7 +192,7 @@ function viewProfiles() {
     <button type="button" class="icon-btn" data-act="openProfileDir" data-id="${esc(p.id)}" aria-label="Открыть папку"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h6l2 2h10v11H3z"/></svg></button>
     <button type="button" class="icon-btn primary" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg></button>
   </div>`).join('');
-  return `<section class="page"><div class="page-head"><h1>Профили</h1><button type="button" class="btn" data-act="newProfile">+ Новый профиль</button></div><div class="grid3">${cards}</div></section>`;
+  return `<section class="page"><div class="page-head"><h1>Сборки</h1><button type="button" class="btn" data-act="newProfile">+ Новая сборка</button></div><div class="grid3">${cards}</div></section>`;
 }
 
 function versionsFiltered() {
@@ -204,7 +239,7 @@ function modsProfile() { return S.profiles.list.find(p => p.id === S.mods.profil
 function viewMods() {
   const M = S.mods;
   const p = modsProfile();
-  if (!p) return `<section class="page"><h1>Моды</h1><div class="soon">Сначала создай профиль.</div></section>`;
+  if (!p) return `<section class="page"><h1>Каталог</h1><div class="soon">Сначала создай сборку.</div></section>`;
   const options = S.profiles.list.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)} — ${esc(profMeta(x))}</option>`).join('');
   const installedKeys = new Set(M.items.filter(i => i.projectId).map(i => i.projectId));
   const tabs = `<div class="tabs" role="tablist">
@@ -269,7 +304,7 @@ function viewMods() {
       <div class="list">${rows}</div>`;
   }
   return `<section class="page" style="overflow:hidden">
-    <div class="page-head"><h1>Моды</h1><select id="modsProfile" class="input" aria-label="Профиль" style="max-width:420px">${options}</select></div>
+    <div class="page-head"><h1>Каталог</h1><select id="modsProfile" class="input" aria-label="Профиль" style="max-width:420px">${options}</select></div>
     ${tabs}${body}</section>`;
 }
 
@@ -362,7 +397,7 @@ function viewSettings() {
       <div class="prow"><span>Версия лаунчера</span><span>${esc(S.info.version)}${S.info.dev ? ' · DEV' : ''}</span></div>
       <div class="prow"><span>Обновления</span><span style="display:flex;gap:10px;align-items:center"><span class="note">${esc(updText())}</span>${S.update && S.update.state !== 'off' ? `<button type="button" class="btn2" data-act="updCheck">Проверить</button>` : ''}${S.update && S.update.state === 'ready' ? `<button type="button" class="btn" data-act="updInstall">Установить</button>` : ''}</span></div>
     </div>
-    ${socialBlock()}
+
     ${st.showConsole ? `<div class="console" id="console">${esc(S.log || 'Здесь появится вывод игры после запуска.')}</div>` : ''}`;
   } else if (S.sTab === 'java') {
     body = `<div class="panel">
@@ -784,8 +819,10 @@ const ACTIONS = {
   mUpdateAll: async () => { for (const u of (S.mods.updates || []).slice()) await ACTIONS.mUpdate(u.key); toast('Моды обновлены', true); },
   mFolder: (type) => K.mods.openFolder(S.mods.profileId, type),
   toggleMenu: () => { S.menuOpen = !S.menuOpen; render(); },
-  pickProfile: async (id) => { S.profiles = await K.profiles.select(id); S.menuOpen = false; render(); },
-  play: () => launch(null, false),
+  pickProfile: async (id) => { S.profiles = await K.profiles.select(id); S.menuOpen = false; S.log = ''; render(); loadLastLog(); },
+  play: () => launch(null, !!(S.info.serverManifest && S.profiles.selected === S.info.serverProfileId)),
+  pingNow: () => refreshPing(true),
+  openLog: () => K.game.openLog(),
   playServer: () => {
     // Без ссылки на сборку сервера кнопка запускает выбранный профиль — говорим об этом явно
     if (!S.info.serverManifest) toast('Сборка сервера не задана (serverManifestUrl) — запускаю выбранный профиль');
@@ -949,11 +986,13 @@ K.game.onLog((text) => {
   S.log = (S.log + text).slice(-60000);
   const c = $('#console');
   if (c) { c.textContent = S.log; c.scrollTop = c.scrollHeight; }
+  const lb = $('#logbox');
+  if (lb) lb.innerHTML = logLines();
 });
 K.game.onRunning((ids) => { S.running = ids || []; render(); });
 K.game.onExit(({ code, error, crash }) => {
   if (crash) S.crash = { code: error ? -1 : code, error: error || '', reason: crash.reason, canReport: crash.canReport, hasCrashReport: crash.hasCrashReport, note: '', sending: false, sent: false };
-  render(); renderCrash();
+  render(); renderCrash(); loadLastLog();
 });
 K.update.onState((st) => { S.update = st; renderSide(); if (S.screen === 'settings') render(); });
 K.accounts.onMsDone((accs) => { S.accounts = accs; S.msCode = null; toast('Вход выполнен', true); render(); });
@@ -971,4 +1010,17 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
   } catch (e) { toast(errText(e)); }
   render();
   loadVersions();
+  loadLastLog();
+  refreshPing();
+  setInterval(refreshPing, 60000);
 })();
+
+async function refreshPing(force) {
+  if (force) { S.ping = null; if (S.screen === 'home') render(); }
+  try { S.ping = await K.server.ping(); } catch { S.ping = { online: false }; }
+  if (S.screen === 'home' && !S.form) render();
+}
+async function loadLastLog() {
+  try { S.lastLog = await K.game.lastLog(); } catch { S.lastLog = null; }
+  if (S.screen === 'home' && !S.running.length) render();
+}
