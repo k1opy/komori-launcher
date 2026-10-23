@@ -74,6 +74,7 @@ function createWindow() {
     width: 1280, height: 760, minWidth: 1040, minHeight: 640,
     frame: false, backgroundColor: '#0E0A1A', show: false,
     title: DEV ? 'Komori Launcher DEV' : 'Komori Launcher',
+    icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'), // иконка в панели задач (и в dev-режиме)
     icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
