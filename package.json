@@ -1,0 +1,36 @@
+{
+  "name": "komori-launcher",
+  "productName": "Komori Launcher",
+  "version": "0.4.0",
+  "description": "Komori Launcher — лаунчер Minecraft сервера Komori",
+  "main": "src/main/main.js",
+  "author": "Komori",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win nsis",
+    "dist:dev": "electron-builder --win nsis -c.extraMetadata.komoriDev=true -c.productName=\"Komori Launcher DEV\" -c.appId=fun.komori.launcher.dev -c.nsis.artifactName=\"Komori-Launcher-DEV-Setup-${version}.${ext}\""
+  },
+  "dependencies": {
+    "adm-zip": "0.5.16"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "fun.komori.launcher",
+    "productName": "Komori Launcher",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "build/icon.ico", "komori.config.json", "package.json"],
+    "win": { "target": ["nsis"], "icon": "build/icon.ico" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Komori-Launcher-Setup-${version}.${ext}",
+      "shortcutName": "Komori Launcher"
+    }
+  }
+}

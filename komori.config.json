@@ -1,0 +1,8 @@
+{
+  "msClientId": "",
+  "curseforgeApiKey": "",
+  "serverManifestUrl": "",
+  "trustedHosts": [],
+  "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
+  "newsUrl": ""
+}

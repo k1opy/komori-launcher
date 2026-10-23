@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://cdn.modrinth.com https://media.forgecdn.net; connect-src 'none'">
+<title>Komori Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand drag"><span class="brand-mark">K</span><span class="brand-word"><b>K</b>omori</span></div>
+    <nav class="nav" id="nav" aria-label="Разделы"></nav>
+    <div class="grow"></div>
+    <div id="devBadge" class="dev-badge hidden">DEV-сборка</div>
+    <button type="button" class="acc-chip" id="accChip"></button>
+  </aside>
+  <main class="main">
+    <div class="titlebar drag">
+      <div class="win-btns no-drag">
+        <button type="button" class="win-btn" id="wMin" aria-label="Свернуть"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M1 6h10" stroke="currentColor" stroke-width="1.5"/></svg></button>
+        <button type="button" class="win-btn" id="wMax" aria-label="Развернуть"><svg width="11" height="11" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+        <button type="button" class="win-btn close" id="wClose" aria-label="Закрыть"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      </div>
+    </div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+<div id="modal" class="modal hidden"></div>
+<div id="manual" class="modal hidden"></div>
+<div id="toast" class="toast hidden" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
