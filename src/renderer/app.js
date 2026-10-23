@@ -341,6 +341,7 @@ function viewSettings() {
       <div class="prow"><span>Сворачивать лаунчер при запуске игры</span>${sw(!!st.minimizeOnLaunch, 'toggleMinimize')}</div>
       <div class="prow"><span>Показывать консоль игры</span>${sw(!!st.showConsole, 'toggleConsole')}</div>
       <div class="prow"><span>Папка игры</span><span style="display:flex;gap:10px;align-items:center"><code>${esc(st.gameDir)}</code><button type="button" class="btn2" data-act="openGameDir">Открыть</button></span></div>
+      <div class="prow"><span>URL сервера скинов<br><span class="note">Пусто — сервер Komori${S.info.skinServerDefault ? '' : ' (пока не задан)'}</span></span><span style="display:flex;gap:10px;align-items:center"><input id="skinSrv" class="input" style="width:300px" placeholder="${esc(S.info.skinServerDefault || 'https://…workers.dev')}" value="${esc(st.skinServerUrl || '')}" aria-label="URL сервера скинов"><button type="button" class="btn2" data-act="saveSkinServer">Сохранить</button></span></div>
       <div class="prow"><span>Версия лаунчера</span><span>${esc(S.info.version)}${S.info.dev ? ' · DEV' : ''}</span></div>
       <div class="prow"><span>Обновления</span><span style="display:flex;gap:10px;align-items:center"><span class="note">${esc(updText())}</span>${S.update && S.update.state !== 'off' ? `<button type="button" class="btn2" data-act="updCheck">Проверить</button>` : ''}${S.update && S.update.state === 'ready' ? `<button type="button" class="btn" data-act="updInstall">Установить</button>` : ''}</span></div>
     </div>
@@ -451,21 +452,40 @@ async function srvLoad() {
 function skinPanel() {
   const a = selectedAccount();
   if (!a) return '';
-  if (a.type !== 'microsoft') return `<div class="panel" style="padding:16px"><b style="color:var(--title)">Скин</b><span class="note">Скины для офлайн-аккаунтов появятся в следующей версии.</span></div>`;
   const sk = S.skin;
   if (sk.forId !== a.id || sk.loading) return `<div class="panel" style="padding:16px"><span class="note">Загружаю скин…</span></div>`;
   if (sk.error) return `<div class="panel" style="padding:16px;gap:8px"><span class="note">${esc(sk.error)}</span><button type="button" class="btn2" data-act="skinReload" style="align-self:flex-start">Повторить</button></div>`;
   const info = sk.info || {};
   const variant = sk.variant || (info.skin && info.skin.variant) || 'classic';
+  const variantChips = `<div class="field"><label>Модель рук</label><div class="chips">
+        <button type="button" class="chip ${variant === 'classic' ? 'on' : ''}" data-act="skinVariant" data-id="classic">Классическая (4 px)</button>
+        <button type="button" class="chip ${variant === 'slim' ? 'on' : ''}" data-act="skinVariant" data-id="slim">Тонкая (3 px)</button></div></div>`;
+
+  // ===== п.2: офлайн-аккаунт — скин хранится в лаунчере и на сервере скинов Komori =====
+  if (a.type !== 'microsoft') {
+    const status = !info.server
+      ? 'Сервер скинов не настроен: скин сохранён только в лаунчере, в игре пока будет стандартный.'
+      : info.skinData ? (info.synced ? 'Скин на сервере Komori — его видят игроки с Komori Launcher.' : 'Скин ещё не загружен на сервер — попробуем при следующем запуске игры.') : '';
+    return `<div class="skinbox">
+    ${skinPreviewHtml(info.name || a.name, !!info.skinData)}
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;min-width:260px">
+      <b style="color:var(--title);font-size:17px">Скин ${esc(info.name || a.name)} <span class="tag">офлайн</span></b>
+      ${variantChips}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn" data-act="offSkinUpload" data-id="${variant}" ${sk.busy ? 'disabled' : ''}>${sk.busy ? 'Сохраняю…' : 'Загрузить PNG'}</button>
+        ${info.skinData && variant !== ((info.skin && info.skin.variant) || 'classic') ? `<button type="button" class="btn2" data-act="offSkinVariant" data-id="${variant}" ${sk.busy ? 'disabled' : ''}>Сохранить модель рук</button>` : ''}
+        ${info.skinData ? `<button type="button" class="btn2" data-act="offSkinReset" ${sk.busy ? 'disabled' : ''}>Убрать скин</button>` : ''}</div>
+      <span class="note">PNG 64×64 (или старый 64×32), до 64 КБ. ${esc(status)}</span>
+    </div></div>`;
+  }
+
   const capes = info.capes || [];
   const active = capes.find(c => c.active);
   return `<div class="skinbox">
-    <canvas id="skinCanvas" width="128" height="256" aria-label="Скин игрока ${esc(a.name)}"></canvas>
-    <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+    ${skinPreviewHtml(info.name || a.name, !!info.skinData)}
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;min-width:260px">
       <b style="color:var(--title);font-size:17px">Скин ${esc(info.name || a.name)}</b>
-      <div class="field"><label>Модель рук</label><div class="chips">
-        <button type="button" class="chip ${variant === 'classic' ? 'on' : ''}" data-act="skinVariant" data-id="classic">Классическая (4 px)</button>
-        <button type="button" class="chip ${variant === 'slim' ? 'on' : ''}" data-act="skinVariant" data-id="slim">Тонкая (3 px)</button></div></div>
+      ${variantChips}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="btn" data-act="skinUpload" data-id="${variant}" ${sk.busy ? 'disabled' : ''}>${sk.busy ? 'Загружаю…' : 'Загрузить PNG'}</button>
         <button type="button" class="btn2" data-act="skinReset" ${sk.busy ? 'disabled' : ''}>Сбросить на стандартный</button></div>
@@ -477,11 +497,11 @@ function skinPanel() {
 
 async function loadSkin(force) {
   const a = selectedAccount();
-  if (!a || a.type !== 'microsoft') return;
+  if (!a) return;
   if (!force && S.skin.forId === a.id && S.skin.info) return;
   S.skin = { loading: true, info: null, error: null, forId: a.id, busy: false };
   render();
-  try { S.skin.info = await K.accounts.skinGet(a.id); }
+  try { S.skin.info = a.type === 'microsoft' ? await K.accounts.skinGet(a.id) : await K.accounts.offSkinGet(a.id); }
   catch (e) { S.skin.error = errText(e); }
   S.skin.loading = false;
   render();
@@ -494,41 +514,75 @@ async function skinAction(run) {
   S.skin.busy = false; render();
 }
 
-// Вид спереди: голова, тело, руки, ноги + второй слой.
-function drawSkin(canvas, dataUrl, slim) {
-  if (!canvas || !canvas.getContext || !dataUrl) return;
+// ===== Превью скина (п.2): спереди, сзади, сбоку + 2D-развёртка =====
+// Части модели: [u, v] начала развёртки, w×h×d. Грани: спереди (u+d, v+d), сзади (u+2d+w, v+d),
+// правый бок (u, v+d), левый бок (u+d+w, v+d).
+function skinParts(slim, modern) {
+  const aw = slim ? 3 : 4;
+  const P = (u, v, w, h, d, ou, ov) => ({ u, v, w, h, d, ou, ov });
+  return {
+    head: P(0, 0, 8, 8, 8, 32, 0), body: P(16, 16, 8, 12, 4, 16, 32),
+    rArm: P(40, 16, aw, 12, 4, 40, 32), lArm: modern ? P(32, 48, aw, 12, 4, 48, 48) : null,
+    rLeg: P(0, 16, 4, 12, 4, 0, 32), lLeg: modern ? P(16, 48, 4, 12, 4, 0, 48) : null, aw
+  };
+}
+function drawSkinView(canvas, img, view, slim) {
+  const ctx = canvas.getContext('2d');
+  const s = canvas.height / 32;
+  const modern = img.height === 64;
+  const k = skinParts(slim, modern), aw = k.aw;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // face: 'front' | 'back' | 'side'; mirror — для старых 64×32 скинов, где левые руки/ноги = зеркало правых
+  const face = (p, f, dx, dy, overlay, mirror) => {
+    if (!p) return;
+    const u = overlay ? p.ou : p.u, v = overlay ? p.ov : p.v;
+    let sx, sw;
+    if (f === 'front') { sx = u + p.d; sw = p.w; } else if (f === 'back') { sx = u + 2 * p.d + p.w; sw = p.w; } else { sx = u; sw = p.d; }
+    const sy = v + p.d;
+    if (mirror) { ctx.save(); ctx.scale(-1, 1); ctx.drawImage(img, sx, sy, sw, p.h, -(dx + sw) * s, dy * s, sw * s, p.h * s); ctx.restore(); }
+    else ctx.drawImage(img, sx, sy, sw, p.h, dx * s, dy * s, sw * s, p.h * s);
+  };
+  // Первый проход — основной слой, второй — накладной (шапка, куртка, рукава, штанины).
+  for (const ov of modern ? [false, true] : [false]) {
+    if (view === 'side') {
+      face(k.head, 'side', 0, 0, ov);
+      face(k.rLeg, 'side', 2, 20, ov);
+      face(k.body, 'side', 2, 8, ov);
+      face(k.rArm, 'side', 2, 8, ov);
+      continue;
+    }
+    const back = view === 'back', f = back ? 'back' : 'front';
+    face(k.head, f, 4, 0, ov);
+    face(k.body, f, 4, 8, ov);
+    // Спереди правая рука игрока — слева от зрителя, сзади — справа
+    face(k.rArm, f, back ? 12 : 4 - aw, 8, ov);
+    face(k.lArm || k.rArm, f, back ? 4 - aw : 12, 8, ov, !k.lArm);
+    face(k.rLeg, f, back ? 8 : 4, 20, ov);
+    face(k.lLeg || k.rLeg, f, back ? 4 : 8, 20, ov, !k.lLeg);
+  }
+  // У старых скинов 64×32 второй слой есть только у головы
+  if (!modern) face(k.head, view, view === 'side' ? 0 : 4, 0, true);
+}
+function drawSkin(dataUrl, slim) {
+  if (!dataUrl) return;
   const img = new Image();
   img.onload = () => {
-    const ctx = canvas.getContext('2d');
-    const s = 8;
-    const modern = img.height === 64;
-    const aw = slim ? 3 : 4;
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const part = (sx, sy, w, h, dx, dy, mirror) => {
-      if (mirror) {
-        ctx.save(); ctx.scale(-1, 1);
-        ctx.drawImage(img, sx, sy, w, h, -(dx + w) * s, dy * s, w * s, h * s);
-        ctx.restore();
-      } else ctx.drawImage(img, sx, sy, w, h, dx * s, dy * s, w * s, h * s);
-    };
-    const ax = 4 - aw;
-    part(8, 8, 8, 8, 4, 0);                       // голова
-    part(20, 20, 8, 12, 4, 8);                    // тело
-    part(44, 20, aw, 12, ax, 8);                  // правая рука
-    if (modern) part(36, 52, aw, 12, 12, 8); else part(44, 20, aw, 12, 12, 8, true);
-    part(4, 20, 4, 12, 4, 20);                    // правая нога
-    if (modern) part(20, 52, 4, 12, 8, 20); else part(4, 20, 4, 12, 8, 20, true);
-    part(40, 8, 8, 8, 4, 0);                      // шапка
-    if (modern) {
-      part(20, 36, 8, 12, 4, 8);                  // куртка
-      part(44, 36, aw, 12, ax, 8);
-      part(52, 52, aw, 12, 12, 8);
-      part(4, 36, 4, 12, 4, 20);
-      part(4, 52, 4, 12, 8, 20);
+    for (const [id, view] of [['skinFront', 'front'], ['skinBack', 'back'], ['skinSide', 'side']]) {
+      const cv = document.getElementById(id);
+      if (cv && cv.getContext) drawSkinView(cv, img, view, slim);
     }
   };
   img.src = dataUrl;
+}
+function skinPreviewHtml(name, hasSkin) {
+  if (!hasSkin) return `<div class="skin-views empty-skin"><span class="note">Скин не загружен — в игре будет стандартный</span></div>`;
+  return `<div class="skin-views">
+    <figure><canvas id="skinFront" width="96" height="192" aria-label="Скин ${esc(name)} спереди"></canvas><figcaption>Спереди</figcaption></figure>
+    <figure><canvas id="skinBack" width="96" height="192" aria-label="Скин ${esc(name)} сзади"></canvas><figcaption>Сзади</figcaption></figure>
+    <figure><canvas id="skinSide" width="48" height="192" aria-label="Скин ${esc(name)} сбоку"></canvas><figcaption>Сбоку</figcaption></figure>
+    <figure><img class="skin-flat" src="${S.skin.info.skinData}" alt="Развёртка скина ${esc(name)}"><figcaption>Развёртка</figcaption></figure>
+  </div>`;
 }
 
 function render() {
@@ -543,8 +597,7 @@ function render() {
   }
   const c = $('#console');
   if (c) c.scrollTop = c.scrollHeight;
-  const cv = document.getElementById('skinCanvas');
-  if (cv && S.skin.info && S.skin.info.skinData) drawSkin(cv, S.skin.info.skinData, S.skin.info.skin && S.skin.info.skin.variant === 'slim');
+  if (document.getElementById('skinFront') && S.skin.info && S.skin.info.skinData) drawSkin(S.skin.info.skinData, (S.skin.variant || (S.skin.info.skin && S.skin.info.skin.variant)) === 'slim');
 }
 
 // ---------- модальное окно профиля ----------
@@ -750,6 +803,11 @@ const ACTIONS = {
   skinVariant: (id) => { S.skin.variant = id; render(); },
   skinUpload: (variant) => { const a = selectedAccount(); if (a) skinAction(() => K.accounts.skinUpload(a.id, variant)).then(() => { S.skin.variant = null; render(); }); },
   skinReset: () => { const a = selectedAccount(); if (a) skinAction(() => K.accounts.skinReset(a.id)); },
+  // п.2: скин офлайн-аккаунта
+  offSkinUpload: (variant) => { const a = selectedAccount(); if (a) skinAction(() => K.accounts.offSkinUpload(a.id, variant)).then(() => { S.skin.variant = null; render(); }); },
+  offSkinVariant: (variant) => { const a = selectedAccount(); if (a) skinAction(() => K.accounts.offSkinVariant(a.id, variant)).then(() => { S.skin.variant = null; render(); }); },
+  offSkinReset: () => { const a = selectedAccount(); if (a) skinAction(() => K.accounts.offSkinReset(a.id)); },
+  saveSkinServer: async () => { const el = document.getElementById('skinSrv'); if (!el) return; S.settings = await K.settings.set({ skinServerUrl: el.value }); S.skin.forId = null; toast('Сохранено', true); render(); },
   toggleMinimize: async () => { S.settings = await K.settings.set({ minimizeOnLaunch: !S.settings.minimizeOnLaunch }); render(); },
   toggleConsole: async () => { S.settings = await K.settings.set({ showConsole: !S.settings.showConsole }); render(); },
   openGameDir: () => K.settings.openGameDir(),

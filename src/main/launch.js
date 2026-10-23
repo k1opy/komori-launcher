@@ -80,6 +80,8 @@ function buildArgs(ctx) {
   // Подстраховка: некоторые json не передают путь к нативным явно.
   if (!jvm.some(a => a.startsWith('-Djava.library.path='))) jvm.unshift(`-Djava.library.path=${install.nativesDir}`);
   if (v.logging && v.logging.client && ctx.logConfigPath) jvm.push(substitute(v.logging.client.argument, { path: ctx.logConfigPath }));
+  // Доп. аргументы JVM от лаунчера (например, -javaagent authlib-injector для скинов офлайн-аккаунтов)
+  if (Array.isArray(ctx.extraJvm)) jvm.push(...ctx.extraJvm);
 
   // Игра
   let game = gameList ? collect(gameList, features) : String(v.minecraftArguments || '').split(' ').filter(Boolean);

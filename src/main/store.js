@@ -23,8 +23,8 @@ function writeJson(name, data) {
 }
 
 // ---------- настройки ----------
-// theme (п.3): 'system' | 'dark' | 'light'
-const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '', theme: 'system' };
+// theme (п.3): 'system' | 'dark' | 'light'; skinServerUrl (п.2): свой адрес сервера скинов, пусто = из komori.config.json
+const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '', theme: 'system', skinServerUrl: '' };
 const THEMES = ['system', 'dark', 'light'];
 
 function getSettings() {
@@ -36,6 +36,7 @@ function setSettings(patch) {
   const s = Object.assign(getSettings(), patch || {});
   s.ram = Math.max(1, Math.min(32, Math.round(Number(s.ram) || 4)));
   if (!THEMES.includes(s.theme)) s.theme = 'system';
+  s.skinServerUrl = String(s.skinServerUrl || '').trim().replace(/\/+$/, '').slice(0, 200);
   writeJson('settings.json', s);
   return s;
 }
@@ -171,5 +172,5 @@ function selectAccount(id) {
 module.exports = {
   getSettings, setSettings,
   getProfiles, saveProfile, deleteProfile, selectProfile, touchProfile, upsertManagedProfile, ICONS, LOADERS,
-  getAccounts, getAccountSecret, upsertAccount, removeAccount, selectAccount
+  getAccounts, getAccountSecret, upsertAccount, removeAccount, selectAccount, enc, dec, DATA_DIR
 };

@@ -29,6 +29,8 @@ function loadConfig() {
 }
 const CONFIG = loadConfig();
 const updater = require('./updater');
+const offlineskin = require('./offlineskin');
+const authlib = require('./authlib');
 const crash = require('./crash');
 let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
@@ -49,6 +51,9 @@ if (httpsUrl(CONFIG.websiteUrl)) LINKS.website = { name: 'Сайт', icon: 'glob
   const icon = LINK_ICONS.includes(String(l.icon || '').toLowerCase()) ? String(l.icon).toLowerCase() : 'link';
   LINKS['social' + i] = { name: String(l.name || 'Ссылка').slice(0, 24), icon, url };
 });
+// ===== Сервер скинов офлайн-аккаунтов (п.2): из настроек, иначе из komori.config.json =====
+function skinServerUrl() { return offlineskin.validServerUrl(store.getSettings().skinServerUrl) || offlineskin.validServerUrl(CONFIG.skinServerUrl); }
+
 function publicLinks() {
   const pick = (id) => LINKS[id] ? { id, name: LINKS[id].name, icon: LINKS[id].icon } : null;
   return { discord: pick('discord'), website: pick('website'), social: Object.keys(LINKS).filter(k => k.startsWith('social')).map(pick) };
@@ -91,7 +96,7 @@ ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks() }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl) }));
 
 // ---------- настройки и профили ----------
 ipcMain.handle('link:open', (e, id) => { const l = LINKS[String(id)]; if (l) shell.openExternal(l.url); return !!l; });
@@ -227,10 +232,19 @@ ipcMain.handle('game:launch', async (e, { profileId, join }) => {
 
   const java = await ensureJava(root, componentFor(install.version), (d, t) => progress('Java', d, t));
   const ramMb = (profile.ram || settings.ram) * 1024;
+  // п.2: офлайн-аккаунт + сервер скинов -> подключаем authlib-injector, чтобы игра брала скины с сервера Komori
+  const extraJvm = [];
+  const skinServer = skinServerUrl();
+  if (acc.type !== 'microsoft' && skinServer) {
+    send('game:progress', { stage: 'Скины', done: 0, total: 1 });
+    await offlineskin.syncIfNeeded(acc, skinServer);
+    const jar = await authlib.ensure(root, t => { if (settings.showConsole) send('game:log', t); });
+    if (jar) extraJvm.push(`-javaagent:${jar}=${skinServer}`);
+  }
   const args = buildArgs({
     root, install, gameDir, ramMb, logConfigPath, launcherVersion: app.getVersion(),
     account: { name: acc.name, uuid: acc.uuid, accessToken: acc.mcToken || '0', type: acc.type, xuid: acc.xuid },
-    join: joinTarget
+    join: joinTarget, extraJvm
   });
 
   send('game:progress', { stage: 'Запуск', done: 1, total: 1 });
@@ -402,6 +416,26 @@ async function msAccount(id) {
   return fresh;
 }
 ipcMain.handle('skin:get', async (e, id) => auth.getSkinInfo(await msAccount(id)));
+
+// ===== Скин офлайн-аккаунта (п.2) =====
+function offAccount(id) {
+  const accs = store.getAccounts();
+  const acc = store.getAccountSecret(id || accs.selected);
+  if (!acc) throw new Error('Аккаунт не найден');
+  if (acc.type === 'microsoft') throw new Error('Это аккаунт Microsoft');
+  return acc;
+}
+ipcMain.handle('skin:offline:get', (e, id) => offlineskin.info(offAccount(id), skinServerUrl()));
+ipcMain.handle('skin:offline:upload', async (e, { id, variant }) => {
+  const acc = offAccount(id);
+  const r = await dialog.showOpenDialog(win, { title: 'Выбери скин (PNG 64×64)', properties: ['openFile'], filters: [{ name: 'PNG', extensions: ['png'] }] });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const st = fs.statSync(r.filePaths[0]);
+  if (st.size > 64 * 1024) throw new Error('Файл скина слишком большой');
+  return offlineskin.save(acc, fs.readFileSync(r.filePaths[0]), variant, skinServerUrl());
+});
+ipcMain.handle('skin:offline:variant', (e, { id, variant }) => offlineskin.setVariant(offAccount(id), variant, skinServerUrl()));
+ipcMain.handle('skin:offline:reset', (e, id) => offlineskin.reset(offAccount(id), skinServerUrl()));
 ipcMain.handle('skin:upload', async (e, { id, variant }) => {
   const acc = await msAccount(id);
   const r = await dialog.showOpenDialog(win, { title: 'Выбери скин (PNG 64×64)', properties: ['openFile'], filters: [{ name: 'PNG', extensions: ['png'] }] });

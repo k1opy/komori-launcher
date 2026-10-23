@@ -232,3 +232,12 @@ body.theme-light .hero{
 }
 body.theme-light .main:has(.hero) .win-btn{color:#C7BBE6}
 body.theme-light .main:has(.hero) .win-btn:hover{background:#1F1638}
+
+/* ===== Превью скина (п.2) ===== */
+.skin-views{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;padding:14px;border-radius:12px;background:var(--side);border:1px solid var(--line)}
+.skin-views figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.skin-views canvas{image-rendering:pixelated}
+.skin-views figcaption{font-size:12px;color:var(--dim)}
+.skin-flat{width:128px;height:auto;image-rendering:pixelated;background:repeating-conic-gradient(var(--line) 0 25%,transparent 0 50%) 0 0/16px 16px;border-radius:6px}
+.empty-skin{min-height:120px;min-width:240px;justify-content:center;align-items:center}
+.skinbox{flex-wrap:wrap}

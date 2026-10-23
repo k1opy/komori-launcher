@@ -1,0 +1,11 @@
+# Деплой через CLI (необязательно — можно вставить worker.js в панели Cloudflare):
+#   npx wrangler login
+#   npx wrangler kv namespace create SKINS   -> вставить id ниже
+#   npx wrangler deploy
+name = "komori-skins"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[kv_namespaces]]
+binding = "SKINS"
+id = "ВСТАВЬ_ID_KV"

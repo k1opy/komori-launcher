@@ -45,6 +45,10 @@ contextBridge.exposeInMainWorld('komori', {
     skinUpload: (id, variant) => ipcRenderer.invoke('skin:upload', { id, variant }),
     skinReset: (id) => ipcRenderer.invoke('skin:reset', id),
     capeSet: (id, capeId) => ipcRenderer.invoke('skin:cape', { id, capeId }),
+    offSkinGet: (id) => ipcRenderer.invoke('skin:offline:get', id),
+    offSkinUpload: (id, variant) => ipcRenderer.invoke('skin:offline:upload', { id, variant }),
+    offSkinVariant: (id, variant) => ipcRenderer.invoke('skin:offline:variant', { id, variant }),
+    offSkinReset: (id) => ipcRenderer.invoke('skin:offline:reset', id),
     onMsDone: on('auth:ms:done'),
     onMsError: on('auth:ms:error')
   },
