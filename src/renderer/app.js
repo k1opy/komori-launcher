@@ -120,14 +120,17 @@ function progressHtml() {
 }
 
 // Komori-сервер первым в списке; если его сборки ещё нет — пункт «Установить и играть»
+// Список сборок внутри раскрывающегося квадрата. Komori-сервер первый; если его сборки нет — «Установить и играть»
 function homeMenu(p) {
   const srvId = S.info.serverManifest ? S.info.serverProfileId : null;
   const list = S.profiles.list.slice().sort((a, b) => (b.id === srvId) - (a.id === srvId));
   const item = x => `<button type="button" data-act="pickProfile" data-id="${esc(x.id)}" class="${x.id === (p && p.id) ? 'on' : ''}"><img class="pix" src="${iconSrc(x.icon)}" alt="" width="28" height="28"><span class="t"><b>${esc(x.name)}${x.id === srvId ? ' <span class="tag ok">Сервер</span>' : ''}</b><span>${esc(profMeta(x))}</span></span></button>`;
   const srvMissing = srvId && !list.some(x => x.id === srvId);
-  return `<div class="pmenu">${srvMissing ? `<button type="button" data-act="playServer"><img class="pix" src="assets/logo.svg" alt="" width="28" height="28"><span class="t"><b>${esc(S.info.server.name || 'Komori')} <span class="tag ok">Сервер</span></b><span>Установить сборку сервера и играть</span></span></button><div class="sep"></div>` : ''}
-    ${list.map(item).join('')}<div class="sep"></div>
-    <button type="button" data-act="newProfile"><span class="t"><b>+ Новая сборка</b></span></button></div>`;
+  const rows = list.length + 1 + (srvMissing ? 1 : 0);
+  const html = `${srvMissing ? `<button type="button" data-act="playServer"><img class="pix" src="assets/logo.svg" alt="" width="28" height="28"><span class="t"><b>${esc(S.info.server.name || 'Komori')} <span class="tag ok">Сервер</span></b><span>Установить сборку сервера и играть</span></span></button>` : ''}
+    ${list.map(item).join('')}
+    <button type="button" data-act="newProfile" class="new"><span class="t"><b>+ Новая сборка</b></span></button>`;
+  return { html, height: Math.min(12 + rows * 50, 320) };
 }
 
 // Плашка сервера: статус, онлайн, кнопка входа и ссылки
@@ -167,18 +170,18 @@ function floatLogs() {
 function viewHome() {
   const p = selectedProfile();
   const ps = playState();
+  const menu = homeMenu(p);
   return `<section class="home">
     <div class="home-center">
       <img class="home-logo" src="assets/logo.svg" alt="">
       <h1 class="home-word">KOMORI</h1>
       <p class="home-sub">MINECRAFT LAUNCHER</p>
-      <div class="play-row">
-        <button type="button" class="play ${ps.cls}" data-act="play">${PLAY_SVG}<span class="pl"><span>${ps.label}</span>${p ? `<small>${esc(p.name)}</small>` : ''}</span></button>
-        <div class="pwrap">
-          ${p ? `<button type="button" class="psq ${S.menuOpen ? 'on' : ''}" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"></button>`
-            : `<button type="button" class="psq" data-act="newProfile" aria-label="Создать сборку" title="Создать сборку">+</button>`}
-          ${S.menuOpen ? homeMenu(p) : ''}
-        </div>
+      <div class="play-row ${S.menuOpen ? 'open' : ''}">
+        <button type="button" class="play ${ps.cls}" data-act="play" tabindex="${S.menuOpen ? -1 : 0}">${PLAY_SVG}<span class="pl"><span>${ps.label}</span>${p ? `<small>${esc(p.name)}</small>` : ''}</span></button>
+        ${p ? `<div class="picker" style="--h:${menu.height}px">
+          <button type="button" class="psq" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}"><img class="pix" src="${iconSrc(p.icon)}" alt="" width="30" height="30"></button>
+          <div class="plist" role="listbox" aria-label="Сборки">${menu.html}</div>
+        </div>` : `<div class="picker"><button type="button" class="psq" data-act="newProfile" aria-label="Создать сборку" title="Создать сборку">+</button></div>`}
       </div>
       <button type="button" class="play-srv" data-act="playServer"><span class="dot ${!S.ping ? 'wait' : S.ping.online ? '' : 'off'}"></span>Играть на ${esc(S.info.server.name || 'Komori')}</button>
       ${progressHtml()}
@@ -765,6 +768,15 @@ async function launch(profileId, join) {
   }
 }
 
+// Квадрат выбора сборки раскрывается поверх «Играть» без перерисовки — так анимация плавная
+function setMenu(open) {
+  S.menuOpen = open;
+  const row = document.querySelector('.play-row');
+  if (!row) return render();
+  row.classList.toggle('open', open);
+  const sq = row.querySelector('.psq'); if (sq) sq.setAttribute('aria-expanded', String(open));
+  const pl = row.querySelector('.play'); if (pl) pl.tabIndex = open ? -1 : 0;
+}
 const ACTIONS = {
   // п.3: смена темы — сохраняется в settings.json и применяется сразу
   setTheme: async (id) => { S.settings = await K.settings.set({ theme: id }); applyTheme(); render(); },
@@ -821,8 +833,13 @@ const ACTIONS = {
   },
   mUpdateAll: async () => { for (const u of (S.mods.updates || []).slice()) await ACTIONS.mUpdate(u.key); toast('Моды обновлены', true); },
   mFolder: (type) => K.mods.openFolder(S.mods.profileId, type),
-  toggleMenu: () => { S.menuOpen = !S.menuOpen; render(); },
-  pickProfile: async (id) => { S.profiles = await K.profiles.select(id); S.menuOpen = false; S.log = ''; render(); loadLastLog(); },
+  toggleMenu: () => setMenu(!S.menuOpen),
+  pickProfile: async (id) => {
+    setMenu(false);
+    S.profiles = await K.profiles.select(id); S.log = '';
+    setTimeout(() => { if (!S.menuOpen) render(); }, 300); // даём квадрату плавно свернуться
+    loadLastLog();
+  },
   play: () => launch(null, !!(S.info.serverManifest && S.profiles.selected === S.info.serverProfileId)),
   pingNow: () => refreshPing(true),
   toggleLogs: () => { S.logsOpen = !S.logsOpen; render(); },
@@ -942,7 +959,7 @@ const ACTIONS = {
 document.addEventListener('click', (ev) => {
   const el = ev.target.closest('[data-act]');
   if (!el) {
-    if (S.menuOpen && !ev.target.closest('.pmenu')) { S.menuOpen = false; render(); }
+    if (S.menuOpen && !ev.target.closest('.picker')) setMenu(false);
     return;
   }
   const fn = ACTIONS[el.dataset.act];
@@ -976,6 +993,7 @@ document.addEventListener('change', async (ev) => {
 });
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && S.form) { S.form = null; renderForm(); }
+  else if (ev.key === 'Escape' && S.menuOpen) setMenu(false);
   if (ev.key === 'Enter' && ev.target.id === 'devName') ACTIONS.devLogin();
   if (ev.key === 'Enter' && ['yggLogin', 'yggPass', 'yggUrl'].includes(ev.target.id)) ACTIONS.yggLogin();
   if (ev.key === 'Enter' && ev.target.id === 'newNick' && S.renaming) ACTIONS.renameSave(S.renaming);
