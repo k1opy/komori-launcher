@@ -1,7 +1,7 @@
 {
   "msClientId": "",
   "curseforgeApiKey": "",
-  "serverManifestUrl": "",
+  "serverManifestUrl": "https://raw.githubusercontent.com/k1opy/komori-launcher/main/server/komori-server.json",
   "trustedHosts": [],
   "crashWebhookUrl": "",
   "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
