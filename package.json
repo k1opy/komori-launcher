@@ -32,7 +32,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "Komori-Launcher-Setup-${version}.${ext}",
+      "artifactName": "Komori-Launcher-Setup.${ext}",
       "shortcutName": "Komori Launcher"
     }
   }

@@ -1,0 +1,35 @@
+# Автосборка Komori Launcher: при пуше тега v* GitHub собирает установщик на Windows
+# и публикует его в Releases (вместе с latest.yml для автообновления).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Установка зависимостей
+        run: npm install --no-audit --no-fund
+
+      - name: Секреты в komori.config.json (только внутри сборки)
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          CRASH_WEBHOOK_URL: ${{ secrets.CRASH_WEBHOOK_URL }}
+        run: node scripts/inject-secrets.js
+
+      - name: Сборка и публикация
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish always
