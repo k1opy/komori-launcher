@@ -35,6 +35,25 @@ CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl ||
 CONFIG.trustedHosts = Array.isArray(CONFIG.trustedHosts) ? CONFIG.trustedHosts.filter(h => /^[A-Za-z0-9.\-]+$/.test(String(h))) : [];
 curseforge.setKey(CONFIG.curseforgeApiKey);
 
+// ===== Ссылки: Discord (п.4), сайт (п.5), соцсети (п.6) =====
+// Берутся только из komori.config.json, только https. В интерфейс уходят id/название/иконка,
+// а открывает ссылку main-процесс по id — страница не может подсунуть свой адрес.
+const LINK_ICONS = ['telegram', 'youtube', 'vk', 'x', 'discord', 'globe', 'link', 'twitch', 'tiktok', 'instagram'];
+function httpsUrl(u) { try { const x = new URL(String(u || '')); return x.protocol === 'https:' ? x.href : ''; } catch { return ''; } }
+const LINKS = {};
+if (httpsUrl(CONFIG.discordUrl)) LINKS.discord = { name: 'Discord', icon: 'discord', url: httpsUrl(CONFIG.discordUrl) };
+if (httpsUrl(CONFIG.websiteUrl)) LINKS.website = { name: 'Сайт', icon: 'globe', url: httpsUrl(CONFIG.websiteUrl) };
+(Array.isArray(CONFIG.socialLinks) ? CONFIG.socialLinks : []).slice(0, 12).forEach((l, i) => {
+  const url = httpsUrl(l && l.url);
+  if (!url) return;
+  const icon = LINK_ICONS.includes(String(l.icon || '').toLowerCase()) ? String(l.icon).toLowerCase() : 'link';
+  LINKS['social' + i] = { name: String(l.name || 'Ссылка').slice(0, 24), icon, url };
+});
+function publicLinks() {
+  const pick = (id) => LINKS[id] ? { id, name: LINKS[id].name, icon: LINKS[id].icon } : null;
+  return { discord: pick('discord'), website: pick('website'), social: Object.keys(LINKS).filter(k => k.startsWith('social')).map(pick) };
+}
+
 let win = null;
 let game = null; // запущенный процесс игры
 let msLogin = null; // { cancelled }
@@ -72,9 +91,10 @@ ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks() }));
 
 // ---------- настройки и профили ----------
+ipcMain.handle('link:open', (e, id) => { const l = LINKS[String(id)]; if (l) shell.openExternal(l.url); return !!l; });
 ipcMain.handle('settings:get', () => store.getSettings());
 ipcMain.handle('settings:set', (e, patch) => store.setSettings(patch));
 ipcMain.handle('settings:openGameDir', () => { const d = store.getSettings().gameDir; fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });

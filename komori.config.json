@@ -5,5 +5,8 @@
   "trustedHosts": [],
   "crashWebhookUrl": "",
   "server": { "name": "Komori", "host": "mc.komori.fun", "port": 25565 },
-  "newsUrl": ""
+  "newsUrl": "",
+  "discordUrl": "",
+  "websiteUrl": "",
+  "socialLinks": []
 }

@@ -26,7 +26,7 @@ function iconSrc(name) { return 'assets/icons/' + encodeURIComponent(name || 'gr
 function errText(e) { return String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''); }
 const LOADER_NAMES = { vanilla: 'Vanilla', fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge', quilt: 'Quilt' };
 const TYPE_NAMES = { release: 'Релиз', snapshot: 'Снапшот', old_beta: 'Бета', old_alpha: 'Альфа' };
-const TYPE_COLORS = { release: '#9FE3B4', snapshot: '#FFD48A', old_beta: '#6FA8FF', old_alpha: '#FF9FD8' };
+const TYPE_COLORS = { release: 'var(--ok)', snapshot: 'var(--warn)', old_beta: 'var(--t-beta)', old_alpha: 'var(--t-alpha)' };
 const TYPE_ICONS = { release: 'grass', snapshot: 'potion', old_beta: 'pickaxe', old_alpha: 'chest' };
 const ICONS = ['pickaxe', 'sword', 'fish', 'bat', 'orb', 'grass', 'diamond', 'heart', 'star', 'crown', 'chest', 'potion', 'book',
   'axe', 'bow', 'skull', 'mushroom', 'tree', 'flame', 'snow', 'moon', 'amethyst', 'shield', 'compass', 'rod', 'portal'];
@@ -60,8 +60,31 @@ const NAV = [
 ];
 const PLAY_SVG = '<svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg>';
 const CHEVRON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>';
-const SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8F84AD" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+const SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
 const MS_LOGO = '<svg width="17" height="17" viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9" fill="#F25022"/><rect x="13" y="2" width="9" height="9" fill="#7FBA00"/><rect x="2" y="13" width="9" height="9" fill="#00A4EF"/><rect x="13" y="13" width="9" height="9" fill="#FFB900"/></svg>';
+
+// ===== Тема лаунчера (п.3) =====
+// settings.theme: 'system' | 'dark' | 'light'. «Системная» следит за Windows через matchMedia.
+const darkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function applyTheme() {
+  const mode = (S.settings && S.settings.theme) || 'system';
+  const dark = mode === 'dark' || (mode === 'system' && (!darkMq || darkMq.matches));
+  document.body.classList.toggle('theme-dark', dark);
+  document.body.classList.toggle('theme-light', !dark);
+}
+if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyTheme);
+const THEME_NAMES = [['light', 'Светлая'], ['dark', 'Тёмная'], ['system', 'Системная']];
+
+// ===== Ссылки: Discord (п.4), сайт (п.5), соцсети (п.6) =====
+// Адреса знает только main-процесс; здесь только id, название и иконка из renderer/icons/.
+function linkIcon(icon, cls) { return `<img class="${cls || ''}" src="icons/${encodeURIComponent(icon || 'link')}.svg" alt="" width="18" height="18">`; }
+function links() { return (S.info && S.info.links) || { discord: null, website: null, social: [] }; }
+function socialBlock() {
+  const soc = links().social;
+  if (!soc.length) return '';
+  return `<div class="panel" style="padding:16px;gap:12px"><b style="color:var(--title)">Соцсети</b><div class="social">${soc.map(l =>
+    `<button type="button" data-act="openLink" data-id="${esc(l.id)}">${linkIcon(l.icon, 'ico')}${esc(l.name)}</button>`).join('')}</div></div>`;
+}
 
 // ---------- отрисовка ----------
 function renderSide() {
@@ -72,6 +95,11 @@ function renderSide() {
     ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : 'Microsoft'}</span></span>`
     : `<span class="avatar">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
   $('#devBadge').classList.toggle('hidden', !S.info.dev);
+  // п.4–5: кнопки Discord и «Сайт» в боковой панели, скрыты если ссылки пустые
+  const L = links(), sl = $('#sideLinks');
+  const sideBtns = [L.discord, L.website].filter(Boolean);
+  sl.innerHTML = sideBtns.map(l => `<button type="button" data-act="openLink" data-id="${esc(l.id)}">${linkIcon(l.icon, 'ico')}${esc(l.name)}</button>`).join('');
+  sl.classList.toggle('hidden', !sideBtns.length);
   const u = S.update || {};
   const ub = $('#updBanner');
   if (u.state === 'ready') { ub.innerHTML = `<b>Обновление ${esc(u.version)} готово</b><button type="button" class="btn" data-act="updInstall">Перезапустить</button>`; ub.classList.remove('hidden'); }
@@ -114,6 +142,7 @@ function viewHome() {
       ${progressHtml()}
     </div>
     <div class="server-pill"><span class="dot"></span><b>${esc(S.info.server.host)}</b><button type="button" data-act="playServer">Играть на Komori</button></div>
+    ${links().social.length ? `<div class="social-home">${links().social.map(l => `<button type="button" data-act="openLink" data-id="${esc(l.id)}" title="${esc(l.name)}" aria-label="${esc(l.name)}">${linkIcon(l.icon)}</button>`).join('')}</div>` : ''}
   </section>`;
 }
 
@@ -225,7 +254,7 @@ function viewMods() {
         <div class="t"><b class="mtitle-static">${esc(it.title)}</b><span class="mby">${esc(MTYPE_ONE[it.type])}${it.version ? ' · ' + esc(it.version) : ''} · ${esc(SOURCE_NAMES[it.source] || 'вручную')}</span><span class="mdesc">${esc(it.file)}</span></div>
         ${u ? `<button type="button" class="btn" data-act="mUpdate" data-id="${esc(it.key)}" ${busy ? 'disabled' : ''}>${busy ? 'Обновляю…' : 'Обновить до ' + esc(u.to)}</button>` : ''}
         ${sw(it.enabled, 'mToggle').replace('data-act="mToggle"', `data-act="mToggle" data-id="${esc(it.key)}" aria-label="Включён"`)}
-        <button type="button" class="icon-btn" data-act="mRemove" data-id="${esc(it.key)}" aria-label="Удалить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF9FB8" stroke-width="2.2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
+        <button type="button" class="icon-btn" data-act="mRemove" data-id="${esc(it.key)}" aria-label="Удалить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger-text)" stroke-width="2.2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
     }).join('') : `<div class="empty">Пока ничего не установлено. Найди моды во вкладке «Каталог Modrinth».</div>`;
     body = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button type="button" class="btn2" data-act="mCheck" ${M.checking ? 'disabled' : ''}>${M.checking ? 'Проверяю…' : 'Проверить обновления'}</button>
@@ -307,12 +336,15 @@ function viewSettings() {
   let body = '';
   if (S.sTab === 'general') {
     body = `<div class="panel">
+      <div class="prow"><span>Тема</span><div class="theme-seg" role="radiogroup" aria-label="Тема">${THEME_NAMES.map(([id, l]) =>
+        `<button type="button" role="radio" aria-checked="${(st.theme || 'system') === id}" class="${(st.theme || 'system') === id ? 'on' : ''}" data-act="setTheme" data-id="${id}">${l}</button>`).join('')}</div></div>
       <div class="prow"><span>Сворачивать лаунчер при запуске игры</span>${sw(!!st.minimizeOnLaunch, 'toggleMinimize')}</div>
       <div class="prow"><span>Показывать консоль игры</span>${sw(!!st.showConsole, 'toggleConsole')}</div>
       <div class="prow"><span>Папка игры</span><span style="display:flex;gap:10px;align-items:center"><code>${esc(st.gameDir)}</code><button type="button" class="btn2" data-act="openGameDir">Открыть</button></span></div>
       <div class="prow"><span>Версия лаунчера</span><span>${esc(S.info.version)}${S.info.dev ? ' · DEV' : ''}</span></div>
       <div class="prow"><span>Обновления</span><span style="display:flex;gap:10px;align-items:center"><span class="note">${esc(updText())}</span>${S.update && S.update.state !== 'off' ? `<button type="button" class="btn2" data-act="updCheck">Проверить</button>` : ''}${S.update && S.update.state === 'ready' ? `<button type="button" class="btn" data-act="updInstall">Установить</button>` : ''}</span></div>
     </div>
+    ${socialBlock()}
     ${st.showConsole ? `<div class="console" id="console">${esc(S.log || 'Здесь появится вывод игры после запуска.')}</div>` : ''}`;
   } else if (S.sTab === 'java') {
     body = `<div class="panel">
@@ -341,7 +373,7 @@ function viewSettings() {
     const code = S.msCode ? `<div class="codebox"><span>Открой страницу входа Microsoft и введи код:</span><span class="code">${esc(S.msCode.userCode)}</span>
       <div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn2" data-act="msOpen">Открыть страницу</button><button type="button" class="btn2" data-act="msCopy">Скопировать код</button><button type="button" class="btn-ghost" data-act="msCancel">Отмена</button><span class="note">Жду подтверждения…</span></div></div>` : '';
     const hasMs = S.accounts.list.some(x => x.type === 'microsoft');
-    const dev = (hasMs || S.info.dev) ? `<div class="codebox" style="border-color:${hasMs ? '#3A2C66' : '#8A6A2A'}"><div class="field"><label for="devName">${hasMs ? 'Офлайн-аккаунт' : 'DEV: тестовый вход'}</label><input class="input" id="devName" maxlength="16" placeholder="${hasMs ? 'Ник для офлайн-аккаунта' : 'Ник для теста'}" value="${esc(S.devName)}"></div>
+    const dev = (hasMs || S.info.dev) ? `<div class="codebox" style="border-color:${hasMs ? 'var(--line4)' : '#8A6A2A'}"><div class="field"><label for="devName">${hasMs ? 'Офлайн-аккаунт' : 'DEV: тестовый вход'}</label><input class="input" id="devName" maxlength="16" placeholder="${hasMs ? 'Ник для офлайн-аккаунта' : 'Ник для теста'}" value="${esc(S.devName)}"></div>
       <div style="display:flex;gap:8px;align-items:center"><button type="button" class="${hasMs ? 'btn2' : 'btn-dev'}" data-act="devLogin">${hasMs ? '+ Добавить офлайн-аккаунт' : 'Войти для теста'}</button><span class="note">${hasMs ? 'Доступно, потому что ты вошёл через Microsoft с купленной игрой.' : 'Есть только в тестовой сборке.'}</span></div></div>`
       : `<span class="note">Офлайн-аккаунты можно добавить после входа через Microsoft.</span>`;
     body = `<div style="display:flex;flex-direction:column;gap:12px">${rows || '<div class="note">Аккаунтов пока нет.</div>'}
@@ -368,8 +400,8 @@ function renderCrash() {
   const title = c.error ? 'Игра не запустилась' : 'Игра вылетела';
   m.innerHTML = `<div class="dialog" role="dialog" aria-label="${title}" style="width:600px">
     <div class="dialog-head"><h2>${title}</h2><button type="button" class="icon-btn" data-act="crashClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
-    <div class="panel" style="padding:14px;gap:6px"><span class="note">Код выхода: ${esc(c.code)}</span><b style="color:#fff;user-select:text">${esc(c.error || c.reason || 'Причина не определена — подробности в логе')}</b></div>
-    ${c.sent ? `<div class="codebox" style="border-color:#2E7D4F"><b style="color:#9FE3B4">Отчёт отправлен админам</b><span class="note">Спасибо! Админы посмотрят лог в Discord.</span></div>`
+    <div class="panel" style="padding:14px;gap:6px"><span class="note">Код выхода: ${esc(c.code)}</span><b style="color:var(--title);user-select:text">${esc(c.error || c.reason || 'Причина не определена — подробности в логе')}</b></div>
+    ${c.sent ? `<div class="codebox" style="border-color:#2E7D4F"><b style="color:var(--ok)">Отчёт отправлен админам</b><span class="note">Спасибо! Админы посмотрят лог в Discord.</span></div>`
       : c.canReport ? `<div class="field"><label for="crashNote">Что ты делал перед вылетом? (необязательно)</label><textarea id="crashNote" class="input" rows="3" maxlength="1000" placeholder="Например: зашёл в Незер, открыл сундук…">${esc(c.note)}</textarea></div>
         <span class="note">Админам уйдут: ник, профиль, версия, ядро, список модов и логи игры. Пароли и токены не отправляются.</span>`
       : `<span class="note">Отправка отчётов не настроена. Открой лог и отправь его админам в Discord вручную.</span>`}
@@ -392,17 +424,17 @@ function viewServerAdmin() {
     : !V.status ? '' : !V.status.url
       ? `<span class="note">Ссылка на сборку не задана: впиши serverManifestUrl в komori.config.json. Пока её нет, «Играть на Komori» запускает выбранный профиль.</span>`
       : V.status.error ? `<span class="note">${esc(V.status.url)}<br>Ошибка: ${esc(V.status.error)}</span>`
-        : `<span class="note">${esc(V.status.url)}</span><b style="color:#fff">${manifestSummary(V.status.manifest)}</b><span class="note">Обновлена: ${esc((V.status.manifest.updated || '').replace('T', ' ').slice(0, 16))}</span>`;
+        : `<span class="note">${esc(V.status.url)}</span><b style="color:var(--title)">${manifestSummary(V.status.manifest)}</b><span class="note">Обновлена: ${esc((V.status.manifest.updated || '').replace('T', ' ').slice(0, 16))}</span>`;
   const built = V.built ? `<div class="panel" style="padding:16px;gap:10px">
-      <b style="color:#fff">${manifestSummary(V.built)}</b>
-      ${V.warnings.length ? `<div class="codebox" style="border-color:#8A6A2A"><b style="color:#FFD48A">Не попало в сборку (${V.warnings.length})</b>${V.warnings.map(w => `<span class="note">${esc(w)}</span>`).join('')}</div>` : ''}
+      <b style="color:var(--title)">${manifestSummary(V.built)}</b>
+      ${V.warnings.length ? `<div class="codebox" style="border-color:#8A6A2A"><b style="color:var(--warn)">Не попало в сборку (${V.warnings.length})</b>${V.warnings.map(w => `<span class="note">${esc(w)}</span>`).join('')}</div>` : ''}
       <div class="list" style="max-height:220px">${V.built.files.map(f => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(f.title)}</b><span class="mdesc">${esc(f.path)}</span></div></div>`).join('') || '<div class="empty">Без модов</div>'}</div>
       <div style="display:flex;gap:8px"><button type="button" class="btn" data-act="srvSave">Сохранить komori-server.json</button></div>
       <span class="note">Загрузи файл по ссылке из serverManifestUrl (сайт, GitHub и т. п.) — у всех игроков сборка обновится при следующем «Играть на Komori».</span></div>` : '';
   return `<div style="display:flex;flex-direction:column;gap:14px">
-    <div class="panel" style="padding:16px;gap:6px"><b style="color:#fff">Сборка сервера сейчас</b>${status}
+    <div class="panel" style="padding:16px;gap:6px"><b style="color:var(--title)">Сборка сервера сейчас</b>${status}
       <button type="button" class="btn2" data-act="srvLoad" style="align-self:flex-start;margin-top:6px">Обновить</button></div>
-    <div class="panel" style="padding:16px;gap:10px"><b style="color:#fff">Собрать новую из профиля</b>
+    <div class="panel" style="padding:16px;gap:10px"><b style="color:var(--title)">Собрать новую из профиля</b>
       <span class="note">Настрой обычный профиль: версия, ядро, моды и ресурспаки из каталога. Выключенные моды в сборку не попадут.</span>
       <div style="display:flex;gap:10px;align-items:center"><select id="srvProfile" class="input" aria-label="Профиль" style="flex:1">${own.map(p => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>${esc(p.name)} — ${esc(profMeta(p))}</option>`).join('')}</select>
       <button type="button" class="btn" data-act="srvBuild" data-id="${esc(pid || '')}" ${V.busy || !pid ? 'disabled' : ''}>${V.busy ? 'Собираю…' : 'Собрать'}</button></div></div>
@@ -419,7 +451,7 @@ async function srvLoad() {
 function skinPanel() {
   const a = selectedAccount();
   if (!a) return '';
-  if (a.type !== 'microsoft') return `<div class="panel" style="padding:16px"><b style="color:#fff">Скин</b><span class="note">Скины для офлайн-аккаунтов появятся в следующей версии.</span></div>`;
+  if (a.type !== 'microsoft') return `<div class="panel" style="padding:16px"><b style="color:var(--title)">Скин</b><span class="note">Скины для офлайн-аккаунтов появятся в следующей версии.</span></div>`;
   const sk = S.skin;
   if (sk.forId !== a.id || sk.loading) return `<div class="panel" style="padding:16px"><span class="note">Загружаю скин…</span></div>`;
   if (sk.error) return `<div class="panel" style="padding:16px;gap:8px"><span class="note">${esc(sk.error)}</span><button type="button" class="btn2" data-act="skinReload" style="align-self:flex-start">Повторить</button></div>`;
@@ -430,7 +462,7 @@ function skinPanel() {
   return `<div class="skinbox">
     <canvas id="skinCanvas" width="128" height="256" aria-label="Скин игрока ${esc(a.name)}"></canvas>
     <div style="flex:1;display:flex;flex-direction:column;gap:12px">
-      <b style="color:#fff;font-size:17px">Скин ${esc(info.name || a.name)}</b>
+      <b style="color:var(--title);font-size:17px">Скин ${esc(info.name || a.name)}</b>
       <div class="field"><label>Модель рук</label><div class="chips">
         <button type="button" class="chip ${variant === 'classic' ? 'on' : ''}" data-act="skinVariant" data-id="classic">Классическая (4 px)</button>
         <button type="button" class="chip ${variant === 'slim' ? 'on' : ''}" data-act="skinVariant" data-id="slim">Тонкая (3 px)</button></div></div>
@@ -560,7 +592,7 @@ function renderForm() {
   else if (f.lv.error) lvBox = `<div class="pick-list empty">${esc(f.lv.error)}</div>`;
   else if (!f.lv.list.length) lvBox = `<div class="pick-list empty">${esc(LOADER_NAMES[f.loader])} нет для Minecraft ${esc(f.lv.mc || f.mcVersion)}</div>`;
   else lvBox = `<div class="pick-list"><button type="button" class="${!f.loaderVersion ? 'on' : ''}" data-act="fLv" data-id=""><span>Авто — рекомендуемая</span></button>${f.lv.list.slice(0, 300).map(v =>
-    `<button type="button" class="${f.loaderVersion === v.id ? 'on' : ''}" data-act="fLv" data-id="${esc(v.id)}"><span>${esc(v.id)}</span><span style="font-size:12px;color:#9FE3B4">${esc(v.tag)}</span></button>`).join('')}</div>`;
+    `<button type="button" class="${f.loaderVersion === v.id ? 'on' : ''}" data-act="fLv" data-id="${esc(v.id)}"><span>${esc(v.id)}</span><span style="font-size:12px;color:var(--ok)">${esc(v.tag)}</span></button>`).join('')}</div>`;
   const types = Object.keys(TYPE_NAMES).map(t => `<button type="button" class="chip ${f.mcType === t ? 'on' : ''}" data-act="fType" data-id="${t}">${t === 'release' ? 'Релизы' : t === 'snapshot' ? 'Снапшоты' : TYPE_NAMES[t]}</button>`).join('');
   let vers = '<div class="empty">Загружаю…</div>';
   if (S.versions) {
@@ -570,7 +602,7 @@ function renderForm() {
   } else if (S.versionsError) vers = `<div class="empty">${esc(S.versionsError)}</div>`;
   m.innerHTML = `<div class="dialog" role="dialog" aria-label="${f.id ? 'Изменить профиль' : 'Новый профиль'}">
     <div class="dialog-head"><h2>${f.id ? 'Изменить профиль' : 'Новый профиль'}</h2><button type="button" class="icon-btn" data-act="fClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
-    <div style="display:flex;gap:14px;align-items:flex-end"><img class="pix" src="${iconSrc(f.icon)}" alt="" width="64" height="64" style="padding:6px;border-radius:12px;background:#0B0816;border:2px solid #8B3DFF">
+    <div style="display:flex;gap:14px;align-items:flex-end"><img class="pix" src="${iconSrc(f.icon)}" alt="" width="64" height="64" style="padding:6px;border-radius:12px;background:var(--side);border:2px solid #8B3DFF">
       <div class="field" style="flex:1"><label for="fName">Название</label><input class="input" id="fName" maxlength="32" value="${esc(f.name)}"></div></div>
     <div class="field"><label>Иконка</label><div class="icon-grid">${icons}</div></div>
     <div class="field"><label>Ядро</label><div class="seg">${loaders}</div></div>
@@ -583,7 +615,7 @@ function renderForm() {
         <input type="range" id="fRam" min="0" max="16" step="1" value="${f.ram || 0}" aria-label="Память профиля"></div>
       ${f.id ? `<button type="button" class="btn-ghost" data-act="fDelete">Удалить профиль</button>` : ''}
     </div>
-    <div class="dialog-foot"><span style="color:#C7BBE6">${esc(LOADER_NAMES[f.loader])}${f.loader !== 'vanilla' ? ' ' + esc(f.loaderVersion || '(авто)') : ''} · ${esc(mcLabel(f.mcVersion))}</span>
+    <div class="dialog-foot"><span style="color:var(--text2)">${esc(LOADER_NAMES[f.loader])}${f.loader !== 'vanilla' ? ' ' + esc(f.loaderVersion || '(авто)') : ''} · ${esc(mcLabel(f.mcVersion))}</span>
       <div style="display:flex;gap:8px"><button type="button" class="btn2" data-act="fClose">Отмена</button><button type="button" class="btn" data-act="fSave">${f.id ? 'Сохранить' : 'Создать'}</button></div></div>
   </div>`;
   m.classList.remove('hidden');
@@ -616,6 +648,10 @@ async function launch(profileId, join) {
 }
 
 const ACTIONS = {
+  // п.3: смена темы — сохраняется в settings.json и применяется сразу
+  setTheme: async (id) => { S.settings = await K.settings.set({ theme: id }); applyTheme(); render(); },
+  // п.4–6: открыть ссылку из конфига во внешнем браузере
+  openLink: (id) => { K.openLink(id); },
   nav: (id) => {
     S.screen = id; S.menuOpen = false;
     if (id === 'versions' && !S.versions) loadVersions();
@@ -822,6 +858,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
   try {
     S.info = await K.info();
     S.settings = await K.settings.get();
+    applyTheme();
     S.profiles = await K.profiles.get();
     S.accounts = await K.accounts.get();
     S.update = await K.update.state();

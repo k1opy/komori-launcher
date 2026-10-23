@@ -23,7 +23,9 @@ function writeJson(name, data) {
 }
 
 // ---------- настройки ----------
-const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '' };
+// theme (п.3): 'system' | 'dark' | 'light'
+const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '', theme: 'system' };
+const THEMES = ['system', 'dark', 'light'];
 
 function getSettings() {
   const s = Object.assign({}, DEFAULT_SETTINGS, readJson('settings.json', {}));
@@ -33,6 +35,7 @@ function getSettings() {
 function setSettings(patch) {
   const s = Object.assign(getSettings(), patch || {});
   s.ram = Math.max(1, Math.min(32, Math.round(Number(s.ram) || 4)));
+  if (!THEMES.includes(s.theme)) s.theme = 'system';
   writeJson('settings.json', s);
   return s;
 }

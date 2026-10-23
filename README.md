@@ -1,6 +1,23 @@
-# Komori Launcher 0.5.0
+# Komori Launcher 0.6.0
 
 Лаунчер Minecraft для Windows в стиле Komori. Electron, без сторонних библиотек для Minecraft: версии, Java и ассеты качаются напрямую с серверов Mojang.
+
+## Новое в 0.6.0: тема и ссылки
+
+**Тема.** Настройки → Общие → «Тема»: Светлая, Тёмная или Системная. «Системная» следит за темой Windows на лету. Выбор хранится в `settings.json` (`theme`). Главный экран с артом остаётся тёмным в любой теме.
+
+**Discord, сайт, соцсети.** Всё задаётся в `komori.config.json`, пустые поля скрывают кнопки:
+```json
+"discordUrl": "https://discord.gg/xxxx",
+"websiteUrl": "https://komori.fun",
+"socialLinks": [
+  { "name": "Telegram", "url": "https://t.me/komori", "icon": "telegram" },
+  { "name": "YouTube", "url": "https://youtube.com/@komori", "icon": "youtube" },
+  { "name": "VK", "url": "https://vk.com/komori", "icon": "vk" },
+  { "name": "X", "url": "https://x.com/komori", "icon": "x" }
+]
+```
+Discord и «Сайт» — кнопки внизу боковой панели. Соцсети — иконки на главной и блок «Соцсети» в настройках. Иконки лежат в `src/renderer/icons/`: telegram, youtube, vk, x, discord, globe, link, twitch, tiktok, instagram (неизвестное имя → link). Принимаются только https-ссылки, открывает их main-процесс в браузере по умолчанию.
 
 ## Новое в 0.5.0: автообновление и отчёт о вылете
 

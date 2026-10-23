@@ -5,7 +5,7 @@ const path = require('path');
 const { downloadAll, sha1File } = require('./net');
 
 const API = 'https://api.modrinth.com/v2';
-const MR_UA = 'komori/KomoriLauncher/0.5.0 (mc.komori.fun)';
+const MR_UA = 'komori/KomoriLauncher/0.6.0 (mc.komori.fun)';
 const FOLDERS = { mod: 'mods', resourcepack: 'resourcepacks', shader: 'shaderpacks' };
 const EXT = { mod: /\.jar(\.disabled)?$/i, resourcepack: /\.zip(\.disabled)?$/i, shader: /\.zip(\.disabled)?$/i };
 

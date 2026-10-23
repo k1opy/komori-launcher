@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('komori', {
     onState: on('win:state')
   },
   info: () => ipcRenderer.invoke('app:info'),
+  openLink: (id) => ipcRenderer.invoke('link:open', id),
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     set: (patch) => ipcRenderer.invoke('settings:set', patch),
