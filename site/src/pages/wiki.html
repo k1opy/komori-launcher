@@ -8,19 +8,17 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
 <style>
 body{margin:0;background:#0E0A1A}
 a{color:#D9B8FF}a:hover{color:#F3E6FF}
 </style>
 </helmet>
-<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.6">
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.6">
 
 <!--KOMORI_HEADER-->
 
 <section style="max-width: 1240px; margin: 0 auto; padding: 48px 24px 28px; display: flex; flex-direction: column; gap: 18px">
-<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(32px, 4.5vw, 52px); color: #FFFFFF">Вики Komori</h1>
+<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: clamp(32px, 4.5vw, 52px); color: #FFFFFF">Вики Komori</h1>
 <p style="margin: 0; color: #C7BBE6; max-width: 680px; font-size: 18px">Рыбалка, 132 рыбы, снасти, 73 зачарования, магазин игроков, награды за головы, топы и команды.</p>
 <div style="display: flex; align-items: center; gap: 10px; max-width: 560px; padding: 0 14px; border-radius: 12px; border: 1px solid #2E2250; background: #170F2B">
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B9AED6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
@@ -45,26 +43,26 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <sc-if value="{{showFish}}" hint-placeholder-val="{{ true }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
 <img src="/assets/hero.jpg" alt="Fishing Update" style="width: 100%; aspect-ratio: 16 / 7; object-fit: cover; display: block; border-radius: 20px; border: 1px solid #2E2250">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Рыбалка</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Рыбалка</h2>
 <p style="margin: 0; color: #C7BBE6">Своя система рыбалки Komori. При поклёвке на экране запускается мини-игра, улов зависит от биома, а за пойманную рыбу ты получаешь очки рыбака и рыбацкие монеты с продажи.</p>
 
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
 <h3 style="margin: 0; font-size: 20px; color: #FFFFFF">Мини-игра</h3>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
 <div style="background: #1F1638; border-radius: 14px; padding: 16px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">5 шкал</div>
+<div style="font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">5 шкал</div>
 <div style="color: #C7BBE6; font-size: 15px">Ползунок бегает вверх-вниз. Жми <b style="color: #FFFFFF">F</b>, когда он в зелёной зоне, — переходишь к следующей шкале.</div>
 </div>
 <div style="background: #1F1638; border-radius: 14px; padding: 16px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">3 жизни</div>
+<div style="font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">3 жизни</div>
 <div style="color: #C7BBE6; font-size: 15px">Промах откатывает на шкалу назад, промах на первой шкале отнимает жизнь.</div>
 </div>
 <div style="background: #1F1638; border-radius: 14px; padding: 16px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">90 секунд</div>
+<div style="font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800; color: #B57BFF">90 секунд</div>
 <div style="color: #C7BBE6; font-size: 15px">Не успел пройти все шкалы — рыба уходит.</div>
 </div>
 <div style="background: #1F1638; border-radius: 14px; padding: 16px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800; color: #FFC857">Бонус 10%</div>
+<div style="font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800; color: #FFC857">Бонус 10%</div>
 <div style="color: #C7BBE6; font-size: 15px">Иногда появляется бонусная точка. Попади в неё и закончи игру — получишь сокровище.</div>
 </div>
 </div>
@@ -78,7 +76,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <thead><tr style="text-align: left; color: #B9AED6"><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Ранг</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Очки рыбака</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Продажа</th></tr></thead>
 <tbody>
 <sc-for list="{{fishRanks}}" as="r" hint-placeholder-count="5">
-<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839"><span style="display: inline-flex; width: 36px; height: 36px; border-radius: 10px; border: 2px solid {{r.color}}; color: {{r.color}}; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-weight: 800">{{r.rank}}</span></td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.xp}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.sell}} монет</td></tr>
+<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839"><span style="display: inline-flex; width: 36px; height: 36px; border-radius: 10px; border: 2px solid {{r.color}}; color: {{r.color}}; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-weight: 800">{{r.rank}}</span></td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.xp}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.sell}} монет</td></tr>
 </sc-for>
 </tbody>
 </table>
@@ -93,7 +91,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <thead><tr style="text-align: left; color: #B9AED6"><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Ранг</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Очков до следующего</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Удача</th><th style="padding: 10px 12px; border-bottom: 1px solid #2E2250">Шанс бонуса</th></tr></thead>
 <tbody>
 <sc-for list="{{anglerRanks}}" as="r" hint-placeholder-count="6">
-<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839; font-family: 'Unbounded', sans-serif; font-weight: 800; color: {{r.color}}">{{r.rank}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.need}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.luck}}%</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.bonus}}%</td></tr>
+<tr><td style="padding: 10px 12px; border-bottom: 1px solid #221839; font-family: 'Montserrat', sans-serif; font-weight: 800; color: {{r.color}}">{{r.rank}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">{{r.need}}</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.luck}}%</td><td style="padding: 10px 12px; border-bottom: 1px solid #221839; color: #E2DAF5">+{{r.bonus}}%</td></tr>
 </sc-for>
 </tbody>
 </table>
@@ -116,7 +114,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showFishList}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 20px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Рыбы</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Рыбы</h2>
 <p style="margin: 0; color: #C7BBE6">132 вида. Выбери биом. В игре свой прогресс смотри в <code style="color: #FF9FD8">/kf catalog</code>.</p>
 <div role="tablist" aria-label="Биом" style="display: flex; flex-wrap: wrap; gap: 8px">
 <sc-for list="{{biomeTabs}}" as="b" hint-placeholder-count="9">
@@ -129,7 +127,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px">
 <sc-for list="{{fishList}}" as="f" hint-placeholder-count="15">
 <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #130D24; border: 1px solid #2E2250">
-<span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; border: 2px solid {{f.color}}; color: {{f.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 800">{{f.rank}}</span>
+<span style="flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; border: 2px solid {{f.color}}; color: {{f.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 800">{{f.rank}}</span>
 <span style="font-weight: 600; color: #EFE8FF">{{f.name}}</span>
 </div>
 </sc-for>
@@ -139,7 +137,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showGear}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Удочки и снасти</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Удочки и снасти</h2>
 <p style="margin: 0; color: #C7BBE6">Всё покупается в <code style="color: #FF9FD8">/kf shop</code> за рыбацкие монеты — их даёт продажа рыбы. Удочку ранга X можно купить, когда твой ранг рыбака X или выше. Shift + ПКМ с удочкой открывает её меню, куда ставятся снасти.</p>
 
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
@@ -178,7 +176,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showEnch}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 20px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Зачарования</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Зачарования</h2>
 <p style="margin: 0; color: #C7BBE6">73 собственных зачарования. Тир влияет на редкость: 1 — частые, 3 — редкие.</p>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px">
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px"><div style="font-weight: 800; color: #FFFFFF">Стол зачарований</div><div style="color: #C7BBE6; font-size: 15px">Тир 2 — с кнопки от 10 уровней, тир 3 — от 30. Особые в столе не выпадают.</div></div>
@@ -196,7 +194,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <sc-for list="{{enchList}}" as="e" hint-placeholder-count="12">
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 8px">
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
-<span style="font-family: 'Unbounded', sans-serif; font-size: 16px; font-weight: 700; color: {{e.color}}">{{e.name}}</span>
+<span style="font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: {{e.color}}">{{e.name}}</span>
 <span style="color: #B9AED6; font-weight: 700">{{e.max}}</span>
 </div>
 <div style="display: flex; flex-wrap: wrap; gap: 6px">
@@ -213,7 +211,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showEcon}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Экономика</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Экономика</h2>
 <p style="margin: 0; color: #C7BBE6">Деньги сервера — <b style="color: #FFFFFF">AR</b>. Их тратят в магазине игроков и на награды за головы. Рыбацкие монеты — отдельная валюта только для рыбалки.</p>
 
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
@@ -247,7 +245,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showTops}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Топы</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Топы</h2>
 <p style="margin: 0; color: #C7BBE6">Меню топов открывается командой <code style="color: #FF9FD8">/topmenu</code>.</p>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
 <sc-for list="{{tops}}" as="t" hint-placeholder-count="5">
@@ -266,7 +264,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showCmd}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Команды</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Команды</h2>
 <p style="margin: 0; color: #C7BBE6">Команды с пометкой <span style="padding: 1px 8px; border-radius: 999px; background: #3A2A10; color: #FFD48A; font-size: 13px; font-weight: 700">уточнить</span> — черновик, их ещё нужно сверить с сервером.</p>
 <sc-for list="{{cmdGroups}}" as="grp" hint-placeholder-count="4">
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 4px">
@@ -287,7 +285,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{showDonate}}" hint-placeholder-val="{{ false }}">
 <div style="display: flex; flex-direction: column; gap: 22px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Донат: K.Oins, VIP, питомцы</h2>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Донат: K.Oins, VIP, питомцы</h2>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
 <h3 style="margin: 0; font-size: 20px; color: #FFFFFF">K.Oins</h3>
@@ -304,7 +302,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px">
 <sc-for list="{{petRanks}}" as="r" hint-placeholder-count="6">
 <div style="background: #130D24; border: 1px solid #2E2250; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
-<span style="width: 48px; height: 48px; border-radius: 12px; border: 2px solid {{r.color}}; color: {{r.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 800">{{r.rank}}</span>
+<span style="width: 48px; height: 48px; border-radius: 12px; border: 2px solid {{r.color}}; color: {{r.color}}; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 800">{{r.rank}}</span>
 <span style="font-size: 14px; color: #C7BBE6">[Питомцы и бонусы ранга]</span>
 </div>
 </sc-for>

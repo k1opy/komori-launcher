@@ -8,14 +8,12 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
 <style>
 body{margin:0;background:#0E0A1A}
 a{color:#D9B8FF}a:hover{color:#F3E6FF}
 </style>
 </helmet>
-<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.55; display: flex; flex-direction: column">
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.55; display: flex; flex-direction: column">
 <!--KOMORI_HEADER-->
 
 <sc-if value="{{loading}}">
@@ -24,7 +22,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{notFound}}">
 <section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 64px 24px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start">
-<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">{{notFoundTitle}}</h1>
+<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">{{notFoundTitle}}</h1>
 <p style="margin: 0; color: #C7BBE6">{{notFoundText}}</p>
 <sc-if value="{{K.loggedOut}}">
 <a href="{{K.loginUrl}}" style="padding: 14px 22px; border-radius: 12px; background: #5865F2; color: #FFFFFF; text-decoration: none; font-weight: 800">Войти через Discord</a>
@@ -40,7 +38,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <img src="{{p.avatar}}" alt="Аватар {{p.name}}" width="128" height="128" style="width: 128px; height: 128px; border-radius: 22px; background: #2A1E4A; border: 5px solid {{accent}}; box-shadow: 0 0 0 5px #170F2B; display: block; object-fit: cover">
 <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px">
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
-<span style="font-family: 'Unbounded', sans-serif; font-size: 28px; font-weight: 800; color: #FFFFFF">{{p.name}}</span>
+<span style="font-family: 'Montserrat', sans-serif; font-size: 28px; font-weight: 800; color: #FFFFFF">{{p.name}}</span>
 <sc-for list="{{badges}}" as="b">
 <span style="padding: 3px 12px; border-radius: 999px; border: 1px solid {{b.color}}; color: {{b.color}}; font-size: 13px; font-weight: 700">{{b.label}}</span>
 </sc-for>
@@ -75,7 +73,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 
 <sc-if value="{{editing}}">
 <div style="display: flex; flex-direction: column; gap: 20px">
-<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 30px; color: #FFFFFF">Настройки профиля</h1>
+<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Настройки профиля</h1>
 <p style="margin: 0; color: #C7BBE6">Аватарка и ник берутся из Discord. Профиль видят все — правила сервера действуют и здесь.</p>
 
 <div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 16px">

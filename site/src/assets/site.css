@@ -1,0 +1,65 @@
+/* Komori — общий стиль сайта, в одном ключе с лаунчером (шрифты Montserrat + Inter, лицензия OFL) */
+@font-face{font-family:'Montserrat';src:url(/assets/Montserrat.woff) format('woff');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Inter';src:url(/assets/Inter.woff) format('woff');font-weight:100 900;font-display:swap}
+:root{--bg:#0E0A1A;--bg0:#08060F;--card:#140E26;--card2:#1A1230;--line:#241A40;--line2:#2E2250;--line3:#3A2C66;--sel:#1C1433;
+  --accent:#8B3DFF;--accent2:#9D5BFF;--accent-text:#C99BFF;--text:#EFE8FF;--muted:#B9AED6;--dim:#8F84AD;--ok:#9FE3B4;--err:#FF9FB8;--gold:#FFD15C}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-text)}a:hover{color:#F3E6FF}
+x-dc{display:none}
+
+/* шапка */
+.k-head{position:sticky;top:0;z-index:20;background:rgba(8,6,15,.78);backdrop-filter:blur(14px) saturate(1.2);border-bottom:1px solid var(--line)}
+.k-head-in{max-width:1200px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:28px}
+.k-brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;flex:0 0 auto}
+.k-brand img{width:36px;height:36px;display:block}
+.k-brand span{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;letter-spacing:.32em}
+.k-nav{display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.k-nav::-webkit-scrollbar{display:none}
+.k-nav a{position:relative;padding:10px 14px;border-radius:10px;text-decoration:none;color:var(--muted);font-weight:600;white-space:nowrap}
+.k-nav a:hover{color:#fff;background:var(--card)}
+.k-nav a[aria-current="page"]{color:#fff;background:var(--sel)}
+.k-nav a[aria-current="page"]::after{content:"";position:absolute;left:14px;right:14px;bottom:4px;height:2px;border-radius:2px;background:var(--accent2)}
+.k-user{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto}
+.k-me{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);text-decoration:none;font-weight:600}
+.k-me img{width:32px;height:32px;border-radius:8px;display:block;background:#2A1E4A}
+.k-out{width:44px;height:44px;border-radius:12px;border:1px solid var(--line2);background:transparent;color:var(--err);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.k-out:hover{background:var(--card)}
+.k-login{display:flex;align-items:center;gap:0;padding:10px 16px;min-height:44px;border-radius:12px;background:#5865F2;color:#fff;text-decoration:none;font-weight:700}
+.k-login svg{margin-right:8px}
+.k-login:hover{color:#fff;filter:brightness(1.08)}
+.k-flash{max-width:1200px;margin:0 auto;padding:0 20px 12px}
+.k-flash div{padding:12px 16px;border-radius:12px;background:#3A2A10;color:#FFD48A;font-weight:600}
+@media (max-width:760px){
+  .k-head-in{flex-wrap:wrap;gap:8px 12px}
+  .k-nav{order:3;flex-basis:100%}
+  .k-brand span{display:none}
+  .k-login span{display:none}
+}
+
+/* общие блоки */
+.k-wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+.k-sec{padding:88px 0}
+.k-h2{margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.15;color:#fff}
+.k-lead{margin:0;color:var(--muted);font-size:18px;max-width:640px}
+.k-eyebrow{display:inline-block;margin-bottom:12px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent-text)}
+.k-glass{border-radius:20px;border:1px solid color-mix(in srgb,var(--line3) 70%,transparent);background:color-mix(in srgb,var(--card) 70%,transparent);backdrop-filter:blur(14px)}
+.k-btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:56px;padding:0 28px;border-radius:14px;border:none;background:linear-gradient(180deg,#9D5BFF,#7B2FF2);color:#fff;text-decoration:none;font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;letter-spacing:.1em;text-transform:uppercase;box-shadow:0 12px 34px rgba(123,47,242,.45),inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer}
+.k-btn:hover{color:#fff;filter:brightness(1.08)}
+.k-btn2{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:0 22px;border-radius:14px;border:1px solid var(--accent);background:transparent;color:var(--accent-text);text-decoration:none;font-weight:700;cursor:pointer;font:inherit;font-weight:700}
+.k-btn2:hover{background:color-mix(in srgb,var(--accent) 16%,transparent);color:#fff}
+.k-tile{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--c);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 26%,transparent),color-mix(in srgb,var(--c) 10%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent)}
+.k-tile svg{width:26px;height:26px}
+.k-dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 22%,transparent);flex:0 0 auto}
+.k-dot.off{background:#E5484D;box-shadow:0 0 0 4px rgba(229,72,77,.22)}
+.k-dot.wait{background:var(--dim);box-shadow:none}
+
+/* подвал */
+.k-foot{border-top:1px solid var(--line);background:var(--bg0)}
+.k-foot-in{max-width:1200px;margin:0 auto;padding:36px 20px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+.k-foot-brand{display:flex;align-items:center;gap:12px;color:var(--dim);font-size:14px}
+.k-foot-brand img{width:28px;height:28px}
+.k-foot-links{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:14px}
+.k-foot-links a{color:var(--muted);text-decoration:none}
+.k-foot-links a:hover{color:#fff}

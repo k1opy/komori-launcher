@@ -1,49 +1,38 @@
 <!--HEAD-->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="theme-color" content="#0E0A1A">
-<style>x-dc{display:none}</style>
+<link rel="preload" href="/assets/Montserrat.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
 <!--BOOT-->
 <script src="/komori-dc.js" defer></script>
 <!--HEADER-->
-<header style="position: sticky; top: 0; z-index: 10; background: #08060F; border-bottom: 1px solid #241A40">
-<div style="max-width: 1240px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px">
-<a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #F3E6FF">
-<img src="/assets/logo.png" alt="Логотип Komori" style="height: 44px; width: 44px; display: block">
-<span style="font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: 0.04em">KOMORI</span>
-</a>
-<nav aria-label="Основное меню" style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1 1 420px">
-<sc-for list="{{K.nav}}" as="n">
-<a href="{{n.href}}" aria-current="{{n.current}}" style="padding: 10px 14px; border-radius: 8px; text-decoration: none; color: {{n.color}}; background: {{n.bg}}; font-weight: 700">{{n.label}}</a>
-</sc-for>
+<header class="k-head">
+<div class="k-head-in">
+<a href="/" class="k-brand" aria-label="Komori — на главную"><img src="/assets/logo.svg" alt=""><span>KOMORI</span></a>
+<nav class="k-nav" aria-label="Основное меню">
+<sc-for list="{{K.nav}}" as="n"><a href="{{n.href}}" aria-current="{{n.current}}">{{n.label}}</a></sc-for>
 </nav>
-<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+<div class="k-user">
 <sc-if value="{{K.loggedIn}}">
-<a href="/profile" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #170F2B; color: #EFE8FF; text-decoration: none; font-weight: 700">
-<img src="{{K.avatar}}" alt="" width="32" height="32" style="width: 32px; height: 32px; border-radius: 50%; display: block; background: #2A1E4A">
-{{K.name}}
-</a>
-<button type="button" onClick="{{K.logout}}" style="padding: 11px 14px; min-height: 44px; border-radius: 10px; border: 1px solid #2E2250; background: transparent; color: #FF9FB8; font: inherit; font-weight: 700; cursor: pointer">Выйти</button>
+<a href="/profile" class="k-me"><img src="{{K.avatar}}" alt="" width="32" height="32">{{K.name}}</a>
+<button type="button" class="k-out" onClick="{{K.logout}}" aria-label="Выйти" title="Выйти"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></button>
 </sc-if>
 <sc-if value="{{K.loggedOut}}">
-<a href="{{K.loginUrl}}" style="display: flex; align-items: center; gap: 8px; padding: 11px 18px; min-height: 44px; box-sizing: border-box; border-radius: 10px; background: #5865F2; color: #FFFFFF; text-decoration: none; font-weight: 700">
-<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
-Войти через Discord
-</a>
+<a href="{{K.loginUrl}}" class="k-login"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>Войти<span>&nbsp;через&nbsp;Discord</span></a>
 </sc-if>
 </div>
 </div>
 <sc-if value="{{K.flash}}">
-<div role="status" style="max-width: 1240px; margin: 0 auto 12px; padding: 12px 24px">
-<div style="padding: 12px 16px; border-radius: 10px; background: #3A2A10; color: #FFD48A; font-weight: 600">{{K.flash}} <sc-if value="{{K.flashJoin}}"><a href="{{K.discord}}" target="_blank" rel="noopener" style="color: #FFFFFF">Зайти на сервер Discord</a></sc-if></div>
-</div>
+<div class="k-flash" role="status"><div>{{K.flash}} <sc-if value="{{K.flashJoin}}"><a href="{{K.discord}}" target="_blank" rel="noopener" style="color:#fff">Зайти на сервер Discord</a></sc-if></div></div>
 </sc-if>
 </header>
 <!--FOOTER-->
-<footer style="background: #08060F; border-top: 1px solid #241A40">
-<div style="max-width: 1240px; margin: 0 auto; padding: 32px 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; color: #B9AED6; font-size: 14px">
-<span>© 2026 Komori · mc.komori.fun · Не связан с Mojang и Microsoft.</span>
-<span style="display: flex; gap: 20px; flex-wrap: wrap"><a href="/rules">Правила</a><a href="/wiki">Вики</a><a href="/map">Карта</a><a href="{{K.launcher}}">Лаунчер</a><a href="{{K.discord}}" target="_blank" rel="noopener">Discord</a><sc-for list="{{K.social}}" as="s"><a href="{{s.url}}" target="_blank" rel="noopener">{{s.name}}</a></sc-for></span>
+<footer class="k-foot">
+<div class="k-foot-in">
+<div class="k-foot-brand"><img src="/assets/logo.svg" alt=""><span>© 2026 Komori · mc.komori.fun · Не связан с Mojang и Microsoft.</span></div>
+<nav class="k-foot-links" aria-label="Ссылки"><a href="/rules">Правила</a><a href="/wiki">Вики</a><a href="/map">Карта</a><a href="{{K.launcher}}">Лаунчер</a><a href="{{K.discord}}" target="_blank" rel="noopener">Discord</a><sc-for list="{{K.social}}" as="s"><a href="{{s.url}}" target="_blank" rel="noopener">{{s.name}}</a></sc-for></nav>
 </div>
 </footer>
 <!--END-->

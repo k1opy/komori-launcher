@@ -25,7 +25,7 @@ for (const f of fs.readdirSync(src('pages'))) {
     .replace('<x-dc>', '<template id="komori-tpl">').replace('</x-dc>', '</template><x-dc></x-dc>');
   PAGES[f.replace('.html', '')] = html;
 }
-const TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml', webp: 'image/webp' };
+const TYPES = { css: 'text/css; charset=utf-8', woff: 'font/woff', woff2: 'font/woff2', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml', webp: 'image/webp' };
 const ASSETS = {};
 for (const f of fs.readdirSync(src('assets'))) ASSETS[f] = { type: TYPES[f.split('.').pop()] || 'application/octet-stream', b64: fs.readFileSync(src('assets/' + f)).toString('base64') };
 const RUNTIME = fs.readFileSync(src('base.js'), 'utf8') + '\n' + fs.readFileSync(src('komori-dc.js'), 'utf8');

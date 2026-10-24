@@ -8,19 +8,17 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
 <style>
 body{margin:0;background:#0E0A1A}
 a{color:#D9B8FF}a:hover{color:#F3E6FF}
 </style>
 </helmet>
-<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.6">
+<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.6">
 
 <!--KOMORI_HEADER-->
 
 <section style="max-width: 1240px; margin: 0 auto; padding: 56px 24px 32px; display: flex; flex-direction: column; gap: 24px">
-<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(32px, 4.5vw, 52px); color: #FFFFFF">Правила проекта</h1>
+<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: clamp(32px, 4.5vw, 52px); color: #FFFFFF">Правила проекта</h1>
 <p style="margin: 0; color: #C7BBE6; max-width: 720px; font-size: 18px">Действуют на Minecraft-сервере, в Discord и на всех официальных площадках Komori. Незнание правил не освобождает от ответственности.</p>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px">
 <div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 14px; padding: 18px; display: flex; gap: 12px; align-items: flex-start">
@@ -47,7 +45,7 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <nav aria-label="Разделы правил" style="flex: 1 1 240px; background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 10px; display: flex; flex-direction: column; gap: 2px">
 <sc-for list="{{sections}}" as="s" hint-placeholder-count="5">
 <a href="#{{s.id}}" style="display: flex; gap: 10px; align-items: center; padding: 12px 12px; border-radius: 10px; text-decoration: none; color: #EFE8FF; font-weight: 600">
-<span style="min-width: 28px; height: 28px; border-radius: 8px; background: #2A1E4A; color: #D9B8FF; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 700">{{s.num}}</span>
+<span style="min-width: 28px; height: 28px; border-radius: 8px; background: #2A1E4A; color: #D9B8FF; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700">{{s.num}}</span>
 {{s.title}}
 </a>
 </sc-for>
@@ -57,8 +55,8 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 <sc-for list="{{sections}}" as="s" hint-placeholder-count="5">
 <article id="{{s.id}}" style="background: #130D24; border: 1px solid #2E2250; border-radius: 20px; padding: 28px; display: flex; flex-direction: column; gap: 20px">
 <div style="display: flex; align-items: center; gap: 14px">
-<span style="width: 52px; height: 52px; border-radius: 14px; background: #8B3DFF; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 800">{{s.num}}</span>
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 24px; color: #FFFFFF">{{s.title}}</h2>
+<span style="width: 52px; height: 52px; border-radius: 14px; background: #8B3DFF; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 800">{{s.num}}</span>
+<h2 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 24px; color: #FFFFFF">{{s.title}}</h2>
 </div>
 <sc-if value="{{s.hasNote}}" hint-placeholder-val="{{ false }}">
 <p style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #1F1638; color: #D9CCF5">{{s.note}}</p>

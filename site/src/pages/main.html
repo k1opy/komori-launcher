@@ -3,125 +3,157 @@
 <head>
 <meta charset="utf-8">
 <title>Komori — сервер Minecraft</title>
+<meta name="description" content="Komori — Minecraft-сервер 26.2: своя рыбалка, 73 своих зачарования, новая генерация мира. Идёт ЗБТ.">
 <!--KOMORI_HEAD-->
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
 <style>
-body{margin:0;background:#0E0A1A}
-a{color:#D9B8FF}a:hover{color:#F3E6FF}
+.hero{position:relative;overflow:hidden;min-height:calc(100vh - 65px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:72px 20px 96px;
+  background:radial-gradient(ellipse 55% 50% at 50% 42%,rgba(139,61,255,.25),transparent 70%),radial-gradient(ellipse 35% 30% at 90% 100%,rgba(139,61,255,.12),transparent 70%),var(--bg)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(182,107,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(182,107,255,.06) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(ellipse 60% 60% at 50% 45%,transparent 30%,#000 85%);mask-image:radial-gradient(ellipse 60% 60% at 50% 45%,transparent 30%,#000 85%)}
+.hero-in{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.hero-logo{width:clamp(96px,14vw,140px);height:auto;filter:drop-shadow(0 18px 44px rgba(139,61,255,.5))}
+.hero-word{margin:8px 0 0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(40px,8vw,72px);letter-spacing:.38em;margin-right:-.38em;line-height:1;color:#fff}
+.hero-sub{margin:0;font-family:'Montserrat',sans-serif;font-weight:600;font-size:clamp(11px,1.6vw,14px);letter-spacing:.5em;margin-right:-.5em;color:var(--dim)}
+.hero-pill{margin-top:14px;display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;background:var(--card);border:1px solid var(--line2);font-size:14px;font-weight:600;color:var(--text)}
+.hero-pill b{color:var(--gold);font-weight:700}
+.hero-cta{margin-top:26px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.ip{display:inline-flex;align-items:center;gap:12px;min-height:56px;padding:0 10px 0 20px;border-radius:14px;border:1px solid var(--line2);background:color-mix(in srgb,var(--card) 80%,transparent);font-family:'Montserrat',sans-serif;font-weight:700;color:#fff}
+.ip button{min-height:40px;padding:0 14px;border-radius:10px;border:none;background:var(--sel);color:var(--accent-text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.ip button:hover{background:var(--line2);color:#fff}
+.hero-note{margin:10px 0 0;font-size:14px;color:var(--dim)}
+.hero-stats{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:10px;width:240px}
+.hero-stats .k-glass{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.hero-stats .t{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.hero-stats .v{display:flex;align-items:center;gap:10px;font-weight:700;color:#fff}
+.hero-stats .v small{margin-left:auto;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+@media (max-width:980px){.hero-stats{position:static;flex-direction:row;flex-wrap:wrap;justify-content:center;width:auto;margin-top:28px}.hero-stats .k-glass{min-width:200px}}
+
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:36px}
+.feat{padding:24px;display:flex;flex-direction:column;gap:12px}
+.feat h3{margin:4px 0 0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:#fff}
+.feat p{margin:0;color:var(--muted)}
+.feat .big{font-family:'Montserrat',sans-serif;font-weight:900;font-size:46px;line-height:1;background:linear-gradient(180deg,#fff,#B66BFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.soon{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:36px}
+.soon .k-glass{position:relative;overflow:hidden;padding:26px;display:flex;flex-direction:column;gap:10px;min-height:190px}
+.soon .q{position:absolute;right:-6px;bottom:-30px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:150px;line-height:1;color:rgba(182,107,255,.10)}
+.soon h3{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;color:#fff}
+.soon p{margin:0;color:var(--muted)}
+.soon .tag{align-self:flex-start;padding:4px 10px;border-radius:999px;background:rgba(139,61,255,.22);color:var(--accent-text);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+
+.zbt{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:stretch}
+@media (max-width:860px){.zbt{grid-template-columns:1fr}}
+.ticket{position:relative;padding:32px;border-radius:26px;background:linear-gradient(135deg,#8B3DFF,#5A16C8);box-shadow:0 30px 90px rgba(139,61,255,.35);display:flex;flex-direction:column;gap:16px;color:#fff}
+.ticket h3{margin:0;display:flex;align-items:center;gap:12px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:30px;letter-spacing:.04em}
+.ticket hr{border:none;border-top:2px dashed rgba(255,255,255,.35);margin:2px 0}
+.ticket .row{display:flex;align-items:center;gap:12px;font-size:18px;font-weight:600}
+.ticket .ck{width:28px;height:28px;border-radius:50%;background:#fff;color:#7B2FF2;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.price{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:34px}
+.price span{opacity:.55;font-size:24px}
+.ticket .how{font-size:14px;opacity:.85}
+.give{padding:30px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+.give h3{margin:0;font-family:'Montserrat',sans-serif;font-weight:900;font-size:28px;color:var(--gold)}
+.give p{margin:0;color:var(--muted)}
+.dc-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 22px;border-radius:14px;background:#5865F2;color:#fff;text-decoration:none;font-weight:700}
+.dc-btn:hover{color:#fff;filter:brightness(1.08)}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:36px;counter-reset:s}
+.step{padding:24px;display:flex;flex-direction:column;gap:8px}
+.step .n{font-family:'Montserrat',sans-serif;font-weight:900;font-size:40px;line-height:1;color:var(--accent-text)}
+.step h3{margin:0;font-size:18px;color:#fff}
+.step p{margin:0;color:var(--muted)}
 </style>
 </helmet>
-<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Manrope', system-ui, sans-serif; font-size: 16px; line-height: 1.55">
 
 <!--KOMORI_HEADER-->
 
-<section id="top" style="max-width: 1240px; margin: 0 auto; padding: 80px 24px 72px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 48px; align-items: center">
-<div style="display: flex; flex-direction: column; gap: 24px">
-<span style="align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: #1F1638; color: {{statusColor}}; font-weight: 600; font-size: 14px">{{statusText}}</span>
-<h1 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 800; font-size: clamp(44px, 6.5vw, 76px); line-height: 1.02; color: #FFFFFF">KOMORI</h1>
-<p style="margin: 0; font-size: 20px; color: #C7BBE6; max-width: 520px">Выживание с кастомными предметами, своими зачарованиями, рыбалкой и новыми биомами.</p>
-<div style="display: flex; flex-wrap: wrap; gap: 12px">
-<a href="#how" style="padding: 14px 24px; min-height: 48px; box-sizing: border-box; border-radius: 10px; background: #8B3DFF; color: #FFFFFF; text-decoration: none; font-weight: 700">Начать играть</a>
-<a href="{{K.launcher}}" style="padding: 14px 24px; min-height: 48px; box-sizing: border-box; border-radius: 10px; background: #1F1638; color: #EFE8FF; text-decoration: none; font-weight: 600">Скачать лаунчер</a>
-<a href="{{K.discord}}" target="_blank" rel="noopener" style="padding: 14px 24px; min-height: 48px; box-sizing: border-box; border-radius: 10px; background: #5865F2; color: #FFFFFF; text-decoration: none; font-weight: 700">Наш Discord</a>
+<main>
+<section class="hero">
+<div class="hero-grid" aria-hidden="true"></div>
+<div class="hero-in">
+<img class="hero-logo" src="/assets/logo.svg" alt="" width="140" height="140">
+<h1 class="hero-word">KOMORI</h1>
+<p class="hero-sub">MINECRAFT СЕРВЕР</p>
+<span class="hero-pill"><span class="k-dot {{dotCls}}"></span><b>ЗБТ</b> · {{statusText}}</span>
+<div class="hero-cta">
+<a class="k-btn" href="{{K.launcher}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>Скачать лаунчер</a>
+<span class="ip">mc.komori.fun<button type="button" onClick="{{copy}}">{{copyLabel}}</button></span>
 </div>
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; max-width: 520px">
-<div style="font-size: 13px; color: #B9AED6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em">IP для подключения</div>
-<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
-<code style="flex: 1 1 200px; padding: 12px 16px; border-radius: 10px; background: #08060F; color: #FFFFFF; font-family: 'Unbounded', monospace; font-size: 17px">mc.komori.fun</code>
-<button type="button" onClick="{{copy}}" style="padding: 12px 18px; min-height: 48px; border-radius: 10px; border: none; background: #8B3DFF; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">{{copyLabel}}</button>
+<p class="hero-note">Windows · версия Minecraft 26.2 · вход через Microsoft</p>
+</div>
+<div class="hero-stats">
+<div class="k-glass"><span class="t">Сервер</span><span class="v"><span class="k-dot {{dotCls}}"></span>mc.komori.fun<small>{{online}}</small></span></div>
+<div class="k-glass"><span class="t">Discord</span><span class="v">Участников<small>{{discordMembers}}</small></span></div>
+</div>
+</section>
+
+<section class="k-sec" id="features">
+<div class="k-wrap">
+<span class="k-eyebrow">Что уже есть</span>
+<h2 class="k-h2">Не ванилла — и это видно</h2>
+<p class="k-lead">Выживание на 26.2 со своими механиками, которых нет на других серверах.</p>
+<div class="feats">
+<div class="k-glass feat"><span class="k-tile" style="--c:#5FD3F3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"></path><path d="M18 12v.5"></path><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"></path><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"></path></svg></span><h3>Своя рыбалка</h3><p>Мини-игра на 5 шкал при поклёвке, ранги рыбака от D до SS, сокровища и улов, который зависит от биома.</p></div>
+<div class="k-glass feat"><span class="big">73</span><h3>своих зачарования</h3><p>Метеор, Крылья, Гром, Бульдозер и ещё десятки — всё описано в <a href="/wiki">вики</a>.</p></div>
+<div class="k-glass feat"><span class="k-tile" style="--c:#7EDB8A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"></path></svg></span><h3>Новый мир</h3><p>Своя генерация: высокие горы, снежные долины и десятки новых биомов.</p></div>
+<div class="k-glass feat"><span class="k-tile" style="--c:#FFC24D"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg></span><h3>Топы игроков</h3><p>Топ охотников, рыбаков и другие рейтинги сервера.</p></div>
 </div>
 </div>
+</section>
+
+<section class="k-sec" id="soon" style="padding-top:0">
+<div class="k-wrap">
+<span class="k-eyebrow">Спойлеры</span>
+<h2 class="k-h2">Что будет дальше</h2>
+<div class="soon">
+<div class="k-glass"><span class="tag">Скоро</span><h3>Незерит — это не конец</h3><p>Новая ступень снаряжения выше незерита.</p><span class="q" aria-hidden="true">?</span></div>
+<div class="k-glass"><span class="tag">Скоро</span><h3>Энд изменится</h3><p>Подробностей пока не будет. Следи за Discord.</p><span class="q" aria-hidden="true">?</span></div>
+<div class="k-glass"><span class="tag">В планах</span><h3>Данжи и охота</h3><p>Обновляемые подземелья и система охоты на животных.</p><span class="q" aria-hidden="true">?</span></div>
 </div>
-<div style="display: flex; flex-direction: column; gap: 14px">
-<img src="/assets/hero.jpg" alt="Летучая мышь — талисман Komori" style="width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 18px; border: 1px solid #2E2250; display: block">
-<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
-<div style="background: #170F2B; border-radius: 12px; padding: 14px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 700; color: #FFFFFF">{{online}}</div>
-<div style="font-size: 13px; color: #B9AED6">игроков онлайн</div>
 </div>
-<div style="background: #170F2B; border-radius: 12px; padding: 14px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 700; color: #FFFFFF">26.2</div>
-<div style="font-size: 13px; color: #B9AED6">версия</div>
+</section>
+
+<section class="k-sec" id="zbt" style="padding-top:0">
+<div class="k-wrap">
+<span class="k-eyebrow">Закрытый бета-тест</span>
+<h2 class="k-h2" style="margin-bottom:28px">Попади в ЗБТ</h2>
+<div class="zbt">
+<div class="ticket">
+<h3><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2M13 17v2M13 11v2"></path></svg>Проходка</h3>
+<hr>
+<div class="row"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>Доступ к ЗБТ</div>
+<div class="row"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>VIP на 3 месяца в 1 сезоне</div>
+<hr>
+<div class="price">500 ₽<span>·</span>280 ₴<span>·</span>6.20 $</div>
+<span class="how">Купить проходку — через Discord.</span>
 </div>
-<div style="background: #170F2B; border-radius: 12px; padding: 14px">
-<div style="font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 700; color: #FFFFFF">{{discordMembers}}</div>
-<div style="font-size: 13px; color: #B9AED6">в Discord</div>
+<div class="k-glass give">
+<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#FFD15C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
+<h3>Розыгрыш проходок</h3>
+<p>Регулярно разыгрываем проходки в нашем Discord. Заходи, чтобы участвовать и следить за новостями.</p>
+<a class="dc-btn" href="{{K.discord}}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 7.5c3-1.3 6-1.3 9 0 1.6 2.3 2.4 4.9 2.3 8.2-1.3 1-2.7 1.6-4.1 2l-1-1.6c-1.7.4-3.7.4-5.4 0l-1 1.6c-1.4-.4-2.8-1-4.1-2-.1-3.3.7-5.9 2.3-8.2z"></path><circle cx="9.5" cy="12.5" r="1"></circle><circle cx="14.5" cy="12.5" r="1"></circle></svg>Зайти в Discord</a>
 </div>
 </div>
 </div>
 </section>
 
-<section id="news" style="max-width: 1240px; margin: 0 auto; padding: 0 24px 72px; display: flex; flex-direction: column; gap: 24px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 32px; color: #FFFFFF">Новости</h2>
-<a href="#news" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0; background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; overflow: hidden; text-decoration: none; color: #EFE8FF">
-<img src="/assets/hero.jpg" alt="Fishing Update" style="width: 100%; height: 100%; min-height: 240px; object-fit: cover; display: block">
-<div style="padding: 32px; display: flex; flex-direction: column; gap: 12px; justify-content: center">
-<span style="align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: #8B3DFF; color: #FFFFFF; font-size: 13px; font-weight: 700">Скоро</span>
-<h3 style="margin: 0; font-family: 'Unbounded', sans-serif; font-size: 26px; color: #FFFFFF">Обновление рыбалки</h3>
-<p style="margin: 0; color: #C7BBE6">Мини-игра при поклёвке, сокровища, каталог рыб и уловы, которые зависят от биома.</p>
-<span style="color: #D9B8FF; font-weight: 700">Читать подробнее →</span>
-</div>
-</a>
-</section>
-
-<section style="background: #130D24; border-top: 1px solid #241A40; border-bottom: 1px solid #241A40">
-<div style="max-width: 1240px; margin: 0 auto; padding: 72px 24px; display: flex; flex-direction: column; gap: 32px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 32px; color: #FFFFFF">Что есть на сервере</h2>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
-<div style="background: #1F1638; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
-<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B57BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"></path><path d="M12 7v6M9 10h6"></path></svg>
-<h3 style="margin: 0; font-size: 19px; color: #FFFFFF">Свои предметы и зачарования</h3>
-<p style="margin: 0; color: #C7BBE6">Уникальные зачарованные книги, проклятия и кастомные предметы, которых нет в ванилле.</p>
-</div>
-<div style="background: #1F1638; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
-<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B57BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l6-10 4 6 3-4 5 8z"></path><circle cx="17" cy="6" r="2"></circle></svg>
-<h3 style="margin: 0; font-size: 19px; color: #FFFFFF">Новые биомы</h3>
-<p style="margin: 0; color: #C7BBE6">Мир с генерацией Terralith: горы, снежные долины и десятки необычных биомов.</p>
-</div>
-<div style="background: #1F1638; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
-<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B57BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c4-6 12-6 16 0-4 6-12 6-16 0z"></path><path d="M19 12l3-3v6z"></path></svg>
-<h3 style="margin: 0; font-size: 19px; color: #FFFFFF">Рыбалка <span style="font-size: 13px; color: #9FE3B4">скоро</span></h3>
-<p style="margin: 0; color: #C7BBE6">Мини-игра, сокровища и редкие рыбы, которые зависят от биома.</p>
-</div>
-<div style="background: #1F1638; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
-<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B57BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>
-<h3 style="margin: 0; font-size: 19px; color: #FFFFFF">Топы игроков</h3>
-<p style="margin: 0; color: #C7BBE6">Соревнуйся в топе охотников и других рейтингах сервера.</p>
-</div>
+<section class="k-sec" id="how" style="padding-top:0">
+<div class="k-wrap">
+<span class="k-eyebrow">Как начать</span>
+<h2 class="k-h2">Три шага до игры</h2>
+<div class="steps">
+<div class="k-glass step"><span class="n">1</span><h3>Скачай Komori Launcher</h3><p>Войди через Microsoft и нажми «Играть на Komori» — лаунчер сам поставит нужную версию и моды. <a href="{{K.launcher}}">Скачать для Windows</a></p></div>
+<div class="k-glass step"><span class="n">2</span><h3>Или зайди вручную</h3><p>Minecraft 26.2 → Сетевая игра → Добавить сервер → <b style="color:#fff">mc.komori.fun</b></p></div>
+<div class="k-glass step"><span class="n">3</span><h3>Прими ресурспак</h3><p>Без него не будут видны текстуры своих предметов и зачарований.</p></div>
 </div>
 </div>
 </section>
-
-<section id="how" style="max-width: 1240px; margin: 0 auto; padding: 72px 24px; display: flex; flex-direction: column; gap: 32px">
-<h2 style="margin: 0; font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 32px; color: #FFFFFF">Как начать играть</h2>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
-<div style="border: 1px solid #2E2250; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<span style="font-family: 'Unbounded', sans-serif; font-size: 32px; font-weight: 800; color: #B57BFF">1</span>
-<h3 style="margin: 0; font-size: 18px; color: #FFFFFF">Скачай Komori Launcher</h3>
-<p style="margin: 0; color: #C7BBE6">Войди через Microsoft и нажми «Играть на Komori» — лаунчер сам поставит нужную версию и моды. <a href="{{K.launcher}}">Скачать для Windows</a></p>
-</div>
-<div style="border: 1px solid #2E2250; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<span style="font-family: 'Unbounded', sans-serif; font-size: 32px; font-weight: 800; color: #B57BFF">2</span>
-<h3 style="margin: 0; font-size: 18px; color: #FFFFFF">Или добавь сервер вручную</h3>
-<p style="margin: 0; color: #C7BBE6">Minecraft 26.2 → Сетевая игра → Добавить → вставь IP mc.komori.fun.</p>
-</div>
-<div style="border: 1px solid #2E2250; border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<span style="font-family: 'Unbounded', sans-serif; font-size: 32px; font-weight: 800; color: #B57BFF">3</span>
-<h3 style="margin: 0; font-size: 18px; color: #FFFFFF">Прими ресурспак</h3>
-<p style="margin: 0; color: #C7BBE6">Без него не будут видны текстуры кастомных предметов.</p>
-</div>
-</div>
-</section>
-
+</main>
 
 <!--KOMORI_FOOTER-->
-
-</div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
@@ -136,9 +168,9 @@ fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) { 
 renderVals() {
 var self = this, st = this.state.stats, mc = st && st.mc, dc = st && st.discord;
 return {
-statusText: !st ? '● Проверяем сервер…' : mc && mc.online ? '● Сервер онлайн · версия 26.2' : '● Сервер сейчас недоступен',
-statusColor: !st || (mc && mc.online) ? '#9FE3B4' : '#FF9FB8',
-online: mc && mc.online ? mc.players + ' / ' + mc.max : '—',
+statusText: !st ? 'проверяем сервер…' : mc && mc.online ? 'сервер онлайн' : 'сервер сейчас недоступен',
+dotCls: !st ? 'wait' : mc && mc.online ? '' : 'off',
+online: !st ? '…' : mc && mc.online ? mc.players + ' / ' + mc.max : 'офлайн',
 discordMembers: dc ? dc.members : '—',
 copyLabel: this.state.copied ? 'Скопировано' : 'Копировать',
 copy: function () {

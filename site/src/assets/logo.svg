@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Komori">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B66BFF"/>
+      <stop offset="1" stop-color="#7B2FF2"/>
+    </linearGradient>
+  </defs>
+  <!-- силуэт: уши, «сердечко» между ушами, ступеньки щёк, нос -->
+  <path fill="url(#g)" d="M16 14 L39 39.5 L39.5 58 L50 62 L60.5 58 L61 39.5 L84 14 L84 58 L64 72.5 L66.5 76.5 L50 93 L33.5 76.5 L36 72.5 L16 58 Z"/>
+  <!-- грани: нижняя часть темнее, правая щека чуть темнее левой -->
+  <path fill="#5A16C8" opacity="0.35" d="M16 58 L50 62 L84 58 L64 72.5 L66.5 76.5 L50 93 L33.5 76.5 L36 72.5 Z"/>
+  <path fill="#3E0C9A" opacity="0.25" d="M50 62 L84 58 L64 72.5 L66.5 76.5 L50 93 Z"/>
+  <path fill="#FFFFFF" opacity="0.10" d="M16 14 L39 39.5 L39.5 58 L16 58 Z"/>
+</svg>
