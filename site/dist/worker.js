@@ -66,7 +66,7 @@ async function route(req, env, ctx) {
     const u = await env.SITE.get('u:' + r[1], { type: 'json' });
     return u ? json(publicProfile(u, false)) : json({ error: 'Не найден' }, 404);
   }
-  if (p === '/api/stats' && m === 'GET') return stats(ctx);
+  if (p === '/api/stats' && m === 'GET') return stats(ctx, env);
 
   // ----- страницы -----
   const pages = { '/': 'main', '/rules': 'rules', '/wiki': 'wiki', '/map': 'map', '/profile': 'profile' };
@@ -214,7 +214,7 @@ async function saveProfile(req, env, ctx) {
 }
 
 // ===== онлайн сервера и Discord (кэш 60 сек) =====
-async function stats(ctx) {
+async function stats(ctx, env) {
   const key = new Request('https://cache.komori/stats');
   const cache = caches.default;
   const hit = await cache.match(key);
@@ -225,13 +225,29 @@ async function stats(ctx) {
       out.mc = { online: !!d.online, players: d.players ? d.players.online : 0, max: d.players ? d.players.max : 0,
         list: d.players && Array.isArray(d.players.list) ? d.players.list.map(x => String(x.name || x)).slice(0, 50) : [] };
     }).catch(() => {}),
-    fetch('https://discord.com/api/v10/invites/' + CFG.discordInvite.split('/').pop() + '?with_counts=true').then(r => r.json()).then(d => {
-      if (d.approximate_member_count) out.discord = { members: d.approximate_member_count, online: d.approximate_presence_count };
-    }).catch(() => {})
+    discordCounts(env).then(d => { out.discord = d; }).catch(() => {})
   ]);
+  // Discord иногда не отвечает Cloudflare — тогда показываем последнее удачное значение из KV
+  if (out.discord) ctx.waitUntil(env.SITE.put('stats:discord', JSON.stringify(out.discord)));
+  else out.discord = await env.SITE.get('stats:discord', { type: 'json' }).catch(() => null);
   const res = json(out, 200, { 'cache-control': 'public, max-age=60' });
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
+}
+
+// Число участников: сначала через бота (у него свой лимит запросов), запасной путь — публичный инвайт
+async function discordCounts(env) {
+  if (env.DISCORD_BOT_TOKEN) {
+    const r = await fetch(`https://discord.com/api/v10/guilds/${CFG.guildId}?with_counts=true`, { headers: { authorization: 'Bot ' + env.DISCORD_BOT_TOKEN } });
+    if (r.ok) {
+      const g = await r.json();
+      if (g.approximate_member_count) return { members: g.approximate_member_count, online: g.approximate_presence_count };
+    }
+  }
+  const r2 = await fetch('https://discord.com/api/v10/invites/' + CFG.discordInvite.split('/').pop() + '?with_counts=true');
+  const d = await r2.json();
+  if (d.approximate_member_count) return { members: d.approximate_member_count, online: d.approximate_presence_count };
+  return null;
 }
 
 // ===== утилиты =====
