@@ -19,7 +19,7 @@ const CFG = {
   guildId: '1443520605210152974',
   discordInvite: 'https://discord.gg/cQDMCZvUgp',
   launcher: 'https://github.com/k1opy/komori-launcher/releases/latest/download/Komori-Launcher-Setup.exe',
-  map: 'http://80.249.144.187:8197/',
+  map: 'https://map.komori.fun/',
   mcHost: 'mc.komori.fun',
   social: [
     { name: 'Telegram', url: 'https://t.me/komorifun' },
