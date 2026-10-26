@@ -218,18 +218,30 @@ async function stats(ctx, env) {
   if (hit) return hit;
   const out = { mc: null, discord: null };
   await Promise.all([
-    fetch('https://api.mcsrvstat.us/3/' + CFG.mcHost, { headers: { 'user-agent': 'KomoriSite/1.0' } }).then(r => r.json()).then(d => {
+    fetchRetry('https://api.mcsrvstat.us/3/' + CFG.mcHost, { headers: { 'user-agent': 'KomoriSite/1.0' } }).then(r => r.json()).then(d => {
       out.mc = { online: !!d.online, players: d.players ? d.players.online : 0, max: d.players ? d.players.max : 0,
         list: d.players && Array.isArray(d.players.list) ? d.players.list.map(x => String(x.name || x)).slice(0, 50) : [] };
     }).catch(() => {}),
     discordCounts(env).then(d => { out.discord = d; }).catch(() => {})
   ]);
+  // mcsrvstat иногда не успевает ответить — берём последний ответ из KV, если ему меньше 10 минут
+  if (out.mc) ctx.waitUntil(env.SITE.put('stats:mc', JSON.stringify({ at: Date.now(), mc: out.mc })));
+  else {
+    const last = await env.SITE.get('stats:mc', { type: 'json' }).catch(() => null);
+    if (last && Date.now() - last.at < 600000) out.mc = last.mc;
+  }
   // Discord иногда не отвечает Cloudflare — тогда показываем последнее удачное значение из KV
   if (out.discord) ctx.waitUntil(env.SITE.put('stats:discord', JSON.stringify(out.discord)));
   else out.discord = await env.SITE.get('stats:discord', { type: 'json' }).catch(() => null);
   const res = json(out, 200, { 'cache-control': 'public, max-age=60' });
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
+}
+
+// Повтор запроса один раз, если сервис статуса ответил ошибкой
+async function fetchRetry(url, opt) {
+  try { const r = await fetch(url, opt); if (r.ok) return r; } catch (e) {}
+  return fetch(url, opt);
 }
 
 // Число участников: сначала через бота (у него свой лимит запросов), запасной путь — публичный инвайт

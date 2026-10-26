@@ -162,14 +162,20 @@ this.state = { copied: false, stats: null };
 }
 mounted() {
 var self = this;
-fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) { self.setState({ stats: d }); }).catch(function () {});
+var load = function (n) {
+fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) {
+self.setState({ stats: d });
+if (!d.mc && n < 3) setTimeout(function () { load(n + 1); }, 20000); // статус не пришёл — спросим ещё раз
+}).catch(function () {});
+};
+load(0);
 }
 renderVals() {
 var self = this, st = this.state.stats, mc = st && st.mc, dc = st && st.discord;
 return {
-statusText: !st ? 'проверяем сервер…' : mc && mc.online ? 'сервер онлайн' : 'сервер сейчас недоступен',
-dotCls: !st ? 'wait' : mc && mc.online ? '' : 'off',
-online: !st ? '…' : mc && mc.online ? mc.players + ' / ' + mc.max : 'офлайн',
+statusText: !st || !mc ? 'проверяем сервер…' : mc.online ? 'сервер онлайн' : 'сервер сейчас недоступен',
+dotCls: !st || !mc ? 'wait' : mc.online ? '' : 'off',
+online: !st || !mc ? '…' : mc.online ? mc.players + ' / ' + mc.max : 'офлайн',
 discordMembers: dc ? dc.members : '—',
 copyLabel: this.state.copied ? 'Скопировано' : 'Копировать',
 copy: function () {
