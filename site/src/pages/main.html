@@ -24,6 +24,8 @@
 .ip button{min-height:40px;padding:0 14px;border-radius:10px;border:none;background:var(--sel);color:var(--accent-text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .ip button:hover{background:var(--line2);color:#fff}
 .hero-note{margin:10px 0 0;font-size:14px;color:var(--dim)}
+.ips{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.ip .rg{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--dim);margin-right:-4px}
 .hero-stats{position:absolute;right:24px;bottom:24px;display:flex;flex-direction:column;gap:10px;width:240px}
 .hero-stats .k-glass{padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .hero-stats .t{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
@@ -80,9 +82,12 @@
 <span class="hero-pill"><span class="k-dot {{dotCls}}"></span><b>ЗБТ</b> · {{statusText}}</span>
 <div class="hero-cta">
 <a class="k-btn" href="{{K.launcher}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>Скачать лаунчер</a>
-<span class="ip">mc.komori.fun<button type="button" onClick="{{copy}}">{{copyLabel}}</button></span>
 </div>
-<p class="hero-note">Windows · версия Minecraft 26.2 · вход через Microsoft</p>
+<div class="ips">
+<span class="ip"><span class="rg">RU</span>mc.komori.fun<button type="button" onClick="{{copyRu}}">{{labelRu}}</button></span>
+<span class="ip"><span class="rg">EU</span>eu.komori.fun<button type="button" onClick="{{copyEu}}">{{labelEu}}</button></span>
+</div>
+<p class="hero-note">RU — для игроков из России, EU — из Украины и Европы · Minecraft 26.2</p>
 </div>
 <div class="hero-stats">
 <div class="k-glass"><span class="t">Сервер</span><span class="v"><span class="k-dot {{dotCls}}"></span>mc.komori.fun<small>{{online}}</small></span></div>
@@ -145,7 +150,7 @@
 <h2 class="k-h2">Три шага до игры</h2>
 <div class="steps">
 <div class="k-glass step"><span class="n">1</span><h3>Скачай Komori Launcher</h3><p>Войди через Microsoft и нажми «Играть на Komori» — лаунчер сам поставит нужную версию и моды. <a href="{{K.launcher}}">Скачать для Windows</a></p></div>
-<div class="k-glass step"><span class="n">2</span><h3>Или зайди вручную</h3><p>Minecraft 26.2 → Сетевая игра → Добавить сервер → <b style="color:#fff">mc.komori.fun</b></p></div>
+<div class="k-glass step"><span class="n">2</span><h3>Или зайди вручную</h3><p>Minecraft 26.2 → Сетевая игра → Добавить сервер → <b style="color:#fff">mc.komori.fun</b> (Россия) или <b style="color:#fff">eu.komori.fun</b> (Украина и Европа)</p></div>
 <div class="k-glass step"><span class="n">3</span><h3>Прими ресурспак</h3><p>Без него не будут видны текстуры своих предметов и зачарований.</p></div>
 </div>
 </div>
@@ -158,7 +163,7 @@
 class Component extends DCLogic {
 constructor(props) {
 super(props);
-this.state = { copied: false, stats: null };
+this.state = { copied: '', stats: null };
 }
 mounted() {
 var self = this;
@@ -171,18 +176,21 @@ if (!d.mc && n < 3) setTimeout(function () { load(n + 1); }, 20000); // стат
 load(0);
 }
 renderVals() {
-var self = this, st = this.state.stats, mc = st && st.mc, dc = st && st.discord;
+var self = this, st = this.state.stats,
+copyIp = function (ip, k) {
+try { navigator.clipboard.writeText(ip); } catch (e) {}
+self.setState({ copied: k });
+setTimeout(function () { self.setState({ copied: '' }); }, 1600);
+}, mc = st && st.mc, dc = st && st.discord;
 return {
 statusText: !st || !mc ? 'проверяем сервер…' : mc.online ? 'сервер онлайн' : 'сервер сейчас недоступен',
 dotCls: !st || !mc ? 'wait' : mc.online ? '' : 'off',
 online: !st || !mc ? '…' : mc.online ? mc.players + ' / ' + mc.max : 'офлайн',
 discordMembers: dc ? dc.members : '—',
-copyLabel: this.state.copied ? 'Скопировано' : 'Копировать',
-copy: function () {
-try { navigator.clipboard.writeText('mc.komori.fun'); } catch (e) {}
-self.setState({ copied: true });
-setTimeout(function () { self.setState({ copied: false }); }, 1600);
-}
+labelRu: this.state.copied === 'ru' ? 'Скопировано' : 'Копировать',
+labelEu: this.state.copied === 'eu' ? 'Скопировано' : 'Копировать',
+copyRu: function () { copyIp('mc.komori.fun', 'ru'); },
+copyEu: function () { copyIp('eu.komori.fun', 'eu'); }
 };
 }
 }
