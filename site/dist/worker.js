@@ -46,6 +46,11 @@ async function route(req, env, ctx) {
   const p = url.pathname;
   const m = req.method;
 
+  // Один адрес для всех: старый workers.dev и www перекидываем на komori.fun (иначе вход через Discord не сработает)
+  if (m === 'GET' && (url.hostname.endsWith('.workers.dev') || url.hostname === 'www.komori.fun')) {
+    return Response.redirect('https://komori.fun' + p + url.search, 301);
+  }
+
   if (m === 'GET' && p === '/komori-dc.js') return new Response(RUNTIME, { headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' } });
   if (m === 'GET' && p.startsWith('/assets/')) return asset(p.slice(8));
   if (m === 'GET' && p === '/robots.txt') return text('User-agent: *\nAllow: /\n');
