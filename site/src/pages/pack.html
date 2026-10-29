@@ -53,10 +53,10 @@
 .pk-file{position:relative;overflow:hidden}
 .pk-file input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .pk-report{padding:14px 16px;border-radius:12px;background:#1F1638;color:#D9CCF5;font-size:14px;white-space:pre-line}
-.ad-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
-.ad-bar-in{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
-.ad-state{margin-right:auto;font-weight:600;color:var(--muted)}
-.ad-state.dirty{color:var(--gold)}.ad-state.ok{color:var(--ok)}.ad-state.err{color:var(--err)}
+.cp-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
+.cp-bar-in{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+.cp-state{margin-right:auto;font-weight:600;color:var(--muted)}
+.cp-state.dirty{color:var(--gold)}.cp-state.ok{color:var(--ok)}.cp-state.err{color:var(--err)}
 .pk-hist{padding:16px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .pk-hist div{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pk-hist small{color:var(--dim);margin-left:8px}
@@ -172,7 +172,7 @@
 </div>
 </sc-if>
 </section>
-<div class="ad-bar"><div class="ad-bar-in">
+<div class="cp-bar"><div class="cp-bar-in">
 <span class="{{stateCls}}">{{stateText}}</span>
 <button type="button" class="btn-s" onClick="{{toggleHist}}">История</button>
 <button type="button" class="btn-s" onClick="{{discard}}" disabled="{{clean}}">Отменить изменения</button>
@@ -498,7 +498,7 @@ setLoader: function (e) { var v = e.target.value; change(function (dr) { dr.load
 setLv: function (e) { var v = e.target.value.trim(); change(function (dr) { dr.loaderVersion = v; }); },
 setRam: function (e) { var v = Math.max(0, Math.min(32, parseInt(e.target.value, 10) || 0)); change(function (dr) { dr.ram = v; }); },
 stateText: s.err ? s.err : s.busy ? s.busy : dirty ? 'Есть несохранённые изменения' : s.msg || 'Всё сохранено',
-stateCls: 'ad-state' + (s.err ? ' err' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
+stateCls: 'cp-state' + (s.err ? ' err' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
 clean: !dirty, saveOff: !dirty || !!s.busy, saveLabel: s.busy === 'Сохраняю…' ? 'Сохраняю…' : 'Сохранить',
 discard: function () { self.setState({ draft: JSON.parse(JSON.stringify(self.state.saved)), msg: '', report: '', upd: {} }); },
 save: function () { send('PUT', '/api/content/pack', { data: self.state.draft }); },

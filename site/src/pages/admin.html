@@ -10,82 +10,82 @@
 <x-dc>
 <helmet>
 <style>
-.ad{max-width:1500px;margin:0 auto;padding:32px 20px 120px}
-.ad-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
-.ad-head h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(28px,4vw,40px);color:#fff}
-.ad-head p{margin:6px 0 0;color:var(--muted)}
-.ad-quick{display:flex;flex-wrap:wrap;gap:10px}
-.ad-grid{display:grid;grid-template-columns:220px minmax(0,860px);gap:20px;align-items:start}
-@media (max-width:720px){.ad-grid{grid-template-columns:1fr}}
-.ad-nav{display:flex;flex-direction:column;gap:4px;padding:8px;position:sticky;top:84px}
-@media (max-width:720px){.ad-nav{position:static;flex-direction:row;flex-wrap:wrap}}
-.ad-nav button{text-align:left;padding:11px 14px;min-height:44px;border-radius:10px;border:none;background:transparent;color:var(--text);font:inherit;font-weight:700;cursor:pointer}
-.ad-nav button:hover{background:var(--sel)}
-.ad-nav button[aria-current="page"]{background:var(--accent);color:#fff}
-.ad-form{padding:22px;display:flex;flex-direction:column;gap:14px}
-.ad-h{margin:0;font-family:'Montserrat',sans-serif;font-size:22px;color:#fff}
-.ad-hint{margin:-6px 0 0;color:var(--dim);font-size:14px}
-.ad-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
-.ad-f input[type=text],.ad-f textarea,.ad-f select{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;font-size:15px;font-weight:500;outline:none}
-.ad-f textarea{min-height:76px;resize:vertical;line-height:1.5}
-.ad-f input:focus,.ad-f textarea:focus,.ad-f select:focus{border-color:var(--accent2)}
-.ad-chk{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);cursor:pointer}
-.ad-chk input{width:20px;height:20px;accent-color:#8B3DFF}
-.ad-item{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
-.ad-item b{color:var(--accent-text);font-size:14px;letter-spacing:.04em;text-transform:uppercase}
-.ad-item div{display:flex;gap:6px}
-.ad-mini{min-width:36px;min-height:36px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
-.ad-mini:hover{border-color:var(--accent2)}
-.ad-mini.del{color:var(--err)}
-.ad-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
-.ad-bar-in{max-width:1500px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
-.ad-state{margin-right:auto;font-weight:600;color:var(--muted)}
-.ad-state.dirty{color:var(--gold)}
-.ad-state.ok{color:var(--ok)}
-.ad-md code{padding:1px 5px;border-radius:5px;background:var(--sel);color:var(--accent-text);font-family:inherit}
-.ad-deny{max-width:560px;margin:80px auto;padding:32px;text-align:center}
-.ad-hist{padding:16px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
-.ad-hist div{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.ad-hist small{color:var(--dim);margin-left:8px}
+.cp{max-width:1500px;margin:0 auto;padding:32px 20px 120px}
+.cp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+.cp-head h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(28px,4vw,40px);color:#fff}
+.cp-head p{margin:6px 0 0;color:var(--muted)}
+.cp-quick{display:flex;flex-wrap:wrap;gap:10px}
+.cp-grid{display:grid;grid-template-columns:220px minmax(0,860px);gap:20px;align-items:start}
+@media (max-width:720px){.cp-grid{grid-template-columns:1fr}}
+.cp-nav{display:flex;flex-direction:column;gap:4px;padding:8px;position:sticky;top:84px}
+@media (max-width:720px){.cp-nav{position:static;flex-direction:row;flex-wrap:wrap}}
+.cp-nav button{text-align:left;padding:11px 14px;min-height:44px;border-radius:10px;border:none;background:transparent;color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.cp-nav button:hover{background:var(--sel)}
+.cp-nav button[aria-current="page"]{background:var(--accent);color:#fff}
+.cp-form{padding:22px;display:flex;flex-direction:column;gap:14px}
+.cp-h{margin:0;font-family:'Montserrat',sans-serif;font-size:22px;color:#fff}
+.cp-hint{margin:-6px 0 0;color:var(--dim);font-size:14px}
+.cp-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+.cp-f input[type=text],.cp-f textarea,.cp-f select{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;font-size:15px;font-weight:500;outline:none}
+.cp-f textarea{min-height:76px;resize:vertical;line-height:1.5}
+.cp-f input:focus,.cp-f textarea:focus,.cp-f select:focus{border-color:var(--accent2)}
+.cp-chk{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);cursor:pointer}
+.cp-chk input{width:20px;height:20px;accent-color:#8B3DFF}
+.cp-item{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
+.cp-item b{color:var(--accent-text);font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.cp-item div{display:flex;gap:6px}
+.cp-mini{min-width:36px;min-height:36px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.cp-mini:hover{border-color:var(--accent2)}
+.cp-mini.del{color:var(--err)}
+.cp-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
+.cp-bar-in{max-width:1500px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+.cp-state{margin-right:auto;font-weight:600;color:var(--muted)}
+.cp-state.dirty{color:var(--gold)}
+.cp-state.ok{color:var(--ok)}
+.cp-md code{padding:1px 5px;border-radius:5px;background:var(--sel);color:var(--accent-text);font-family:inherit}
+.cp-deny{max-width:560px;margin:80px auto;padding:32px;text-align:center}
+.cp-hist{padding:16px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.cp-hist div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cp-hist small{color:var(--dim);margin-left:8px}
 </style>
 </helmet>
 <div style="min-height:100vh;display:flex;flex-direction:column">
 <!--KOMORI_HEADER-->
 <main style="flex:1">
 <sc-if value="{{deny}}">
-<div class="k-glass ad-deny"><h2 class="ad-h">Управление сайтом</h2><p style="color:var(--muted)">Сюда могут зайти только админы Komori. Войди через Discord с аккаунтом администратора.</p>
+<div class="k-glass cp-deny"><h2 class="cp-h">Управление сайтом</h2><p style="color:var(--muted)">Сюда могут зайти только админы Komori. Войди через Discord с аккаунтом администратора.</p>
 <sc-if value="{{K.loggedOut}}"><a class="k-login" style="display:inline-flex" href="{{K.loginUrl}}">Войти через Discord</a></sc-if></div>
 </sc-if>
 <sc-if value="{{allow}}">
-<section class="ad">
-<div class="ad-head">
+<section class="cp">
+<div class="cp-head">
 <div><h1>Управление сайтом</h1><p>Тексты главной, плашка-объявление и ссылки. «Предпросмотр» откроет главную в соседней вкладке — она меняется сразу, пока печатаешь.</p></div>
-<div class="ad-quick"><a class="btn-p" href="/?preview=1" target="komori-preview">Предпросмотр ↗</a><a class="btn-s" href="/admin/pack">Сборка сервера</a><a class="btn-s" href="/news">Посты и новости</a><a class="btn-s" href="/rules">Правила</a><a class="btn-s" href="/wiki">Вики</a></div>
+<div class="cp-quick"><a class="btn-p" href="/?preview=1" target="komori-preview">Предпросмотр ↗</a><a class="btn-s" href="/admin/pack">Сборка сервера</a><a class="btn-s" href="/news">Посты и новости</a><a class="btn-s" href="/rules">Правила</a><a class="btn-s" href="/wiki">Вики</a></div>
 </div>
-<div class="ad-grid">
-<nav class="k-glass ad-nav" aria-label="Разделы">
+<div class="cp-grid">
+<nav class="k-glass cp-nav" aria-label="Разделы">
 <sc-for list="{{groups}}" as="g"><button type="button" aria-current="{{g.current}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
 </nav>
 <div>
-<div class="k-glass ad-form">
+<div class="k-glass cp-form">
 <sc-for list="{{rows}}" as="r">
-<sc-if value="{{r.isH}}"><h2 class="ad-h">{{r.label}}</h2><sc-if value="{{r.hint}}"><p class="ad-hint">{{r.hint}}</p></sc-if></sc-if>
-<sc-if value="{{r.isText}}"><label class="ad-f">{{r.label}}<input type="text" id="{{r.id}}" value="{{r.value}}" placeholder="{{r.ph}}" onInput="{{r.set}}" maxlength="600"></label></sc-if>
-<sc-if value="{{r.isArea}}"><label class="ad-f">{{r.label}}<textarea id="{{r.id}}" placeholder="{{r.ph}}" onInput="{{r.set}}">{{r.value}}</textarea></label></sc-if>
-<sc-if value="{{r.isBool}}"><label class="ad-chk"><input type="checkbox" checked="{{r.value}}" onChange="{{r.set}}">{{r.label}}</label></sc-if>
-<sc-if value="{{r.isSelect}}"><label class="ad-f">{{r.label}}<select onChange="{{r.set}}"><sc-for list="{{r.options}}" as="o"><option value="{{o.v}}" selected="{{o.sel}}">{{o.label}}</option></sc-for></select></label></sc-if>
-<sc-if value="{{r.isItem}}"><div class="ad-item"><b>{{r.label}}</b><div>
-<button type="button" class="ad-mini" onClick="{{r.up}}" aria-label="Выше" title="Выше">↑</button><button type="button" class="ad-mini" onClick="{{r.down}}" aria-label="Ниже" title="Ниже">↓</button><button type="button" class="ad-mini del" onClick="{{r.del}}" aria-label="Удалить" title="Удалить">✕</button>
+<sc-if value="{{r.isH}}"><h2 class="cp-h">{{r.label}}</h2><sc-if value="{{r.hint}}"><p class="cp-hint">{{r.hint}}</p></sc-if></sc-if>
+<sc-if value="{{r.isText}}"><label class="cp-f">{{r.label}}<input type="text" id="{{r.id}}" value="{{r.value}}" placeholder="{{r.ph}}" onInput="{{r.set}}" maxlength="600"></label></sc-if>
+<sc-if value="{{r.isArea}}"><label class="cp-f">{{r.label}}<textarea id="{{r.id}}" placeholder="{{r.ph}}" onInput="{{r.set}}">{{r.value}}</textarea></label></sc-if>
+<sc-if value="{{r.isBool}}"><label class="cp-chk"><input type="checkbox" checked="{{r.value}}" onChange="{{r.set}}">{{r.label}}</label></sc-if>
+<sc-if value="{{r.isSelect}}"><label class="cp-f">{{r.label}}<select onChange="{{r.set}}"><sc-for list="{{r.options}}" as="o"><option value="{{o.v}}" selected="{{o.sel}}">{{o.label}}</option></sc-for></select></label></sc-if>
+<sc-if value="{{r.isItem}}"><div class="cp-item"><b>{{r.label}}</b><div>
+<button type="button" class="cp-mini" onClick="{{r.up}}" aria-label="Выше" title="Выше">↑</button><button type="button" class="cp-mini" onClick="{{r.down}}" aria-label="Ниже" title="Ниже">↓</button><button type="button" class="cp-mini del" onClick="{{r.del}}" aria-label="Удалить" title="Удалить">✕</button>
 </div></div></sc-if>
 <sc-if value="{{r.isAdd}}"><button type="button" class="btn-s" style="align-self:flex-start" onClick="{{r.add}}">{{r.label}}</button></sc-if>
 </sc-for>
-<p class="ad-hint ad-md" style="margin-top:6px">В текстах можно <code>**выделять жирным**</code> и ставить ссылки <code>[текст](https://...)</code>.</p>
+<p class="cp-hint cp-md" style="margin-top:6px">В текстах можно <code>**выделять жирным**</code> и ставить ссылки <code>[текст](https://...)</code>.</p>
 </div>
 <sc-if value="{{showHist}}">
-<div class="k-glass ad-hist">
+<div class="k-glass cp-hist">
 <b style="color:#fff">Прошлые версии</b>
-<sc-if value="{{histLoading}}"><span class="ad-hint">Загружаю…</span></sc-if>
-<sc-if value="{{histEmpty}}"><span class="ad-hint">Пока ничего не меняли.</span></sc-if>
+<sc-if value="{{histLoading}}"><span class="cp-hint">Загружаю…</span></sc-if>
+<sc-if value="{{histEmpty}}"><span class="cp-hint">Пока ничего не меняли.</span></sc-if>
 <sc-for list="{{hist}}" as="h"><div><span>{{h.label}}<small>{{h.author}}</small></span><button type="button" class="btn-s" onClick="{{h.restore}}">Вернуть</button></div></sc-for>
 <button type="button" class="{{resetCls}}" style="align-self:flex-start" onClick="{{reset}}">{{resetLabel}}</button>
 </div>
@@ -93,7 +93,7 @@
 </div>
 </div>
 </section>
-<div class="ad-bar"><div class="ad-bar-in">
+<div class="cp-bar"><div class="cp-bar-in">
 <span class="{{stateCls}}">{{stateText}}</span>
 <button type="button" class="btn-s" onClick="{{toggleHist}}">История</button>
 <button type="button" class="btn-s" onClick="{{discard}}" disabled="{{clean}}">Отменить изменения</button>
@@ -211,7 +211,7 @@ return {
 deny: false, allow: true, rows: rows,
 groups: GROUPS.map(function (g) { return { label: g[1], current: g[0] === G ? 'page' : 'false', pick: function () { self.setState({ group: g[0] }); } }; }),
 stateText: s.err ? s.err : s.busy ? 'Сохраняю…' : dirty ? 'Есть несохранённые изменения' : s.msg || 'Всё сохранено',
-stateCls: 'ad-state' + (s.err ? '' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
+stateCls: 'cp-state' + (s.err ? '' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
 clean: !dirty, saveOff: !dirty || s.busy, saveLabel: s.busy ? 'Сохраняю…' : 'Сохранить',
 discard: function () { self.setState({ draft: JSON.parse(JSON.stringify(self.state.saved)), msg: '' }); },
 save: function () { send('PUT', '/api/content/site', { data: self.state.draft }); },

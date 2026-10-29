@@ -13,7 +13,7 @@
     var k = window.KOMORI || {}, me = k.me, cfg = k.cfg || {}, b = (k.site && k.site.banner) || {};
     return {
       site: k.site || {}, mdHelp: window.KomoriMDHelp,
-      banner: !!(b.on && b.text), bannerHtml: b.text ? window.KomoriInline(b.text) : '', bannerLink: b.link || '', bannerTone: 'k-banner ' + (b.tone || 'accent'),
+      banner: !!(b.on && b.text), bannerHtml: b.text ? window.KomoriInline(b.text) : '', bannerLink: b.link || '', bannerTone: 'k-notice ' + (b.tone || 'accent'),
       bannerHasLink: !!(b.on && b.text && b.link),
       loggedIn: !!me, loggedOut: !me, admin: !!(me && me.admin),
       name: me ? me.name : '',
