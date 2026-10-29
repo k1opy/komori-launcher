@@ -162,3 +162,4 @@ x-dc{display:none}
 .edit-fab{position:fixed;right:20px;bottom:20px;z-index:30;box-shadow:0 14px 40px rgba(123,47,242,.5)}
 @media (max-width:1000px){.editing{padding-right:0;padding-bottom:58vh}.dock{top:auto;height:58vh;width:100vw;border-left:none;border-top:1px solid var(--line3)}.dock-text{min-height:160px}}
 .k-sec{scroll-margin-top:110px}
+.btn-p{text-decoration:none}a.btn-p:hover{color:#fff;filter:brightness(1.08)}

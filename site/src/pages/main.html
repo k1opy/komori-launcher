@@ -207,10 +207,12 @@ this.state = { copied: '', stats: null, news: [] };
 }
 mounted() {
 var self = this;
-// Предпросмотр в «Управлении сайтом»: черновик приходит из родительской страницы
-if (/[?&]preview=1/.test(location.search) && window.parent !== window) {
-window.addEventListener('message', function (e) {
-if (e.origin !== location.origin || !e.data || !e.data.komoriSite) return;
+// Предпросмотр из «Управления сайтом»: черновик приходит из вкладки управления (BroadcastChannel)
+if (/[?&]preview=1/.test(location.search) && window.BroadcastChannel) {
+var bc = new BroadcastChannel('komori-preview');
+bc.postMessage({ ready: true });
+bc.onmessage = function (e) {
+if (!e.data || !e.data.komoriSite) return;
 window.KOMORI.site = e.data.komoriSite;
 window.KOMORI.cfg.discord = e.data.komoriSite.links.discord;
 self.setState({});
@@ -218,7 +220,7 @@ var to = { banner: null, hero: null, links: null, features: 'features', soon: 's
 if (e.data.scrollTo === self._lastTo) return;
 self._lastTo = e.data.scrollTo;
 setTimeout(function () { var el = to && document.getElementById(to); if (el) el.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0); }, 30);
-});
+};
 document.addEventListener('click', function (e) { if (e.target.closest('a')) e.preventDefault(); }, true);
 }
 var load = function (n) {
