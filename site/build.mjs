@@ -1,6 +1,7 @@
 // Сборка сайта в ОДИН файл dist/worker.js (его можно целиком вставить в редактор Cloudflare).
 // Запуск: node site/build.mjs
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -8,7 +9,11 @@ const src = (p) => path.join(dir, 'src', p);
 
 const partials = fs.readFileSync(src('partials.html'), 'utf8');
 const part = (name) => { const m = partials.match(new RegExp(`<!--${name}-->\\n([\\s\\S]*?)\\n<!--`)); if (!m) throw new Error('нет блока ' + name); return m[1]; };
-const HEAD = part('HEAD') + '\n<!--BOOT-->\n' + part('BOOT');
+// Версия в адресе стилей и движка: после обновления сайта браузер сразу берёт новые файлы, а не старые из кэша
+const ver = (f) => crypto.createHash('sha1').update(fs.readFileSync(src(f))).digest('hex').slice(0, 10);
+const HEAD = (part('HEAD') + '\n<!--BOOT-->\n' + part('BOOT'))
+  .replace('/assets/site.css', '/assets/site.css?v=' + ver('assets/site.css'))
+  .replace('/komori-dc.js', '/komori-dc.js?v=' + ver('base.js').slice(0, 5) + ver('komori-dc.js').slice(0, 5));
 
 const PAGES = {};
 for (const f of fs.readdirSync(src('pages'))) {
