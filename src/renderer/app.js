@@ -185,7 +185,7 @@ function viewHome() {
       <button type="button" class="play-srv" data-act="playServer"><span class="dot ${!S.ping ? 'wait' : S.ping.online ? '' : 'off'}"></span>Играть на ${esc(S.info.server.name || 'Komori')}</button>
       ${progressHtml()}
     </div>
-    <div class="floats">${floatServer()}${floatLogs()}</div>
+    <div class="floats ${S.floatsSeen ? 'still' : ''}">${floatServer()}${floatLogs()}</div>
   </section>`;
 }
 
@@ -657,6 +657,8 @@ function render() {
   const focused = document.activeElement && document.activeElement.id;
   const caret = focused && document.activeElement.selectionStart;
   $('#view').innerHTML = v();
+  // Плашки справа появляются плавно только при входе на главную, а не при каждой перерисовке (иначе мерцают во время запуска)
+  S.floatsSeen = S.screen === 'home';
   if (focused) {
     const el = document.getElementById(focused);
     if (el) { el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch {} }
@@ -1002,7 +1004,13 @@ $('#wMin').addEventListener('click', () => K.win.minimize());
 $('#wMax').addEventListener('click', () => K.win.maximize());
 $('#wClose').addEventListener('click', () => K.win.close());
 
-K.game.onProgress((p) => { S.prog = p; if (S.screen === 'home' || S.screen === 'versions' || (S.screen === 'mods' && S.mods.type === 'modpack')) render(); });
+K.game.onProgress((p) => {
+  S.prog = p;
+  // На главной обновляем только полосу загрузки — без перерисовки всей страницы
+  const bar = S.screen === 'home' && document.querySelector('#view .progress');
+  if (bar) { const h = progressHtml(); if (h) { bar.outerHTML = h; return; } }
+  if (S.screen === 'home' || S.screen === 'versions' || (S.screen === 'mods' && S.mods.type === 'modpack')) render();
+});
 K.game.onLog((text) => {
   S.log = (S.log + text).slice(-60000);
   const c = $('#console');
