@@ -81,6 +81,7 @@ async function install(dir, projectId, type, ctx, onStep) {
     if (visiting.has(pid) || depth > 6) return;
     visiting.add(pid);
     if (Object.values(meta.items).some(x => x.projectId === pid)) return;
+    if (depth > 0 && ctx.skip && ctx.skip.has(pid)) return;   // уже есть в сборке сервера
     const version = versionId ? await api(`${API}/version/${encodeURIComponent(versionId)}`) : await bestVersion(pid, type, ctx);
     if (!version) {
       if (depth === 0) throw new Error(`Нет версии для ${ctx.loader === 'vanilla' ? 'Minecraft' : ctx.loader} ${ctx.mc}`);

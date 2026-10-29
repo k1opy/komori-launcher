@@ -35,6 +35,7 @@ const { ping } = require('./ping');
 const crash = require('./crash');
 let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
+CONFIG.serverManifestFallback = /^https:\/\//.test(String(CONFIG.serverManifestFallback || '')) ? CONFIG.serverManifestFallback : '';
 CONFIG.trustedHosts = Array.isArray(CONFIG.trustedHosts) ? CONFIG.trustedHosts.filter(h => /^[A-Za-z0-9.\-]+$/.test(String(h))) : [];
 curseforge.setKey(CONFIG.curseforgeApiKey);
 
@@ -233,12 +234,13 @@ async function launchGame(settings, profileId, join) {
   if (join && CONFIG.serverManifestUrl) {
     // «Играть на Komori»: профиль сервера по сборке, которую задали админы.
     progress('Проверяю сборку сервера', 0, 0);
-    const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, root, CONFIG.trustedHosts);
+    const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, root, CONFIG.trustedHosts, CONFIG.serverManifestFallback);
     profile = store.upsertManagedProfile(serverpack.SERVER_PROFILE_ID, {
       name: m.name, icon: 'bat', loader: m.loader, loaderVersion: m.loaderVersion, mcVersion: m.minecraft, ram: m.ram
     });
     store.selectProfile(profile.id);
-    await serverpack.sync(root, m, progress);
+    const synced = await serverpack.sync(root, m, progress);
+    if (synced.blocked.length) send('server:blocked', synced.blocked);
     if (m.server) joinTarget = m.server;
   } else {
     const profiles = store.getProfiles();
@@ -368,6 +370,12 @@ ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId,
     const r = await curseforge.install(ctx.dir, projectId, t, ctx, step);
     return { installed: r.installed, manual: r.manual, items: modrinth.list(ctx.dir) };
   }
+  if (ctx.profile.id === serverpack.SERVER_PROFILE_ID && CONFIG.serverManifestUrl) {
+    // Сборка сервера: свои моды — только из списка, который разрешили админы; то, что уже есть в сборке, не дублируем
+    const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, store.getSettings().gameDir, CONFIG.trustedHosts, CONFIG.serverManifestFallback);
+    if (m.allowed && !m.allowed.some(a => a.projectId === projectId)) throw new Error('Этот мод не разрешён на сервере Komori');
+    ctx.skip = new Set(m.files.map(f => (/\/data\/([A-Za-z0-9]+)\//.exec(f.url) || [])[1]).filter(Boolean));
+  }
   const names = await modrinth.install(ctx.dir, projectId, t, ctx, step);
   return { installed: names, manual: [], items: modrinth.list(ctx.dir) };
 });
@@ -427,7 +435,7 @@ ipcMain.handle('modpack:import', async () => {
 ipcMain.handle('server:status', async () => {
   const url = CONFIG.serverManifestUrl || '';
   if (!url) return { url: '', manifest: null };
-  try { return { url, manifest: await serverpack.fetchManifest(url, store.getSettings().gameDir, CONFIG.trustedHosts) }; }
+  try { return { url, manifest: await serverpack.fetchManifest(url, store.getSettings().gameDir, CONFIG.trustedHosts, CONFIG.serverManifestFallback) }; }
   catch (e) { return { url, manifest: null, error: e.message }; }
 });
 

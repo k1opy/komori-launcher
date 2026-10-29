@@ -106,21 +106,27 @@ async function route(req, env, ctx) {
   if (r && m === 'GET') return newsImage(env, r[1]);
 
   // ----- управление сайтом: тексты главной, правила, вики, картинки -----
-  r = p.match(/^\/api\/content\/(site|rules|wiki)$/);
+  // ----- сборка сервера для лаунчера -----
+  if (m === 'GET' && p === '/komori-server.json') return packManifest(env, url);
+  r = p.match(/^\/pack\/file\/([a-f0-9]{40})$/);
+  if (r && m === 'GET') return packFile(env, r[1]);
+  if (p === '/api/pack/files' && m === 'POST') return packUpload(req, env, ctx);
+
+  r = p.match(/^\/api\/content\/(site|rules|wiki|pack)$/);
   if (r) {
     if (m === 'GET') return json(await contentGet(env, r[1]), 200, { 'cache-control': 'no-store' });
     if (m === 'PUT' || m === 'DELETE') return contentSave(req, env, ctx, r[1], m === 'DELETE');
   }
-  r = p.match(/^\/api\/content\/(site|rules|wiki)\/history$/);
+  r = p.match(/^\/api\/content\/(site|rules|wiki|pack)\/history$/);
   if (r && m === 'GET') return contentHistory(req, env, ctx, r[1]);
-  r = p.match(/^\/api\/content\/(site|rules|wiki)\/restore$/);
+  r = p.match(/^\/api\/content\/(site|rules|wiki|pack)\/restore$/);
   if (r && m === 'POST') return contentRestore(req, env, ctx, r[1]);
   if (p === '/api/img' && m === 'POST') return imageUpload(req, env, ctx);
   r = p.match(/^\/img\/([a-z0-9]{6,24})$/);
   if (r && m === 'GET') return newsImage(env, r[1], 'img:');
 
   // ----- страницы -----
-  const pages = { '/': 'main', '/news': 'news', '/rules': 'rules', '/wiki': 'wiki', '/map': 'map', '/profile': 'profile', '/admin': 'admin' };
+  const pages = { '/': 'main', '/news': 'news', '/rules': 'rules', '/wiki': 'wiki', '/map': 'map', '/profile': 'profile', '/admin': 'admin', '/admin/pack': 'pack' };
   let page = pages[p] || (/^\/u\/\d{5,25}$/.test(p) ? 'profile' : /^\/news\/[a-z0-9]{6,20}$/.test(p) ? 'news' : null);
   if (page && m === 'GET') {
     const me = await currentUser(req, env, ctx);
@@ -128,7 +134,7 @@ async function route(req, env, ctx) {
     const site = await siteCfg(env);
     const boot = { me: me ? { id: me.id, name: displayName(me), avatar: avatarUrl(me), admin: isNewsAdmin(me, env) } : null, page, flash,
       cfg: publicCfg(site), site };
-    if (page === 'rules' || page === 'wiki') boot.content = (await contentGet(env, page)).data;
+    if (page === 'rules' || page === 'wiki' || page === 'pack') boot.content = (await contentGet(env, page)).data;
     const html = PAGES[page].replace('<!--BOOT-->', '<script>window.KOMORI=' + JSON.stringify(boot).replace(/</g, '\\u003c') + ';</script>');
     return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY } });
   }
@@ -382,7 +388,7 @@ function plainExcerpt(src, n) {
 // ===== управление сайтом =====
 // KV: c:site / c:rules / c:wiki — сохранённая версия (если нет — берётся стандартная),
 //     h:<ключ> — 15 прошлых версий, чтобы можно было откатить ошибку; img:<id> — картинки для правил и вики
-const CONTENT_DEFAULTS = { site: SITE_DEFAULTS, rules: CONTENT.rules, wiki: CONTENT.wiki };
+const CONTENT_DEFAULTS = { site: SITE_DEFAULTS, rules: CONTENT.rules, wiki: CONTENT.wiki, pack: CONTENT.pack };
 let SITE_CACHE = null;
 async function siteCfg(env) {
   if (SITE_CACHE && SITE_CACHE.t > Date.now() - 2000) return SITE_CACHE.v;
@@ -425,6 +431,7 @@ async function contentGet(env, key) {
 function validContent(key, d) {
   if (key === 'site') return shapeLike(SITE_DEFAULTS, d, true);
   if (key === 'rules') { const t = cleanStr(d, 60000).trim(); return t || null; }
+  if (key === 'pack') return validPack(d);
   if (key === 'wiki') {
     if (!d || !Array.isArray(d.tabs) || !d.tabs.length) return null;
     const ids = new Set();
@@ -494,6 +501,96 @@ async function imageUpload(req, env, ctx) {
   const id = Date.now().toString(36) + randomHex(4);
   await env.SITE.put('img:' + id, JSON.stringify({ type: m[1], b64: m[2] }));
   return json({ url: '/img/' + id });
+}
+
+// ===== сборка сервера =====
+// c:pack — { name, minecraft, loader, loaderVersion, ram, mods:[…], configs:[…], allowed:[…] }
+// mods — файлы с Modrinth (моды, шейдеры, ресурспаки); configs — свои файлы (настройки модов), лежат в KV pf:<sha1>;
+// allowed — что игроки могут поставить себе сверху. Лаунчер читает готовый /komori-server.json
+const PACK_DIRS = ['mods', 'resourcepacks', 'shaderpacks'];
+const PACK_CFG_DIRS = ['config/', 'resourcepacks/', 'shaderpacks/'];
+function packPath(p) {
+  p = String(p || '').replace(/\\/g, '/');
+  if (p === 'options.txt') return p;
+  if (!PACK_CFG_DIRS.some(d => p.startsWith(d)) || p.length > 200) return null;
+  if (p.split('/').some(x => !x || x === '.' || x === '..') || /[<>:"|?*\u0000-\u001F]/.test(p)) return null;
+  return p;
+}
+function validPack(d) {
+  if (!d || typeof d !== 'object') return null;
+  const hex = x => /^[a-f0-9]{40}$/.test(String(x || ''));
+  const id = x => String(x || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 16);
+  const seen = new Set();
+  const mods = (Array.isArray(d.mods) ? d.mods : []).slice(0, 400).map(x => {
+    const folder = PACK_DIRS.includes(x.folder) ? x.folder : 'mods';
+    const filename = cleanStr(x.filename, 160).trim();
+    if (!filename || /[\\/<>:"|?*]/.test(filename) || filename.startsWith('.')) return null;
+    if (!/^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.url || '')) || !hex(x.sha1)) return null;
+    const key = (folder + '/' + filename).toLowerCase();
+    if (seen.has(key)) return null; seen.add(key);
+    return { projectId: id(x.projectId), versionId: id(x.versionId), title: cleanStr(x.title, 100) || filename, version: cleanStr(x.version, 60),
+      filename, folder, url: x.url, sha1: x.sha1, size: Math.max(0, Number(x.size) || 0), enabled: x.enabled !== false,
+      icon: /^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.icon || '')) ? x.icon : '' };
+  }).filter(Boolean);
+  const cseen = new Set();
+  const configs = (Array.isArray(d.configs) ? d.configs : []).slice(0, 600).map(x => {
+    const path = packPath(x.path);
+    if (!path || !hex(x.sha1) || cseen.has(path.toLowerCase())) return null;
+    cseen.add(path.toLowerCase());
+    return { path, sha1: x.sha1, size: Math.max(0, Number(x.size) || 0), mode: x.mode === 'force' ? 'force' : 'once' };
+  }).filter(Boolean);
+  const aseen = new Set();
+  const allowed = (Array.isArray(d.allowed) ? d.allowed : []).slice(0, 300).map(x => {
+    const pid = id(x.projectId);
+    if (!pid || aseen.has(pid)) return null; aseen.add(pid);
+    return { projectId: pid, title: cleanStr(x.title, 100) || pid, slug: cleanStr(x.slug, 80).replace(/[^\w-]/g, ''),
+      type: ['mod', 'resourcepack', 'shader'].includes(x.type) ? x.type : 'mod', dep: !!x.dep,
+      icon: /^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.icon || '')) ? x.icon : '' };
+  }).filter(Boolean);
+  return {
+    name: cleanStr(d.name, 32).trim() || 'Komori',
+    minecraft: String(d.minecraft || '').replace(/[^A-Za-z0-9._\- ]/g, '').slice(0, 40) || '26.2',
+    loader: ['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'].includes(d.loader) ? d.loader : 'fabric',
+    loaderVersion: String(d.loaderVersion || '').replace(/[^A-Za-z0-9._+\-]/g, '').slice(0, 40),
+    ram: Math.max(0, Math.min(32, Number(d.ram) || 0)), mods, configs, allowed
+  };
+}
+async function packManifest(env, url) {
+  const saved = await env.SITE.get('c:pack', { type: 'json' });
+  const P = saved ? saved.data : CONTENT_DEFAULTS.pack;
+  const base = url.origin;
+  const out = {
+    format: 1, name: P.name, updated: new Date(saved ? saved.at : 0).toISOString(),
+    minecraft: P.minecraft, loader: P.loader, loaderVersion: P.loaderVersion, ram: P.ram,
+    server: { host: CFG.mcHost, port: 25565 },
+    files: P.mods.filter(x => x.enabled).map(x => ({ path: x.folder + '/' + x.filename, url: x.url, sha1: x.sha1, size: x.size || undefined, title: x.title }))
+      .concat(P.configs.map(c => ({ path: c.path, url: base + '/pack/file/' + c.sha1, sha1: c.sha1, size: c.size || undefined, title: c.path.split('/').pop(), mode: c.mode }))),
+    allowed: P.allowed.map(a => ({ projectId: a.projectId, title: a.title, type: a.type, slug: a.slug, icon: a.icon, dep: a.dep || undefined }))
+  };
+  return new Response(JSON.stringify(out, null, 1), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30', 'access-control-allow-origin': '*' } });
+}
+async function packFile(env, sha1) {
+  const a = await env.SITE.get('pf:' + sha1, { type: 'arrayBuffer' });
+  if (!a) return text('not found', 404);
+  return new Response(a, { headers: { 'content-type': 'application/octet-stream', 'cache-control': 'public, max-age=31536000, immutable' } });
+}
+// Загрузка файлов настроек: [{ b64 }] → [{ sha1, size }]. Файл хранится по своему SHA-1, поэтому одинаковые не дублируются
+async function packUpload(req, env, ctx) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const u = await currentUser(req, env, ctx);
+  if (!isNewsAdmin(u, env)) return json({ error: 'Нет прав' }, 403);
+  let b; try { b = await req.json(); } catch { return json({ error: 'Слишком большой или неверный запрос' }, 400); }
+  const files = Array.isArray(b && b.files) ? b.files.slice(0, 60) : [];
+  const out = [];
+  for (const f of files) {
+    if (typeof f.b64 !== 'string' || !/^[A-Za-z0-9+/=]*$/.test(f.b64)) return json({ error: 'Неверный файл' }, 400);
+    const bin = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
+    if (bin.length > 10 * 1024 * 1024) return json({ error: 'Файл больше 10 МБ' }, 400);
+    const sha1 = hex(new Uint8Array(await crypto.subtle.digest('SHA-1', bin)));
+    if (!(await env.SITE.get('pf:' + sha1, { type: 'arrayBuffer' }))) await env.SITE.put('pf:' + sha1, bin);
+    out.push({ sha1, size: bin.length });
+  }
+  return json(out);
 }
 
 // ===== утилиты =====

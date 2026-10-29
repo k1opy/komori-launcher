@@ -263,7 +263,7 @@ function viewMods() {
     } else if (M.error) {
       list = `<div class="empty">${esc(M.error)}<br><br><button type="button" class="btn2" data-act="mRetry">Повторить</button></div>`;
     } else if (!M.hits.length) {
-      list = `<div class="empty">${M.loading ? 'Ищу на Modrinth…' : 'Ничего не найдено'}</div>`;
+      list = `<div class="empty">${M.loading ? 'Ищу на Modrinth…' : M.serverList ? 'Для сборки сервера админы пока ничего такого не разрешили.<br>Свои моды здесь можно ставить только из их списка.' : 'Ничего не найдено'}</div>`;
     } else {
       list = M.hits.map(h => {
         const inst = !isPack && installedKeys.has(h.id);
@@ -271,13 +271,13 @@ function viewMods() {
         const label = inst ? 'Установлен' : busy ? esc(busy) : isPack ? 'Установить сборку' : 'Установить';
         return `<div class="mrow">${modIcon(h.icon, h.title)}
           <div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="${esc(h.type)}" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
-          <span class="mby">${esc(h.author)} · ${fmtNum(h.downloads)} загрузок</span>
+          <span class="mby">${h.note ? esc(h.note) : `${esc(h.author)} · ${fmtNum(h.downloads)} загрузок`}</span>
           <span class="mdesc">${esc(h.description)}</span></div>
           <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${inst || busy || (isPack && S.busy) ? 'disabled' : ''}>${label}</button></div>`;
       }).join('') + (M.hits.length < M.total ? `<div style="padding:14px;text-align:center"><button type="button" class="btn2" data-act="mMore" ${M.loading ? 'disabled' : ''}>${M.loading ? 'Загружаю…' : 'Показать ещё'}</button></div>` : '');
     }
     const forWhat = M.type === 'mod' ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
-    const hint = isPack
+    const hint = M.serverList ? `<span class="note">Это сборка сервера: можно поставить только моды, которые разрешили админы. Остальные лаунчер отключит перед входом.</span>` : isPack
       ? `<span class="note">Сборка ставится в новый профиль со своим ядром и версией.</span>`
       : (M.mc ? `<span class="note">Показаны только подходящие для ${esc(forWhat)}. Зависимости ставятся сами.</span>` : '');
     body = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${srcSeg}<div class="chips">${chips}</div><span class="grow"></span>
@@ -321,6 +321,21 @@ async function modsSearch(reset) {
   M.profileId = p.id;
   if (reset) { M.offset = 0; M.hits = []; }
   M.loading = true; M.error = null; render();
+  // Сборка сервера Komori: вместо всего Modrinth — только то, что разрешили админы
+  if (S.info.serverManifest && p.id === S.info.serverProfileId && M.type !== 'modpack') {
+    try {
+      if (!M.allowedAt || Date.now() - M.allowedAt > 60000) { const st = await K.server.status(); M.allowed = st.manifest ? st.manifest.allowed : null; M.allowedAt = Date.now(); }
+    } catch { M.allowed = null; }
+    if (M.allowed) {
+      const q = (M.query || '').trim().toLowerCase();
+      M.hits = M.allowed.filter(a => !a.dep && a.type === M.type && (!q || a.title.toLowerCase().includes(q)))
+        .map(a => ({ id: a.projectId, slug: a.slug, title: a.title, description: '', icon: a.icon, type: a.type, note: 'Разрешён на сервере Komori' }));
+      M.total = M.hits.length; M.serverList = true; M.needKey = false; M.needLoader = false; M.loading = false;
+      if (S.screen === 'mods') render();
+      return;
+    }
+  }
+  M.serverList = false;
   try {
     const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset });
     M.needLoader = !!r.needLoader; M.needKey = !!r.needKey; M.mc = r.mc || M.mc; M.total = r.total;
@@ -1018,6 +1033,7 @@ K.game.onLog((text) => {
   const lb = $('#logbox');
   if (lb) lb.innerHTML = logLines();
 });
+if (K.server.onBlocked) K.server.onBlocked((list) => toast('Отключены моды, которых нет в списке разрешённых на сервере: ' + list.join(', ')));
 K.game.onRunning((ids) => { S.running = ids || []; render(); });
 K.game.onExit(({ code, error, crash }) => {
   if (crash) S.crash = { code: error ? -1 : code, error: error || '', reason: crash.reason, canReport: crash.canReport, hasCrashReport: crash.hasCrashReport, note: '', sending: false, sent: false };

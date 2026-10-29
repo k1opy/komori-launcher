@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Сборка сервера — Komori</title>
+<meta name="robots" content="noindex">
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.pk{max-width:1200px;margin:0 auto;padding:32px 20px 120px}
+.pk-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+.pk-head h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(28px,4vw,40px);color:#fff}
+.pk-head p{margin:6px 0 0;color:var(--muted)}
+.pk-sum{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pk-sum span{padding:4px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line2);font-size:13px;font-weight:700;color:var(--muted)}
+.pk-sum b{color:#fff}
+.pk-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.pk-tabs button{min-height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font:inherit;font-weight:700;cursor:pointer}
+.pk-tabs button[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pk-box{padding:20px;display:flex;flex-direction:column;gap:14px}
+.pk-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pk-in{flex:1;min-width:200px;min-height:46px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;outline:none}
+.pk-in:focus{border-color:var(--accent2)}
+.pk-note{margin:0;color:var(--dim);font-size:14px}
+.pk-note b{color:var(--muted)}
+.pk-list{display:flex;flex-direction:column;border:1px solid var(--line2);border-radius:14px;overflow:hidden}
+.pk-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.pk-item:first-child{border-top:none}
+.pk-item.off{opacity:.5}
+.pk-ic{width:36px;height:36px;border-radius:9px;flex:0 0 auto;object-fit:cover;background:var(--sel);display:flex;align-items:center;justify-content:center;color:var(--accent-text);font-weight:800;font-size:14px}
+.pk-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.pk-t b{color:#fff;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-t span{font-size:13px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-tag{padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--sel);color:var(--accent-text);white-space:nowrap}
+.pk-tag.up{background:rgba(159,227,180,.14);color:var(--ok)}
+.pk-tag.dep{background:#2A1E4A;color:var(--dim)}
+.pk-mini{min-height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pk-mini:hover{border-color:var(--accent2)}
+.pk-mini:disabled{opacity:.5;cursor:default}
+.pk-mini.del{color:var(--err)}
+.pk-mini.ok{color:var(--ok)}
+.pk-sel{min-height:36px;padding:0 10px;border-radius:9px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;font-size:14px}
+.pk-sw{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.pk-sw input{width:18px;height:18px;accent-color:#8B3DFF}
+.pk-hits{display:flex;flex-direction:column;border:1px solid var(--line3);border-radius:14px;overflow:hidden;background:#0E0919}
+.pk-empty{padding:18px;color:var(--dim);text-align:center}
+.pk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.pk-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+.pk-f input,.pk-f select{min-height:44px;padding:0 12px;border-radius:11px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;font-size:15px}
+.pk-file{position:relative;overflow:hidden}
+.pk-file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.pk-report{padding:14px 16px;border-radius:12px;background:#1F1638;color:#D9CCF5;font-size:14px;white-space:pre-line}
+.ad-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
+.ad-bar-in{max-width:1200px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+.ad-state{margin-right:auto;font-weight:600;color:var(--muted)}
+.ad-state.dirty{color:var(--gold)}.ad-state.ok{color:var(--ok)}.ad-state.err{color:var(--err)}
+.pk-hist{padding:16px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.pk-hist div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pk-hist small{color:var(--dim);margin-left:8px}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+<!--KOMORI_HEADER-->
+<main style="flex:1">
+<sc-if value="{{deny}}">
+<div class="k-glass pk-box" style="max-width:560px;margin:80px auto;text-align:center"><h2 style="margin:0;color:#fff">Сборка сервера</h2><p class="pk-note">Сюда могут зайти только админы Komori.</p></div>
+</sc-if>
+<sc-if value="{{allow}}">
+<section class="pk">
+<div class="pk-head">
+<div><h1>Сборка сервера</h1><p>Что лаунчер ставит игрокам по кнопке «Играть на Komori». Сохранил — у игроков обновится при следующем запуске.</p>
+<div class="pk-sum"><span>Minecraft <b>{{D.minecraft}}</b></span><span>{{loaderName}} <b>{{D.loaderVersion}}</b></span><span>Моды и шейдеры <b>{{modCount}}</b></span><span>Настройки <b>{{cfgCount}}</b></span><span>Разрешено игрокам <b>{{allowCount}}</b></span></div></div>
+<div class="pk-row">
+<a class="btn-s" href="/admin">← Управление сайтом</a>
+<span class="btn-s pk-file">{{importLabel}}<input type="file" accept=".mrpack,.zip" onChange="{{onImport}}" disabled="{{busy}}"></span>
+</div>
+</div>
+<sc-if value="{{report}}"><div class="pk-report">{{report}}</div></sc-if>
+<div class="pk-tabs">
+<sc-for list="{{tabs}}" as="t"><button type="button" aria-current="{{t.current}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+</div>
+
+<sc-if value="{{isMods}}">
+<div class="k-glass pk-box">
+<div class="pk-row"><input class="pk-in" id="pkSearch" type="search" placeholder="Найти мод на Modrinth и добавить в сборку" value="{{q}}" onInput="{{onQ}}">
+<sc-for list="{{types}}" as="ty"><button type="button" class="pk-mini" aria-pressed="{{ty.on}}" style="{{ty.style}}" onClick="{{ty.pick}}">{{ty.label}}</button></sc-for></div>
+<sc-if value="{{showHits}}"><div class="pk-hits">
+<sc-if value="{{hitsEmpty}}"><div class="pk-empty">{{hitsMsg}}</div></sc-if>
+<sc-for list="{{hits}}" as="h"><div class="pk-item"><img class="pk-ic" src="{{h.icon}}" alt="" loading="lazy"><div class="pk-t"><b>{{h.title}}</b><span>{{h.desc}}</span></div><button type="button" class="pk-mini ok" onClick="{{h.add}}" disabled="{{h.off}}">{{h.label}}</button></div></sc-for>
+</div></sc-if>
+<div class="pk-row"><b style="color:#fff;margin-right:auto">В сборке</b>
+<button type="button" class="pk-mini" onClick="{{checkUpdates}}" disabled="{{busy}}">{{checkLabel}}</button>
+<sc-if value="{{hasUpdates}}"><button type="button" class="pk-mini ok" onClick="{{updateAll}}">Обновить все ({{updCount}})</button></sc-if>
+</div>
+<div class="pk-list">
+<sc-for list="{{mods}}" as="m"><div class="{{m.cls}}">
+<sc-if value="{{m.icon}}"><img class="pk-ic" src="{{m.icon}}" alt="" loading="lazy"></sc-if><sc-if value="{{m.noIcon}}"><span class="pk-ic">{{m.letter}}</span></sc-if>
+<div class="pk-t"><b>{{m.title}}</b><span>{{m.sub}}</span></div>
+<sc-if value="{{m.folderTag}}"><span class="pk-tag">{{m.folderTag}}</span></sc-if>
+<sc-if value="{{m.upd}}"><button type="button" class="pk-mini ok" onClick="{{m.update}}" title="{{m.updTitle}}">Обновить → {{m.upd}}</button></sc-if>
+<label class="pk-sw"><input type="checkbox" checked="{{m.on}}" onChange="{{m.toggle}}">вкл</label>
+<button type="button" class="pk-mini del" onClick="{{m.del}}" aria-label="Убрать из сборки" title="Убрать из сборки">✕</button>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isCfg}}">
+<div class="k-glass pk-box">
+<p class="pk-note">Можно загрузить папку config целиком, отдельные файлы, а ещё <b>options.txt</b> — стандартные настройки игры и управление для новичков. <b>Один раз</b> — файл ставится, если его нет; дальше игрок меняет настройку под себя. Если ты обновишь файл, а игрок свой не трогал — ему придёт новый. <b>Закреплён</b> — при каждом запуске как у сервера.</p>
+<div class="pk-row">
+<span class="btn-s pk-file">{{dirLabel}}<input type="file" webkitdirectory="" multiple onChange="{{onDir}}" disabled="{{busy}}"></span>
+<span class="btn-s pk-file">Загрузить файлы<input type="file" multiple onChange="{{onFiles}}" disabled="{{busy}}"></span>
+<label class="pk-sw" style="font-size:14px">файлы класть в папку<input class="pk-in" style="max-width:200px;min-width:140px;min-height:40px" value="{{fileDir}}" onInput="{{onFileDir}}" id="pkDir"></label>
+</div>
+<sc-if value="{{cfgEmpty}}"><div class="pk-empty">Настроек пока нет. Загрузи папку config из своей сборки — или .zip / .mrpack сверху.</div></sc-if>
+<div class="pk-list">
+<sc-for list="{{cfgs}}" as="c"><div class="pk-item">
+<div class="pk-t"><b>{{c.path}}</b><span>{{c.size}}</span></div>
+<select class="pk-sel" onChange="{{c.setMode}}" aria-label="Как ставить"><option value="once" selected="{{c.once}}">Один раз</option><option value="force" selected="{{c.force}}">Закреплён</option></select>
+<button type="button" class="pk-mini del" onClick="{{c.del}}" aria-label="Удалить" title="Удалить">✕</button>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isAllow}}">
+<div class="k-glass pk-box">
+<p class="pk-note">Игроки могут поставить себе сверху только эти моды (в лаунчере, вкладка «Каталог»). Остальные лишние моды в сборке сервера лаунчер отключит перед запуском. Нужные им библиотеки добавляются сами.</p>
+<div class="pk-row"><input class="pk-in" id="pkSearch2" type="search" placeholder="Найти мод на Modrinth и разрешить" value="{{q}}" onInput="{{onQ}}">
+<sc-for list="{{types}}" as="ty"><button type="button" class="pk-mini" aria-pressed="{{ty.on}}" style="{{ty.style}}" onClick="{{ty.pick}}">{{ty.label}}</button></sc-for></div>
+<sc-if value="{{showHits}}"><div class="pk-hits">
+<sc-if value="{{hitsEmpty}}"><div class="pk-empty">{{hitsMsg}}</div></sc-if>
+<sc-for list="{{hits}}" as="h"><div class="pk-item"><img class="pk-ic" src="{{h.icon}}" alt="" loading="lazy"><div class="pk-t"><b>{{h.title}}</b><span>{{h.desc}}</span></div><button type="button" class="pk-mini ok" onClick="{{h.allow}}" disabled="{{h.aoff}}">{{h.alabel}}</button></div></sc-for>
+</div></sc-if>
+<sc-if value="{{allowEmpty}}"><div class="pk-empty">Пока ничего не разрешено — игроки не смогут ставить свои моды.</div></sc-if>
+<div class="pk-list">
+<sc-for list="{{allowed}}" as="a"><div class="pk-item">
+<sc-if value="{{a.icon}}"><img class="pk-ic" src="{{a.icon}}" alt="" loading="lazy"></sc-if><sc-if value="{{a.noIcon}}"><span class="pk-ic">{{a.letter}}</span></sc-if>
+<div class="pk-t"><b>{{a.title}}</b><span>{{a.type}}</span></div>
+<sc-if value="{{a.dep}}"><span class="pk-tag dep">библиотека</span></sc-if>
+<button type="button" class="pk-mini del" onClick="{{a.del}}" aria-label="Убрать" title="Убрать">✕</button>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isParams}}">
+<div class="k-glass pk-box">
+<div class="pk-grid">
+<label class="pk-f">Название сборки<input type="text" id="pName" value="{{D.name}}" onInput="{{setName}}" maxlength="32"></label>
+<label class="pk-f">Версия Minecraft<input type="text" id="pMc" value="{{D.minecraft}}" onInput="{{setMc}}"></label>
+<label class="pk-f">Ядро<select onChange="{{setLoader}}"><sc-for list="{{loaders}}" as="l"><option value="{{l.v}}" selected="{{l.sel}}">{{l.label}}</option></sc-for></select></label>
+<label class="pk-f">Версия ядра (пусто — последняя)<input type="text" id="pLv" value="{{D.loaderVersion}}" onInput="{{setLv}}"></label>
+<label class="pk-f">Память, ГБ (0 — как в настройках игрока)<input type="text" id="pRam" value="{{D.ram}}" onInput="{{setRam}}" inputmode="numeric"></label>
+</div>
+<p class="pk-note">Если меняешь версию Minecraft — нажми «Проверить обновления» на вкладке «Моды», чтобы подтянуть версии модов под неё.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{showHist}}">
+<div class="k-glass pk-hist">
+<b style="color:#fff">Прошлые версии сборки</b>
+<sc-if value="{{histLoading}}"><span class="pk-note">Загружаю…</span></sc-if>
+<sc-if value="{{histEmpty}}"><span class="pk-note">Пока ничего не меняли.</span></sc-if>
+<sc-for list="{{hist}}" as="h"><div><span>{{h.label}}<small>{{h.author}}</small></span><button type="button" class="btn-s" onClick="{{h.restore}}">Вернуть</button></div></sc-for>
+</div>
+</sc-if>
+</section>
+<div class="ad-bar"><div class="ad-bar-in">
+<span class="{{stateCls}}">{{stateText}}</span>
+<button type="button" class="btn-s" onClick="{{toggleHist}}">История</button>
+<button type="button" class="btn-s" onClick="{{discard}}" disabled="{{clean}}">Отменить изменения</button>
+<button type="button" class="btn-p" onClick="{{save}}" disabled="{{saveOff}}">{{saveLabel}}</button>
+</div></div>
+</sc-if>
+</main>
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var c = (window.KOMORI || {}).content || {};
+this.state = { saved: c, draft: JSON.parse(JSON.stringify(c)), tab: 'mods', q: '', type: 'mod', hits: null, searching: false,
+upd: {}, checking: false, busy: '', msg: '', err: '', report: '', adding: {}, showHist: false, hist: null, fileDir: 'config' };
+}
+mounted() {
+var self = this;
+var d = this.state.draft, need = (d.mods || []).filter(function (m) { return !m.icon || !m.version; });
+if (need.length) {
+var ids = need.map(function (m) { return m.projectId; }).filter(Boolean), vids = need.map(function (m) { return m.versionId; }).filter(Boolean);
+var g = function (u) { return fetch('https://api.modrinth.com/v2' + u).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }); };
+Promise.all([g('/projects?ids=' + encodeURIComponent(JSON.stringify(ids))), g('/versions?ids=' + encodeURIComponent(JSON.stringify(vids)))]).then(function (r) {
+var meta = {};
+r[0].forEach(function (p) { meta[p.id] = meta[p.id] || {}; meta[p.id].icon = p.icon_url || ''; });
+r[1].forEach(function (v) { meta['v' + v.id] = v.version_number; });
+self.setState({ meta: meta });
+});
+}
+window.addEventListener('beforeunload', function (e) { if (JSON.stringify(self.state.draft) !== JSON.stringify(self.state.saved)) { e.preventDefault(); e.returnValue = ''; } });
+}
+renderVals() {
+var self = this, s = this.state, D = s.draft;
+if (!window.KomoriBase().admin) return { deny: true, allow: false };
+var MR = 'https://api.modrinth.com/v2';
+var FOLDER = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
+var TYPE_OF = { mods: 'mod', shaderpacks: 'shader', resourcepacks: 'resourcepack' };
+var TYPE_NAMES = { mod: 'Мод', shader: 'Шейдер', resourcepack: 'Ресурспак' };
+function mr(path, opt) {
+return fetch(MR + path, opt).then(function (r) { if (r.status === 429) throw new Error('Modrinth просит подождать пару секунд'); if (!r.ok) throw new Error('Modrinth ответил ' + r.status); return r.json(); });
+}
+function change(fn, extra) { var d = JSON.parse(JSON.stringify(self.state.draft)); fn(d); self.setState(Object.assign({ draft: d, msg: '' }, extra || {})); }
+function fail(e) { self.setState({ busy: '', err: e && e.message === 'Failed to fetch' ? 'Нет связи' : (e && e.message) || 'Ошибка' }); }
+function loadersFor(type) { return type === 'mod' ? (D.loader === 'quilt' ? ['quilt', 'fabric'] : [D.loader]) : type === 'shader' ? ['iris', 'optifine', 'canvas'] : ['minecraft']; }
+function bestVersion(pid, type) {
+var q = '?game_versions=' + encodeURIComponent(JSON.stringify([self.state.draft.minecraft])) + '&loaders=' + encodeURIComponent(JSON.stringify(loadersFor(type)));
+return mr('/project/' + encodeURIComponent(pid) + '/version' + q).then(function (list) { return list.find(function (v) { return v.version_type === 'release'; }) || list[0] || null; });
+}
+function fileOf(v) { return v.files.find(function (f) { return f.primary; }) || v.files[0]; }
+function modFrom(v, proj, type) {
+var f = fileOf(v);
+return { projectId: v.project_id, versionId: v.id, version: v.version_number, title: proj.title, icon: proj.icon_url || proj.icon || '', filename: f.filename, folder: FOLDER[type] || 'mods', url: f.url, sha1: f.hashes.sha1, size: f.size, enabled: true };
+}
+// Добавить проект в сборку (и обязательные зависимости)
+function addToPack(pid, type, title, icon, depth) {
+var d = self.state.draft;
+if (d.mods.some(function (m) { return m.projectId === pid; })) return Promise.resolve(null);
+return bestVersion(pid, type).then(function (v) {
+if (!v) throw new Error('У «' + title + '» нет версии для ' + d.minecraft + (type === 'mod' ? ' + ' + d.loader : ''));
+var proj = { title: title, icon_url: icon };
+var p = title ? Promise.resolve(proj) : mr('/project/' + pid).then(function (x) { return x; });
+return p.then(function (proj) {
+change(function (dr) { if (!dr.mods.some(function (m) { return m.projectId === pid; })) dr.mods.push(modFrom(v, proj, type)); });
+var deps = (v.dependencies || []).filter(function (x) { return x.dependency_type === 'required' && x.project_id; });
+if (depth > 2) return proj.title;
+return deps.reduce(function (pr, dep) { return pr.then(function () { return addToPack(dep.project_id, 'mod', '', '', (depth || 0) + 1); }); }, Promise.resolve()).then(function () { return proj.title; });
+});
+});
+}
+// Разрешить мод игрокам (и его обязательные библиотеки)
+function allowProject(pid, type, title, slug, icon, dep, depth) {
+if (self.state.draft.allowed.some(function (a) { return a.projectId === pid; })) return Promise.resolve();
+var p = title ? Promise.resolve({ title: title, slug: slug, icon_url: icon }) : mr('/project/' + pid);
+return p.then(function (proj) {
+change(function (dr) { if (!dr.allowed.some(function (a) { return a.projectId === pid; })) dr.allowed.push({ projectId: pid, title: proj.title, slug: proj.slug || '', icon: proj.icon_url || '', type: type, dep: !!dep }); });
+if ((depth || 0) > 2) return;
+return bestVersion(pid, type).then(function (v) {
+var deps = v ? (v.dependencies || []).filter(function (x) { return x.dependency_type === 'required' && x.project_id; }) : [];
+return deps.reduce(function (pr, d2) { return pr.then(function () { return allowProject(d2.project_id, 'mod', '', '', '', true, (depth || 0) + 1); }); }, Promise.resolve());
+});
+});
+}
+function search(q, type) {
+clearTimeout(self.tmr);
+if (q.trim().length < 2) { self.setState({ hits: null }); return; }
+self.tmr = setTimeout(function () {
+var facets = [['project_type:' + type], ['versions:' + self.state.draft.minecraft]];
+if (type === 'mod') facets.push(loadersFor('mod').map(function (l) { return 'categories:' + l; }));
+self.setState({ searching: true });
+mr('/search?limit=12&query=' + encodeURIComponent(q) + '&facets=' + encodeURIComponent(JSON.stringify(facets)))
+.then(function (r) { if (self.state.q === q) self.setState({ hits: r.hits, searching: false }); }, function (e) { self.setState({ searching: false, hits: [] }); fail(e); });
+}, 350);
+}
+// Проверка обновлений через Modrinth (по SHA-1 файлов)
+function checkUpdates() {
+var d = self.state.draft, groups = {};
+d.mods.forEach(function (m) { (groups[m.folder] = groups[m.folder] || []).push(m.sha1); });
+self.setState({ checking: true, err: '' });
+Promise.all(Object.keys(groups).map(function (folder) {
+return mr('/version_files/update', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ hashes: groups[folder], algorithm: 'sha1', loaders: loadersFor(TYPE_OF[folder]), game_versions: [d.minecraft] }) });
+})).then(function (res) {
+var upd = {};
+res.forEach(function (r) { Object.keys(r).forEach(function (h) { var m = d.mods.find(function (x) { return x.sha1 === h; }); var f = fileOf(r[h]); if (m && f.hashes.sha1 !== m.sha1) upd[h] = r[h]; }); });
+var miss = d.mods.filter(function (m) { return !res.some(function (r) { return r[m.sha1]; }); });
+self.setState({ upd: upd, checking: false, report: Object.keys(upd).length ? '' : miss.length ? 'Новых версий нет. Для ' + d.minecraft + ' не нашлось: ' + miss.map(function (m) { return m.title; }).join(', ') : 'Все моды последних версий.' });
+}, function (e) { self.setState({ checking: false }); fail(e); });
+}
+function applyUpdate(sha) {
+var v = self.state.upd[sha]; if (!v) return;
+change(function (dr) { var i = dr.mods.findIndex(function (m) { return m.sha1 === sha; }); if (i < 0) return; var m = dr.mods[i], f = fileOf(v);
+dr.mods[i] = Object.assign({}, m, { versionId: v.id, version: v.version_number, filename: f.filename, url: f.url, sha1: f.hashes.sha1, size: f.size }); });
+var u = Object.assign({}, self.state.upd); delete u[sha]; self.setState({ upd: u });
+}
+// ----- файлы -----
+function b64(buf) { var u = new Uint8Array(buf), s2 = ''; for (var i = 0; i < u.length; i += 0x8000) s2 += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s2); }
+function uploadFiles(list) { // list: [{ path, buf }]
+var batches = [], cur = [], size = 0;
+list.forEach(function (f) { if (cur.length && (size + f.buf.byteLength > 6e6 || cur.length >= 40)) { batches.push(cur); cur = []; size = 0; } cur.push(f); size += f.buf.byteLength; });
+if (cur.length) batches.push(cur);
+var done = 0, out = [];
+return batches.reduce(function (pr, b) {
+return pr.then(function () {
+self.setState({ busy: 'Загружаю файлы: ' + done + ' из ' + list.length });
+return fetch('/api/pack/files', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ files: b.map(function (f) { return { b64: b64(f.buf) }; }) }) })
+.then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || 'Ошибка загрузки'); return x; }); })
+.then(function (res) { res.forEach(function (x, i) { out.push({ path: b[i].path, sha1: x.sha1, size: x.size }); }); done += b.length; });
+});
+}, Promise.resolve()).then(function () { return out; });
+}
+function addConfigs(files) {
+change(function (dr) { files.forEach(function (f) {
+var i = dr.configs.findIndex(function (c) { return c.path.toLowerCase() === f.path.toLowerCase(); });
+var c = { path: f.path, sha1: f.sha1, size: f.size, mode: i >= 0 ? dr.configs[i].mode : 'once' };
+if (i >= 0) dr.configs[i] = c; else dr.configs.push(c);
+}); dr.configs.sort(function (a, b) { return a.path.localeCompare(b.path); }); }, { busy: '' });
+}
+function okPath(p) { return (p === 'options.txt' || /^(config|resourcepacks|shaderpacks)\/./.test(p)) && !p.split('/').some(function (x) { return !x || x === '.' || x === '..'; }) && !/[<>:"|?*]/.test(p); }
+// Маленький разборщик .zip (без библиотек): центральный каталог + DecompressionStream
+function unzip(buf) {
+var dv = new DataView(buf), u8 = new Uint8Array(buf), e = -1;
+for (var i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+if (e < 0) return Promise.reject(new Error('Это не .zip архив'));
+var n = dv.getUint16(e + 10, true), off = dv.getUint32(e + 16, true), items = [], dec = new TextDecoder();
+for (var k = 0; k < n; k++) {
+var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true), nlen = dv.getUint16(off + 28, true), xlen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true), lho = dv.getUint32(off + 42, true);
+var name = dec.decode(u8.subarray(off + 46, off + 46 + nlen));
+off += 46 + nlen + xlen + clen;
+if (/\/$/.test(name)) continue;
+var start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+items.push({ name: name, method: method, data: u8.subarray(start, start + csize) });
+}
+return Promise.all(items.map(function (it) {
+if (it.method === 0) return Promise.resolve({ name: it.name, buf: it.data.slice().buffer });
+if (it.method !== 8) return Promise.resolve(null);
+var ds = new Blob([it.data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+return new Response(ds).arrayBuffer().then(function (b) { return { name: it.name, buf: b }; });
+})).then(function (r) { return r.filter(Boolean); });
+}
+function importMrpack(files) {
+var idx = files.find(function (f) { return f.name === 'modrinth.index.json'; });
+var index = JSON.parse(new TextDecoder().decode(idx.buf)), deps = index.dependencies || {}, notes = [];
+var mods = [], ids = [], vids = [];
+(index.files || []).forEach(function (f) {
+if (f.env && f.env.client === 'unsupported') return;
+var url = (f.downloads || []).find(function (u) { return /^https:\/\/cdn\.modrinth\.com\/data\/\w+\/versions\/\w+\//.test(u); });
+var folder = String(f.path).split('/')[0];
+if (!url || ['mods', 'shaderpacks', 'resourcepacks'].indexOf(folder) < 0) { notes.push('Пропущен (не с Modrinth): ' + f.path); return; }
+var m = /\/data\/(\w+)\/versions\/(\w+)\//.exec(url);
+ids.push(m[1]); vids.push(m[2]);
+mods.push({ projectId: m[1], versionId: m[2], version: '', title: String(f.path).split('/').pop(), icon: '', filename: String(f.path).split('/').pop(), folder: folder, url: url, sha1: f.hashes.sha1, size: f.fileSize || 0, enabled: true });
+});
+var over = [], skipped = [];
+files.forEach(function (f) {
+var m = /^(?:client-)?overrides\/(.+)$/.exec(f.name); if (!m) return;
+if (okPath(m[1])) over.push({ path: m[1], buf: f.buf }); else skipped.push(m[1]);
+});
+if (skipped.length) notes.push('Не взяты (берутся только config, resourcepacks, shaderpacks и options.txt): ' + skipped.slice(0, 8).join(', ') + (skipped.length > 8 ? ' и ещё ' + (skipped.length - 8) : ''));
+var loader = deps['fabric-loader'] ? 'fabric' : deps['quilt-loader'] ? 'quilt' : deps.neoforge ? 'neoforge' : deps.forge ? 'forge' : 'vanilla';
+return Promise.all([ids.length ? mr('/projects?ids=' + encodeURIComponent(JSON.stringify(ids))) : [], vids.length ? mr('/versions?ids=' + encodeURIComponent(JSON.stringify(vids))) : []]).then(function (r) {
+mods.forEach(function (m) { var p = r[0].find(function (x) { return x.id === m.projectId; }); var v = r[1].find(function (x) { return x.id === m.versionId; }); if (p) { m.title = p.title; m.icon = p.icon_url || ''; } if (v) m.version = v.version_number; });
+return uploadFiles(over);
+}).then(function (cfgs) {
+change(function (dr) { dr.mods = mods; if (deps.minecraft) dr.minecraft = deps.minecraft; dr.loader = loader; dr.loaderVersion = deps['fabric-loader'] || deps['quilt-loader'] || deps.neoforge || deps.forge || ''; if (index.name) dr.name = String(index.name).slice(0, 32); });
+addConfigs(cfgs);
+self.setState({ report: 'Сборка загружена: ' + mods.length + ' модов и шейдеров, ' + cfgs.length + ' файлов настроек. Проверь и нажми «Сохранить».' + (notes.length ? '\n' + notes.join('\n') : '') });
+});
+}
+function importZip(files) {
+var list = files.map(function (f) { var p = f.name.replace(/\\/g, '/'); if (p !== 'options.txt' && !/^(config|resourcepacks|shaderpacks)\//.test(p)) p = 'config/' + p.replace(/^[^/]+\/(?=.)/, function (x) { return files.every(function (g) { return g.name.indexOf(x) === 0; }) ? '' : x; }); return { path: p, buf: f.buf }; })
+.filter(function (f) { return okPath(f.path); });
+return uploadFiles(list).then(function (cfgs) { addConfigs(cfgs); self.setState({ report: 'Загружено файлов настроек: ' + cfgs.length + '. Проверь и нажми «Сохранить».' }); });
+}
+function readFiles(fl, mapPath) {
+var arr = Array.prototype.slice.call(fl || []);
+return Promise.all(arr.map(function (f) { return f.arrayBuffer().then(function (b) { return { path: mapPath(f), buf: b }; }); }))
+.then(function (l) { return l.filter(function (x) { return okPath(x.path) && x.buf.byteLength <= 10 * 1024 * 1024; }); });
+}
+// ----- вывод -----
+var dirty = JSON.stringify(D) !== JSON.stringify(s.saved);
+function when(ts) { return ts ? new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'стандартная версия'; }
+function send(method, url, body) {
+self.setState({ busy: 'Сохраняю…', err: '' });
+fetch(url, { method: method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+.then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || 'Ошибка'); return x; }); })
+.then(function (x) { self.setState({ saved: x.data, draft: JSON.parse(JSON.stringify(x.data)), busy: '', msg: 'Сохранено — игроки получат при следующем запуске', showHist: false, upd: {} }); }, fail);
+}
+var hitIds = {};
+D.mods.forEach(function (m) { hitIds[m.projectId] = 1; });
+var allowIds = {};
+D.allowed.forEach(function (a) { allowIds[a.projectId] = 1; });
+var upd = s.upd;
+function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(n / 1024)) + ' КБ'; }
+var TABS = [['mods', 'Моды'], ['configs', 'Настройки модов'], ['allowed', 'Свои моды игроков'], ['params', 'Версия и ядро']];
+return {
+deny: false, allow: true, D: D,
+loaderName: { fabric: 'Fabric', quilt: 'Quilt', forge: 'Forge', neoforge: 'NeoForge', vanilla: 'Без ядра' }[D.loader],
+modCount: D.mods.filter(function (m) { return m.enabled; }).length, cfgCount: D.configs.length, allowCount: D.allowed.filter(function (a) { return !a.dep; }).length,
+report: s.report, busy: !!s.busy,
+importLabel: s.busy && /Импорт|Загружаю/.test(s.busy) ? s.busy : 'Загрузить .mrpack или .zip',
+tabs: TABS.map(function (t) { return { label: t[1], current: s.tab === t[0] ? 'page' : 'false', pick: function () { self.setState({ tab: t[0], q: '', hits: null }); } }; }),
+isMods: s.tab === 'mods', isCfg: s.tab === 'configs', isAllow: s.tab === 'allowed', isParams: s.tab === 'params',
+q: s.q, onQ: function (e) { self.setState({ q: e.target.value }); search(e.target.value, self.state.type); },
+types: [['mod', 'Моды'], ['shader', 'Шейдеры'], ['resourcepack', 'Ресурспаки']].map(function (t) { var on = s.type === t[0]; return { label: t[1], on: on ? 'true' : 'false', style: on ? 'background:var(--accent);border-color:var(--accent);color:#fff' : '', pick: function () { self.setState({ type: t[0] }); search(self.state.q, t[0]); } }; }),
+showHits: s.q.trim().length >= 2, hitsEmpty: !s.hits || !s.hits.length, hitsMsg: s.searching || !s.hits ? 'Ищу на Modrinth…' : 'Ничего не нашлось для ' + D.minecraft,
+hits: (s.hits || []).map(function (h) {
+var inPack = !!hitIds[h.project_id], allowedAlready = !!allowIds[h.project_id], adding = s.adding[h.project_id];
+return { icon: h.icon_url || '/assets/logo.svg', title: h.title, desc: h.author + ' · ' + h.description,
+label: inPack ? 'В сборке' : adding ? 'Добавляю…' : 'Добавить', off: inPack || !!adding,
+alabel: allowedAlready ? 'Разрешён' : inPack ? 'Уже в сборке' : adding ? 'Добавляю…' : 'Разрешить', aoff: allowedAlready || inPack || !!adding,
+add: function () { var a = {}; a[h.project_id] = 1; self.setState({ adding: Object.assign({}, self.state.adding, a), err: '' });
+addToPack(h.project_id, s.type, h.title, h.icon_url, 0).then(function () { var x = Object.assign({}, self.state.adding); delete x[h.project_id]; self.setState({ adding: x }); }, function (e) { var x = Object.assign({}, self.state.adding); delete x[h.project_id]; self.setState({ adding: x }); fail(e); }); },
+allow: function () { var a = {}; a[h.project_id] = 1; self.setState({ adding: Object.assign({}, self.state.adding, a), err: '' });
+allowProject(h.project_id, s.type, h.title, h.slug, h.icon_url, false, 0).then(function () { var x = Object.assign({}, self.state.adding); delete x[h.project_id]; self.setState({ adding: x }); }, function (e) { var x = Object.assign({}, self.state.adding); delete x[h.project_id]; self.setState({ adding: x }); fail(e); }); } };
+}),
+checkLabel: s.checking ? 'Проверяю…' : 'Проверить обновления', checkUpdates: checkUpdates,
+hasUpdates: Object.keys(upd).length > 0, updCount: Object.keys(upd).length,
+updateAll: function () { Object.keys(self.state.upd).forEach(applyUpdate); },
+mods: D.mods.slice().sort(function (a, b) { return (a.folder === 'mods' ? 0 : 1) - (b.folder === 'mods' ? 0 : 1) || a.title.localeCompare(b.title); }).map(function (m) {
+var u = upd[m.sha1];
+var mt = s.meta || {}, icon = m.icon || (mt[m.projectId] && mt[m.projectId].icon) || '', ver = m.version || mt['v' + m.versionId] || '';
+return { cls: 'pk-item' + (m.enabled ? '' : ' off'), icon: icon, noIcon: !icon, letter: (m.title || '?').charAt(0).toUpperCase(), title: m.title,
+sub: (ver ? ver + ' · ' : '') + m.filename + ' · ' + kb(m.size || 0), folderTag: m.folder === 'mods' ? '' : m.folder === 'shaderpacks' ? 'шейдер' : 'ресурспак',
+upd: u ? u.version_number : '', updTitle: u ? 'Новая версия: ' + u.version_number : '', update: function () { applyUpdate(m.sha1); },
+on: m.enabled ? 'true' : 'false',
+toggle: function (e) { var v = e.target.checked; change(function (dr) { dr.mods.forEach(function (x) { if (x.sha1 === m.sha1) x.enabled = v; }); }); },
+del: function () { change(function (dr) { dr.mods = dr.mods.filter(function (x) { return x.sha1 !== m.sha1; }); }); } };
+}),
+cfgEmpty: !D.configs.length,
+dirLabel: s.busy && /файлы/.test(s.busy) ? s.busy : 'Загрузить папку config',
+hasFiles: true, fileDir: s.fileDir, onFileDir: function (e) { self.setState({ fileDir: e.target.value }); },
+onDir: function (e) {
+self.setState({ busy: 'Читаю папку…', err: '' });
+readFiles(e.target.files, function (f) { return 'config/' + String(f.webkitRelativePath || f.name).split('/').slice(1).join('/'); }).then(uploadFiles).then(function (c) { addConfigs(c); self.setState({ report: 'Загружено файлов настроек: ' + c.length + '. Проверь и нажми «Сохранить».' }); }, fail);
+},
+onFiles: function (e) {
+var dir = String(self.state.fileDir || 'config').replace(/^\/+|\/+$/g, '');
+if (!/^(config|resourcepacks|shaderpacks)(\/|$)/.test(dir)) dir = 'config/' + dir;
+self.setState({ busy: 'Загружаю файлы…', err: '' });
+readFiles(e.target.files, function (f) { return f.name === 'options.txt' ? 'options.txt' : dir + '/' + f.name; }).then(uploadFiles).then(function (c) { addConfigs(c); }, fail);
+},
+cfgs: D.configs.map(function (c) {
+return { path: c.path, size: kb(c.size || 0), once: c.mode !== 'force' ? 'true' : 'false', force: c.mode === 'force' ? 'true' : 'false',
+setMode: function (e) { var v = e.target.value; change(function (dr) { dr.configs.forEach(function (x) { if (x.path === c.path) x.mode = v; }); }); },
+del: function () { change(function (dr) { dr.configs = dr.configs.filter(function (x) { return x.path !== c.path; }); }); } };
+}),
+onImport: function (e) {
+var f = e.target.files && e.target.files[0]; if (!f) return;
+self.setState({ busy: 'Импорт: читаю архив…', err: '', report: '' });
+f.arrayBuffer().then(unzip).then(function (files) {
+return files.some(function (x) { return x.name === 'modrinth.index.json'; }) ? importMrpack(files) : importZip(files);
+}).then(function () { self.setState({ busy: '' }); }, fail);
+},
+allowEmpty: !D.allowed.length,
+allowed: D.allowed.slice().sort(function (a, b) { return a.dep - b.dep || a.title.localeCompare(b.title); }).map(function (a) {
+return { icon: a.icon, noIcon: !a.icon, letter: (a.title || '?').charAt(0).toUpperCase(), title: a.title, type: TYPE_NAMES[a.type] || 'Мод', dep: a.dep,
+del: function () { change(function (dr) { dr.allowed = dr.allowed.filter(function (x) { return x.projectId !== a.projectId; }); }); } };
+}),
+loaders: [['fabric', 'Fabric'], ['quilt', 'Quilt'], ['neoforge', 'NeoForge'], ['forge', 'Forge'], ['vanilla', 'Без ядра']].map(function (l) { return { v: l[0], label: l[1], sel: D.loader === l[0] ? 'true' : 'false' }; }),
+setName: function (e) { var v = e.target.value; change(function (dr) { dr.name = v; }); },
+setMc: function (e) { var v = e.target.value.trim(); change(function (dr) { dr.minecraft = v; }); },
+setLoader: function (e) { var v = e.target.value; change(function (dr) { dr.loader = v; }); },
+setLv: function (e) { var v = e.target.value.trim(); change(function (dr) { dr.loaderVersion = v; }); },
+setRam: function (e) { var v = Math.max(0, Math.min(32, parseInt(e.target.value, 10) || 0)); change(function (dr) { dr.ram = v; }); },
+stateText: s.err ? s.err : s.busy ? s.busy : dirty ? 'Есть несохранённые изменения' : s.msg || 'Всё сохранено',
+stateCls: 'ad-state' + (s.err ? ' err' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
+clean: !dirty, saveOff: !dirty || !!s.busy, saveLabel: s.busy === 'Сохраняю…' ? 'Сохраняю…' : 'Сохранить',
+discard: function () { self.setState({ draft: JSON.parse(JSON.stringify(self.state.saved)), msg: '', report: '', upd: {} }); },
+save: function () { send('PUT', '/api/content/pack', { data: self.state.draft }); },
+showHist: s.showHist, histLoading: s.showHist && !s.hist, histEmpty: !!(s.hist && !s.hist.length),
+hist: (s.hist || []).map(function (h) { return { label: when(h.at), author: h.author || '', restore: function () { send('POST', '/api/content/pack/restore', { i: h.i }); } }; }),
+toggleHist: function () {
+if (self.state.showHist) { self.setState({ showHist: false }); return; }
+self.setState({ showHist: true, hist: null });
+fetch('/api/content/pack/history').then(function (r) { return r.json(); }).then(function (h) { self.setState({ hist: Array.isArray(h) ? h : [] }); }).catch(function () { self.setState({ hist: [] }); });
+}
+};
+}
+}
+</script>
+</body>
+</html>

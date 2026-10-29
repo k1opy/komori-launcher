@@ -74,7 +74,8 @@ contextBridge.exposeInMainWorld('komori', {
     ping: () => ipcRenderer.invoke('server:ping'),
     status: () => ipcRenderer.invoke('server:status'),
     build: (profileId) => ipcRenderer.invoke('server:build', profileId),
-    save: (manifest) => ipcRenderer.invoke('server:save', manifest)
+    save: (manifest) => ipcRenderer.invoke('server:save', manifest),
+    onBlocked: on('server:blocked')
   },
   crash: {
     send: (note) => ipcRenderer.invoke('crash:send', note),
