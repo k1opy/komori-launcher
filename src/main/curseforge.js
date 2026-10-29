@@ -1,6 +1,7 @@
 'use strict';
 // CurseForge (Core API): поиск, установка с зависимостями, обновления, данные для сборок.
-// Нужен ключ API (console.curseforge.com) в komori.config.json -> curseforgeApiKey.
+// Ключ API хранится на сайте komori.fun: лаунчер ходит через посредника (curseforgeProxy), сам ключ игрокам не попадает.
+// Для разработки можно вписать свой ключ в komori.config.json -> curseforgeApiKey — тогда запросы идут напрямую.
 const fs = require('fs');
 const path = require('path');
 const { downloadAll } = require('./net');
@@ -15,17 +16,47 @@ const SORT = { relevance: 1, downloads: 6, follows: 2, newest: 11, updated: 3 };
 const CDN = /^https:\/\/(edge|mediafilez)\.forgecdn\.net\//;
 
 let apiKey = '';
+let proxy = '';
 function setKey(k) { apiKey = String(k || '').trim(); }
-function hasKey() { return !!apiKey; }
+function setProxy(u) { proxy = /^https:\/\/[^\s]+$/.test(String(u || '')) ? String(u).replace(/\/+$/, '') : ''; }
+function hasKey() { return !!(apiKey || proxy); }
 
 async function api(pathAndQuery, opts = {}) {
-  if (!apiKey) throw new Error('Каталог CurseForge не настроен: нужен curseforgeApiKey в komori.config.json');
-  const res = await fetch(API + pathAndQuery, Object.assign({}, opts, {
-    headers: Object.assign({ 'x-api-key': apiKey, Accept: 'application/json', 'User-Agent': mr.MR_UA }, opts.headers || {})
-  }));
-  if (res.status === 403) throw new Error('CurseForge отклонил ключ API');
+  if (!apiKey && !proxy) throw new Error('Каталог CurseForge не настроен');
+  const headers = Object.assign({ Accept: 'application/json', 'User-Agent': mr.MR_UA }, apiKey ? { 'x-api-key': apiKey } : {}, opts.headers || {});
+  const res = await fetch((apiKey ? API : proxy) + pathAndQuery, Object.assign({}, opts, { headers }));
+  if (res.status === 403) throw new Error(apiKey ? 'CurseForge отклонил ключ API' : 'CurseForge сейчас недоступен через komori.fun');
+  if (res.status === 503) throw new Error('Каталог CurseForge на сайте ещё не настроен');
+  if (res.status === 429) throw new Error('Слишком много запросов к CurseForge, подожди пару минут');
   if (!res.ok) throw new Error(`CurseForge ответил ${res.status}`);
   return res.json();
+}
+
+// Отпечаток файла CurseForge (MurmurHash2, seed 1, без пробельных байтов) — чтобы узнать мод по файлу
+function fingerprint(buf) {
+  const b = buf.filter(x => x !== 9 && x !== 10 && x !== 13 && x !== 32);
+  const m = 0x5bd1e995, len = b.length;
+  let h = (1 ^ len) >>> 0, i = 0;
+  while (len - i >= 4) {
+    let k = (b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24)) >>> 0;
+    k = Math.imul(k, m) >>> 0; k = (k ^ (k >>> 24)) >>> 0; k = Math.imul(k, m) >>> 0;
+    h = (Math.imul(h, m) ^ k) >>> 0; i += 4;
+  }
+  switch (len - i) {
+    case 3: h = (h ^ (b[i + 2] << 16)) >>> 0; // fallthrough
+    case 2: h = (h ^ (b[i + 1] << 8)) >>> 0; // fallthrough
+    case 1: h = (h ^ b[i]) >>> 0; h = Math.imul(h, m) >>> 0;
+  }
+  h = (h ^ (h >>> 13)) >>> 0; h = Math.imul(h, m) >>> 0; h = (h ^ (h >>> 15)) >>> 0;
+  return h;
+}
+// { отпечаток: modId } для найденных на CurseForge
+async function identify(prints) {
+  if (!prints.length || !hasKey()) return {};
+  const r = await post('/fingerprints/432', { fingerprints: prints });
+  const out = {};
+  for (const x of (r.data && r.data.exactMatches) || []) if (x.file) out[x.file.fileFingerprint] = String(x.id);
+  return out;
 }
 const post = (p, body) => api(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -76,6 +107,7 @@ async function install(dir, modId, type, ctx, onStep) {
     if (seen.has(id) || depth > 6) return;
     seen.add(id);
     if (Object.values(meta.items).some(x => String(x.projectId) === id && x.source === 'curseforge')) return;
+    if (depth > 0 && ctx.skip && ctx.skip.has('cf' + id)) return;   // уже есть в сборке сервера
     const [mod, file] = await Promise.all([getMod(id), bestFile(id, type, ctx)]);
     if (!file) {
       if (depth === 0) throw new Error(`Нет файла для ${ctx.loader === 'vanilla' ? 'Minecraft' : ctx.loader} ${ctx.mc}`);
@@ -179,4 +211,4 @@ async function fileInfo(modId, fileId) {
   return { url: f.downloadUrl, sha1: sha1Of(f), size: f.fileLength, filename: mr.safeName(f.fileName) };
 }
 
-module.exports = { setKey, hasKey, search, install, checkUpdates, update, modpackFile, resolvePackFiles, getMod, mapMod, fileInfo };
+module.exports = { setKey, setProxy, fingerprint, identify, hasKey, search, install, checkUpdates, update, modpackFile, resolvePackFiles, getMod, mapMod, fileInfo };

@@ -85,7 +85,8 @@
 
 <sc-if value="{{isMods}}">
 <div class="k-glass pk-box">
-<div class="pk-row"><input class="pk-in" id="pkSearch" type="search" placeholder="Найти мод на Modrinth и добавить в сборку" value="{{q}}" onInput="{{onQ}}">
+<div class="pk-row"><input class="pk-in" id="pkSearch" type="search" placeholder="Найти мод и добавить в сборку" value="{{q}}" onInput="{{onQ}}">
+<sc-for list="{{srcs}}" as="sr"><button type="button" class="pk-mini" aria-pressed="{{sr.on}}" style="{{sr.style}}" onClick="{{sr.pick}}">{{sr.label}}</button></sc-for>
 <sc-for list="{{types}}" as="ty"><button type="button" class="pk-mini" aria-pressed="{{ty.on}}" style="{{ty.style}}" onClick="{{ty.pick}}">{{ty.label}}</button></sc-for></div>
 <sc-if value="{{showHits}}"><div class="pk-hits">
 <sc-if value="{{hitsEmpty}}"><div class="pk-empty">{{hitsMsg}}</div></sc-if>
@@ -130,7 +131,8 @@
 <sc-if value="{{isAllow}}">
 <div class="k-glass pk-box">
 <p class="pk-note">Игроки могут поставить себе сверху только эти моды (в лаунчере, вкладка «Каталог»). Остальные лишние моды в сборке сервера лаунчер отключит перед запуском. Нужные им библиотеки добавляются сами.</p>
-<div class="pk-row"><input class="pk-in" id="pkSearch2" type="search" placeholder="Найти мод на Modrinth и разрешить" value="{{q}}" onInput="{{onQ}}">
+<div class="pk-row"><input class="pk-in" id="pkSearch2" type="search" placeholder="Найти мод и разрешить игрокам" value="{{q}}" onInput="{{onQ}}">
+<sc-for list="{{srcs}}" as="sr"><button type="button" class="pk-mini" aria-pressed="{{sr.on}}" style="{{sr.style}}" onClick="{{sr.pick}}">{{sr.label}}</button></sc-for>
 <sc-for list="{{types}}" as="ty"><button type="button" class="pk-mini" aria-pressed="{{ty.on}}" style="{{ty.style}}" onClick="{{ty.pick}}">{{ty.label}}</button></sc-for></div>
 <sc-if value="{{showHits}}"><div class="pk-hits">
 <sc-if value="{{hitsEmpty}}"><div class="pk-empty">{{hitsMsg}}</div></sc-if>
@@ -186,14 +188,15 @@ class Component extends DCLogic {
 constructor(props) {
 super(props);
 var c = (window.KOMORI || {}).content || {};
-this.state = { saved: c, draft: JSON.parse(JSON.stringify(c)), tab: 'mods', q: '', type: 'mod', hits: null, searching: false,
+this.state = { saved: c, draft: JSON.parse(JSON.stringify(c)), tab: 'mods', q: '', type: 'mod', src: 'mr', hits: null, searching: false,
 upd: {}, checking: false, busy: '', msg: '', err: '', report: '', adding: {}, showHist: false, hist: null, fileDir: 'config' };
 }
 mounted() {
 var self = this;
 var d = this.state.draft, need = (d.mods || []).filter(function (m) { return !m.icon || !m.version; });
 if (need.length) {
-var ids = need.map(function (m) { return m.projectId; }).filter(Boolean), vids = need.map(function (m) { return m.versionId; }).filter(Boolean);
+var mrOnly = function (x) { return x && !/^cf\d/.test(x); };
+var ids = need.map(function (m) { return m.projectId; }).filter(mrOnly), vids = need.map(function (m) { return m.versionId; }).filter(mrOnly);
 var g = function (u) { return fetch('https://api.modrinth.com/v2' + u).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }); };
 Promise.all([g('/projects?ids=' + encodeURIComponent(JSON.stringify(ids))), g('/versions?ids=' + encodeURIComponent(JSON.stringify(vids)))]).then(function (r) {
 var meta = {};
@@ -218,22 +221,49 @@ function change(fn, extra) { var d = JSON.parse(JSON.stringify(self.state.draft)
 function fail(e) { self.setState({ busy: '', err: e && e.message === 'Failed to fetch' ? 'Нет связи' : (e && e.message) || 'Ошибка' }); }
 function loadersFor(type) { return type === 'mod' ? (D.loader === 'quilt' ? ['quilt', 'fabric'] : [D.loader]) : type === 'shader' ? ['iris', 'optifine', 'canvas'] : ['minecraft']; }
 function bestVersion(pid, type) {
+if (isCf(pid)) return cfBest(pid, type);
 var q = '?game_versions=' + encodeURIComponent(JSON.stringify([self.state.draft.minecraft])) + '&loaders=' + encodeURIComponent(JSON.stringify(loadersFor(type)));
 return mr('/project/' + encodeURIComponent(pid) + '/version' + q).then(function (list) { return list.find(function (v) { return v.version_type === 'release'; }) || list[0] || null; });
+}
+// CurseForge — через сайт (/api/cf), ключ хранится в Cloudflare. Ответы приводим к виду Modrinth, id с приставкой cf
+var CFC = { mod: 6, shader: 6552, resourcepack: 12 }, CFL = { forge: 1, fabric: 4, quilt: 4, neoforge: 6 };
+function cf(path, opt) {
+return fetch('/api/cf' + path, opt).then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || 'CurseForge ответил ' + r.status); return x; }); });
+}
+function isCf(pid) { return /^cf\d+$/.test(pid); }
+function cfVersion(f) {
+var h = (f.hashes || []).find(function (x) { return x.algo === 1; });
+return { id: 'cf' + f.id, project_id: 'cf' + f.modId, version_number: f.displayName || f.fileName, version_type: f.releaseType === 1 ? 'release' : 'beta', noDownload: !f.downloadUrl,
+files: [{ primary: true, filename: f.fileName, url: f.downloadUrl ? encodeURI(decodeURI(f.downloadUrl)) : '', hashes: { sha1: h ? h.value : '' }, size: f.fileLength }],
+dependencies: (f.dependencies || []).map(function (d2) { return { project_id: 'cf' + d2.modId, dependency_type: d2.relationType === 3 ? 'required' : 'optional' }; }) };
+}
+function cfBest(pid, type) {
+var dd = self.state.draft, q = new URLSearchParams({ pageSize: '50' });
+if (type !== 'shader') q.set('gameVersion', dd.minecraft);
+if (type === 'mod' && CFL[dd.loader]) q.set('modLoaderType', String(CFL[dd.loader]));
+return cf('/mods/' + pid.slice(2) + '/files?' + q).then(function (r) {
+var list = (r.data || []).sort(function (a, b) { return (a.releaseType - b.releaseType) || (new Date(b.fileDate) - new Date(a.fileDate)); });
+return list[0] ? cfVersion(list[0]) : null;
+});
+}
+function getProject(pid) {
+if (!isCf(pid)) return mr('/project/' + pid);
+return cf('/mods/' + pid.slice(2)).then(function (r) { return { title: r.data.name, slug: r.data.slug, icon_url: (r.data.logo && r.data.logo.thumbnailUrl) || '' }; });
 }
 function fileOf(v) { return v.files.find(function (f) { return f.primary; }) || v.files[0]; }
 function modFrom(v, proj, type) {
 var f = fileOf(v);
-return { projectId: v.project_id, versionId: v.id, version: v.version_number, title: proj.title, icon: proj.icon_url || proj.icon || '', filename: f.filename, folder: FOLDER[type] || 'mods', url: f.url, sha1: f.hashes.sha1, size: f.size, enabled: true };
+return { projectId: v.project_id, versionId: v.id, version: v.version_number, title: proj.title, icon: proj.icon_url || proj.icon || '', filename: f.filename, folder: FOLDER[type] || 'mods', url: f.url, sha1: f.hashes.sha1, size: f.size, enabled: true, source: isCf(v.project_id) ? 'curseforge' : 'modrinth' };
 }
 // Добавить проект в сборку (и обязательные зависимости)
 function addToPack(pid, type, title, icon, depth) {
 var d = self.state.draft;
 if (d.mods.some(function (m) { return m.projectId === pid; })) return Promise.resolve(null);
 return bestVersion(pid, type).then(function (v) {
-if (!v) throw new Error('У «' + title + '» нет версии для ' + d.minecraft + (type === 'mod' ? ' + ' + d.loader : ''));
+if (!v) throw new Error('У «' + (title || pid) + '» нет версии для ' + d.minecraft + (type === 'mod' ? ' + ' + d.loader : ''));
+if (v.noDownload || !fileOf(v).hashes.sha1) throw new Error('Автор «' + (title || pid) + '» запретил скачивание в лаунчерах — такой мод в сборку не добавить');
 var proj = { title: title, icon_url: icon };
-var p = title ? Promise.resolve(proj) : mr('/project/' + pid).then(function (x) { return x; });
+var p = title ? Promise.resolve(proj) : getProject(pid);
 return p.then(function (proj) {
 change(function (dr) { if (!dr.mods.some(function (m) { return m.projectId === pid; })) dr.mods.push(modFrom(v, proj, type)); });
 var deps = (v.dependencies || []).filter(function (x) { return x.dependency_type === 'required' && x.project_id; });
@@ -245,9 +275,9 @@ return deps.reduce(function (pr, dep) { return pr.then(function () { return addT
 // Разрешить мод игрокам (и его обязательные библиотеки)
 function allowProject(pid, type, title, slug, icon, dep, depth) {
 if (self.state.draft.allowed.some(function (a) { return a.projectId === pid; })) return Promise.resolve();
-var p = title ? Promise.resolve({ title: title, slug: slug, icon_url: icon }) : mr('/project/' + pid);
+var p = title ? Promise.resolve({ title: title, slug: slug, icon_url: icon }) : getProject(pid);
 return p.then(function (proj) {
-change(function (dr) { if (!dr.allowed.some(function (a) { return a.projectId === pid; })) dr.allowed.push({ projectId: pid, title: proj.title, slug: proj.slug || '', icon: proj.icon_url || '', type: type, dep: !!dep }); });
+change(function (dr) { if (!dr.allowed.some(function (a) { return a.projectId === pid; })) dr.allowed.push({ projectId: pid, title: proj.title, slug: proj.slug || '', icon: proj.icon_url || '', type: type, dep: !!dep, source: isCf(pid) ? 'curseforge' : 'modrinth' }); });
 if ((depth || 0) > 2) return;
 return bestVersion(pid, type).then(function (v) {
 var deps = v ? (v.dependencies || []).filter(function (x) { return x.dependency_type === 'required' && x.project_id; }) : [];
@@ -262,18 +292,28 @@ self.tmr = setTimeout(function () {
 var facets = [['project_type:' + type], ['versions:' + self.state.draft.minecraft]];
 if (type === 'mod') facets.push(loadersFor('mod').map(function (l) { return 'categories:' + l; }));
 self.setState({ searching: true });
-mr('/search?limit=12&query=' + encodeURIComponent(q) + '&facets=' + encodeURIComponent(JSON.stringify(facets)))
-.then(function (r) { if (self.state.q === q) self.setState({ hits: r.hits, searching: false }); }, function (e) { self.setState({ searching: false, hits: [] }); fail(e); });
+var dd = self.state.draft, req;
+if (self.state.src === 'cf') {
+var cq = new URLSearchParams({ classId: String(CFC[type]), searchFilter: q, pageSize: '12', sortField: '2', sortOrder: 'desc' });
+if (type !== 'shader') cq.set('gameVersion', dd.minecraft);
+if (type === 'mod' && CFL[dd.loader]) cq.set('modLoaderType', String(CFL[dd.loader]));
+req = cf('/mods/search?' + cq).then(function (r) { return { hits: (r.data || []).map(function (m) {
+return { project_id: 'cf' + m.id, slug: m.slug, title: m.name, author: (m.authors && m.authors[0] && m.authors[0].name) || '', description: m.summary || '', icon_url: (m.logo && m.logo.thumbnailUrl) || '' }; }) }; });
+} else req = mr('/search?limit=12&query=' + encodeURIComponent(q) + '&facets=' + encodeURIComponent(JSON.stringify(facets)));
+req.then(function (r) { if (self.state.q === q) self.setState({ hits: r.hits, searching: false }); }, function (e) { self.setState({ searching: false, hits: [] }); fail(e); });
 }, 350);
 }
 // Проверка обновлений через Modrinth (по SHA-1 файлов)
 function checkUpdates() {
-var d = self.state.draft, groups = {};
-d.mods.forEach(function (m) { (groups[m.folder] = groups[m.folder] || []).push(m.sha1); });
+var d = self.state.draft, groups = {}, cfMods = d.mods.filter(function (m) { return isCf(m.projectId); });
+d.mods.forEach(function (m) { if (!isCf(m.projectId)) (groups[m.folder] = groups[m.folder] || []).push(m.sha1); });
 self.setState({ checking: true, err: '' });
+// CurseForge: последний подходящий файл каждого мода → в том же виде, что ответ Modrinth
+var cfReq = cfMods.reduce(function (pr, m) { return pr.then(function (acc) {
+return cfBest(m.projectId, TYPE_OF[m.folder]).then(function (v) { if (v && !v.noDownload) acc[m.sha1] = v; return acc; }, function () { return acc; }); }); }, Promise.resolve({}));
 Promise.all(Object.keys(groups).map(function (folder) {
 return mr('/version_files/update', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ hashes: groups[folder], algorithm: 'sha1', loaders: loadersFor(TYPE_OF[folder]), game_versions: [d.minecraft] }) });
-})).then(function (res) {
+}).concat([cfReq])).then(function (res) {
 var upd = {};
 res.forEach(function (r) { Object.keys(r).forEach(function (h) { var m = d.mods.find(function (x) { return x.sha1 === h; }); var f = fileOf(r[h]); if (m && f.hashes.sha1 !== m.sha1) upd[h] = r[h]; }); });
 var miss = d.mods.filter(function (m) { return !res.some(function (r) { return r[m.sha1]; }); });
@@ -395,8 +435,9 @@ importLabel: s.busy && /Импорт|Загружаю/.test(s.busy) ? s.busy : '
 tabs: TABS.map(function (t) { return { label: t[1], current: s.tab === t[0] ? 'page' : 'false', pick: function () { self.setState({ tab: t[0], q: '', hits: null }); } }; }),
 isMods: s.tab === 'mods', isCfg: s.tab === 'configs', isAllow: s.tab === 'allowed', isParams: s.tab === 'params',
 q: s.q, onQ: function (e) { self.setState({ q: e.target.value }); search(e.target.value, self.state.type); },
+srcs: [['mr', 'Modrinth'], ['cf', 'CurseForge']].map(function (t) { var on = s.src === t[0]; return { label: t[1], on: on ? 'true' : 'false', style: on ? 'background:#2A1E4A;border-color:var(--accent2);color:#fff' : '', pick: function () { self.setState({ src: t[0], hits: null }); search(self.state.q, self.state.type); } }; }),
 types: [['mod', 'Моды'], ['shader', 'Шейдеры'], ['resourcepack', 'Ресурспаки']].map(function (t) { var on = s.type === t[0]; return { label: t[1], on: on ? 'true' : 'false', style: on ? 'background:var(--accent);border-color:var(--accent);color:#fff' : '', pick: function () { self.setState({ type: t[0] }); search(self.state.q, t[0]); } }; }),
-showHits: s.q.trim().length >= 2, hitsEmpty: !s.hits || !s.hits.length, hitsMsg: s.searching || !s.hits ? 'Ищу на Modrinth…' : 'Ничего не нашлось для ' + D.minecraft,
+showHits: s.q.trim().length >= 2, hitsEmpty: !s.hits || !s.hits.length, hitsMsg: s.searching || !s.hits ? (s.src === 'cf' ? 'Ищу на CurseForge…' : 'Ищу на Modrinth…') : 'Ничего не нашлось для ' + D.minecraft,
 hits: (s.hits || []).map(function (h) {
 var inPack = !!hitIds[h.project_id], allowedAlready = !!allowIds[h.project_id], adding = s.adding[h.project_id];
 return { icon: h.icon_url || '/assets/logo.svg', title: h.title, desc: h.author + ' · ' + h.description,

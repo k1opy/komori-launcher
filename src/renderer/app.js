@@ -273,7 +273,7 @@ function viewMods() {
           <div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="${esc(h.type)}" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
           <span class="mby">${h.note ? esc(h.note) : `${esc(h.author)} · ${fmtNum(h.downloads)} загрузок`}</span>
           <span class="mdesc">${esc(h.description)}</span></div>
-          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${inst || busy || (isPack && S.busy) ? 'disabled' : ''}>${label}</button></div>`;
+          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-src="${esc(h.src || '')}" data-title="${esc(h.title)}" ${inst || busy || (isPack && S.busy) ? 'disabled' : ''}>${label}</button></div>`;
       }).join('') + (M.hits.length < M.total ? `<div style="padding:14px;text-align:center"><button type="button" class="btn2" data-act="mMore" ${M.loading ? 'disabled' : ''}>${M.loading ? 'Загружаю…' : 'Показать ещё'}</button></div>` : '');
     }
     const forWhat = M.type === 'mod' ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
@@ -329,7 +329,7 @@ async function modsSearch(reset) {
     if (M.allowed) {
       const q = (M.query || '').trim().toLowerCase();
       M.hits = M.allowed.filter(a => !a.dep && a.type === M.type && (!q || a.title.toLowerCase().includes(q)))
-        .map(a => ({ id: a.projectId, slug: a.slug, title: a.title, description: '', icon: a.icon, type: a.type, note: 'Разрешён на сервере Komori' }));
+        .map(a => ({ id: a.source === 'curseforge' ? a.projectId.replace(/^cf/, '') : a.projectId, src: a.source === 'curseforge' ? 'curseforge' : 'modrinth', slug: a.slug, title: a.title, description: '', icon: a.icon, type: a.type, note: 'Разрешён на сервере Komori' + (a.source === 'curseforge' ? ' · CurseForge' : '') }));
       M.total = M.hits.length; M.serverList = true; M.needKey = false; M.needLoader = false; M.loading = false;
       if (S.screen === 'mods') render();
       return;
@@ -815,7 +815,7 @@ const ACTIONS = {
     if (M.type === 'modpack') return installPack(() => K.mods.installPack(M.source, projectId, el.dataset.title), projectId);
     M.busy[projectId] = 'Скачиваю…'; render();
     try {
-      const r = await K.mods.install(M.source, M.profileId, projectId, M.type);
+      const r = await K.mods.install((el && el.dataset.src) || M.source, M.profileId, projectId, M.type);
       M.items = r.items;
       if (r.installed.length > 1) toast('Установлено: ' + r.installed.join(', '), true);
       else if (r.installed.length === 1) toast('Установлен «' + r.installed[0] + '»', true);

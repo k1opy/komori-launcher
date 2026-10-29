@@ -38,6 +38,7 @@ CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl ||
 CONFIG.serverManifestFallback = /^https:\/\//.test(String(CONFIG.serverManifestFallback || '')) ? CONFIG.serverManifestFallback : '';
 CONFIG.trustedHosts = Array.isArray(CONFIG.trustedHosts) ? CONFIG.trustedHosts.filter(h => /^[A-Za-z0-9.\-]+$/.test(String(h))) : [];
 curseforge.setKey(CONFIG.curseforgeApiKey);
+curseforge.setProxy(CONFIG.curseforgeProxy === undefined ? 'https://komori.fun/api/cf' : CONFIG.curseforgeProxy);
 
 // ===== Ссылки: Discord (п.4), сайт (п.5), соцсети (п.6) =====
 // Берутся только из komori.config.json, только https. В интерфейс уходят id/название/иконка,
@@ -366,15 +367,16 @@ ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId,
   const ctx = await profileCtx(profileId);
   const t = TYPES.includes(type) ? type : 'mod';
   const step = title => send('mods:step', { projectId, title });
-  if (src === 'curseforge') {
-    const r = await curseforge.install(ctx.dir, projectId, t, ctx, step);
-    return { installed: r.installed, manual: r.manual, items: modrinth.list(ctx.dir) };
-  }
   if (ctx.profile.id === serverpack.SERVER_PROFILE_ID && CONFIG.serverManifestUrl) {
     // Сборка сервера: свои моды — только из списка, который разрешили админы; то, что уже есть в сборке, не дублируем
     const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, store.getSettings().gameDir, CONFIG.trustedHosts, CONFIG.serverManifestFallback);
-    if (m.allowed && !m.allowed.some(a => a.projectId === projectId)) throw new Error('Этот мод не разрешён на сервере Komori');
-    ctx.skip = new Set(m.files.map(f => (/\/data\/([A-Za-z0-9]+)\//.exec(f.url) || [])[1]).filter(Boolean));
+    const key = src === 'curseforge' ? 'cf' + projectId : projectId;
+    if (m.allowed && !m.allowed.some(a => a.projectId === key)) throw new Error('Этот мод не разрешён на сервере Komori');
+    ctx.skip = new Set(m.files.map(f => f.projectId || (/\/data\/([A-Za-z0-9]+)\//.exec(f.url) || [])[1]).filter(Boolean));
+  }
+  if (src === 'curseforge') {
+    const r = await curseforge.install(ctx.dir, projectId, t, ctx, step);
+    return { installed: r.installed, manual: r.manual, items: modrinth.list(ctx.dir) };
   }
   const names = await modrinth.install(ctx.dir, projectId, t, ctx, step);
   return { installed: names, manual: [], items: modrinth.list(ctx.dir) };

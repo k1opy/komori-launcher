@@ -6,6 +6,7 @@
 //   KV-привязка  SITE                    — хранилище пользователей и сессий
 //   Секреты      DISCORD_CLIENT_SECRET   — OAuth2 → Client Secret приложения
 //                DISCORD_BOT_TOKEN       — Bot → Token
+//                CURSEFORGE_API_KEY      — ключ CurseForge (лаунчер и сборка сервера ходят в CurseForge через /api/cf)
 //   (необязательно) ROLE_BADGES — JSON {"<id роли>":{"label":"VIP","color":"#FFC857"}, ...}
 
 import { PAGES, ASSETS, RUNTIME, CONTENT } from './bundle.js';
@@ -106,6 +107,10 @@ async function route(req, env, ctx) {
   if (r && m === 'GET') return newsImage(env, r[1]);
 
   // ----- управление сайтом: тексты главной, правила, вики, картинки -----
+  // ----- CurseForge через сайт (ключ остаётся только здесь) -----
+  r = p.match(/^\/api\/cf(\/[\w\/]*)$/);
+  if (r) return cfProxy(req, env, ctx, r[1], url);
+
   // ----- сборка сервера для лаунчера -----
   if (m === 'GET' && p === '/komori-server.json') return packManifest(env, url);
   r = p.match(/^\/pack\/file\/([a-f0-9]{40})$/);
@@ -516,6 +521,7 @@ function packPath(p) {
   if (p.split('/').some(x => !x || x === '.' || x === '..') || /[<>:"|?*\u0000-\u001F]/.test(p)) return null;
   return p;
 }
+const ICON_RE = /^https:\/\/(cdn\.modrinth\.com|media\.forgecdn\.net)\/\S+$/;
 function validPack(d) {
   if (!d || typeof d !== 'object') return null;
   const hex = x => /^[a-f0-9]{40}$/.test(String(x || ''));
@@ -525,12 +531,12 @@ function validPack(d) {
     const folder = PACK_DIRS.includes(x.folder) ? x.folder : 'mods';
     const filename = cleanStr(x.filename, 160).trim();
     if (!filename || /[\\/<>:"|?*]/.test(filename) || filename.startsWith('.')) return null;
-    if (!/^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.url || '')) || !hex(x.sha1)) return null;
+    if (!/^https:\/\/(cdn\.modrinth\.com|edge\.forgecdn\.net|mediafilez\.forgecdn\.net)\/\S+$/.test(String(x.url || '')) || !hex(x.sha1)) return null;
     const key = (folder + '/' + filename).toLowerCase();
     if (seen.has(key)) return null; seen.add(key);
     return { projectId: id(x.projectId), versionId: id(x.versionId), title: cleanStr(x.title, 100) || filename, version: cleanStr(x.version, 60),
       filename, folder, url: x.url, sha1: x.sha1, size: Math.max(0, Number(x.size) || 0), enabled: x.enabled !== false,
-      icon: /^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.icon || '')) ? x.icon : '' };
+      source: x.source === 'curseforge' ? 'curseforge' : 'modrinth', icon: ICON_RE.test(String(x.icon || '')) ? x.icon : '' };
   }).filter(Boolean);
   const cseen = new Set();
   const configs = (Array.isArray(d.configs) ? d.configs : []).slice(0, 600).map(x => {
@@ -545,7 +551,7 @@ function validPack(d) {
     if (!pid || aseen.has(pid)) return null; aseen.add(pid);
     return { projectId: pid, title: cleanStr(x.title, 100) || pid, slug: cleanStr(x.slug, 80).replace(/[^\w-]/g, ''),
       type: ['mod', 'resourcepack', 'shader'].includes(x.type) ? x.type : 'mod', dep: !!x.dep,
-      icon: /^https:\/\/cdn\.modrinth\.com\/\S+$/.test(String(x.icon || '')) ? x.icon : '' };
+      source: x.source === 'curseforge' ? 'curseforge' : 'modrinth', icon: ICON_RE.test(String(x.icon || '')) ? x.icon : '' };
   }).filter(Boolean);
   return {
     name: cleanStr(d.name, 32).trim() || 'Komori',
@@ -563,9 +569,9 @@ async function packManifest(env, url) {
     format: 1, name: P.name, updated: new Date(saved ? saved.at : 0).toISOString(),
     minecraft: P.minecraft, loader: P.loader, loaderVersion: P.loaderVersion, ram: P.ram,
     server: { host: CFG.mcHost, port: 25565 },
-    files: P.mods.filter(x => x.enabled).map(x => ({ path: x.folder + '/' + x.filename, url: x.url, sha1: x.sha1, size: x.size || undefined, title: x.title }))
+    files: P.mods.filter(x => x.enabled).map(x => ({ path: x.folder + '/' + x.filename, url: x.url, sha1: x.sha1, size: x.size || undefined, title: x.title, projectId: x.projectId || undefined }))
       .concat(P.configs.map(c => ({ path: c.path, url: base + '/pack/file/' + c.sha1, sha1: c.sha1, size: c.size || undefined, title: c.path.split('/').pop(), mode: c.mode }))),
-    allowed: P.allowed.map(a => ({ projectId: a.projectId, title: a.title, type: a.type, slug: a.slug, icon: a.icon, dep: a.dep || undefined }))
+    allowed: P.allowed.map(a => ({ projectId: a.projectId, title: a.title, type: a.type, slug: a.slug, icon: a.icon, dep: a.dep || undefined, source: a.source === 'curseforge' ? 'curseforge' : undefined }))
   };
   return new Response(JSON.stringify(out, null, 1), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30', 'access-control-allow-origin': '*' } });
 }
@@ -591,6 +597,45 @@ async function packUpload(req, env, ctx) {
     out.push({ sha1, size: bin.length });
   }
   return json(out);
+}
+
+// ===== CurseForge =====
+// Пропускаем только то, что нужно лаунчеру и странице сборки: поиск, мод, файлы, отпечатки.
+const CF_ROUTES = [
+  ['GET', /^\/mods\/search$/], ['GET', /^\/mods\/\d{1,10}$/], ['GET', /^\/mods\/\d{1,10}\/files$/], ['GET', /^\/mods\/\d{1,10}\/files\/\d{1,12}$/],
+  ['POST', /^\/mods$/], ['POST', /^\/mods\/files$/], ['POST', /^\/fingerprints\/432$/]
+];
+const CF_HITS = new Map();   // простая защита от злоупотреблений: не больше 240 запросов за 5 минут с одного адреса
+async function cfProxy(req, env, ctx, sub, url) {
+  const m = req.method;
+  if (m === 'OPTIONS') return new Response(null, { status: 204 });
+  if (!env.CURSEFORGE_API_KEY) return json({ error: 'CurseForge на сайте ещё не настроен' }, 503);
+  if (!CF_ROUTES.some(([mm, re]) => mm === m && re.test(sub))) return json({ error: 'Такой запрос к CurseForge не поддерживается' }, 404);
+  const ua = req.headers.get('user-agent') || '';
+  if (!/KomoriLauncher|komori\//.test(ua) && req.headers.get('sec-fetch-site') !== 'same-origin') return json({ error: 'forbidden' }, 403);
+  const ip = req.headers.get('cf-connecting-ip') || 'x', now = Date.now();
+  const hit = CF_HITS.get(ip) || { n: 0, t: now };
+  if (now - hit.t > 300000) { hit.n = 0; hit.t = now; }
+  if (++hit.n > 240) return json({ error: 'Слишком много запросов к CurseForge, подожди пару минут' }, 429);
+  CF_HITS.set(ip, hit);
+  if (CF_HITS.size > 5000) CF_HITS.clear();
+  const q = new URLSearchParams(url.search);
+  if (sub === '/mods/search') q.set('gameId', '432');
+  const target = 'https://api.curseforge.com/v1' + sub + (q.toString() ? '?' + q : '');
+  const headers = { 'x-api-key': env.CURSEFORGE_API_KEY, accept: 'application/json', 'user-agent': 'KomoriSite/1.0 (komori.fun)' };
+  if (m === 'GET') {
+    const cache = caches.default, key = new Request(target);
+    const c = await cache.match(key);
+    if (c) return c;
+    const res = await fetch(target, { headers });
+    const out = new Response(res.body, { status: res.status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': res.ok ? 'public, max-age=600' : 'no-store' } });
+    if (res.ok) ctx.waitUntil(cache.put(key, out.clone()));
+    return out;
+  }
+  const body = await req.text();
+  if (body.length > 65536) return json({ error: 'Слишком большой запрос' }, 400);
+  const res = await fetch(target, { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, headers), body });
+  return new Response(res.body, { status: res.status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
 // ===== утилиты =====

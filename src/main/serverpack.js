@@ -49,7 +49,8 @@ function validate(m, extraHosts) {
     if (!hostAllowed(f.url, extraHosts)) throw new Error('Ссылка с неразрешённого сайта: ' + f.url);
     if (!/^[a-f0-9]{40}$/.test(String(f.sha1 || ''))) throw new Error('У файла нет SHA-1: ' + p);
     const mode = !p.startsWith('mods/') && f.mode === 'once' ? 'once' : 'force';
-    files.push({ path: p, url: f.url, sha1: f.sha1, size: Number(f.size) || undefined, title: String(f.title || path.basename(p)).slice(0, 100), mode });
+    const projectId = /^[A-Za-z0-9]{1,16}$/.test(String(f.projectId || '')) ? String(f.projectId) : undefined;
+    files.push({ path: p, url: f.url, sha1: f.sha1, size: Number(f.size) || undefined, title: String(f.title || path.basename(p)).slice(0, 100), mode, projectId });
   }
   // Что игрокам можно поставить сверху (null — старая сборка без списка: свои моды не трогаем)
   const allowed = Array.isArray(m.allowed) ? m.allowed.filter(a => a && /^[A-Za-z0-9]{1,16}$/.test(String(a.projectId))).slice(0, 300).map(a => ({
@@ -146,6 +147,16 @@ async function enforceAllowed(dir, m, state) {
     try {
       const res = await fetch(MR_API + '/version_files', { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'komori/KomoriLauncher (mc.komori.fun)' }, body: JSON.stringify({ hashes: unknown, algorithm: 'sha1' }) });
       if (res.ok) { const r = await res.json(); for (const h of unknown) known[h] = r[h] ? r[h].project_id : ''; }
+    } catch {}
+  }
+  // Нет на Modrinth — пробуем узнать на CurseForge по отпечатку файла
+  const notMr = extra.filter(f => hashes[f] && known[hashes[f]] === '');
+  if (notMr.length && cf.hasKey()) {
+    try {
+      const prints = {};
+      for (const f of notMr) prints[f] = cf.fingerprint(fs.readFileSync(path.join(modsDir, f)));
+      const found = await cf.identify(Object.values(prints));
+      for (const f of notMr) if (found[prints[f]]) known[hashes[f]] = 'cf' + found[prints[f]];
     } catch {}
   }
   const blocked = [];
