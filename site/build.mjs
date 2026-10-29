@@ -14,6 +14,7 @@ const PAGES = {};
 for (const f of fs.readdirSync(src('pages'))) {
   if (!f.endsWith('.html')) continue;
   let html = fs.readFileSync(src('pages/' + f), 'utf8');
+  if (html.includes('<!--KOMORI_DOCK-->')) html = html.replace('<!--KOMORI_DOCK-->', part('DOCK'));
   for (const [mark, val] of [['<!--KOMORI_HEAD-->', HEAD], ['<!--KOMORI_HEADER-->', part('HEADER')], ['<!--KOMORI_FOOTER-->', part('FOOTER')]]) {
     if (!html.includes(mark)) throw new Error(f + ': нет ' + mark);
     html = html.replace(mark, val);
@@ -28,11 +29,13 @@ for (const f of fs.readdirSync(src('pages'))) {
 const TYPES = { css: 'text/css; charset=utf-8', woff: 'font/woff', woff2: 'font/woff2', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml', webp: 'image/webp' };
 const ASSETS = {};
 for (const f of fs.readdirSync(src('assets'))) ASSETS[f] = { type: TYPES[f.split('.').pop()] || 'application/octet-stream', b64: fs.readFileSync(src('assets/' + f)).toString('base64') };
+// Стандартные тексты правил и вики (то, что показывается, пока админ ничего не менял на сайте)
+const CONTENT = { rules: fs.readFileSync(src('content/rules.md'), 'utf8'), wiki: JSON.parse(fs.readFileSync(src('content/wiki.json'), 'utf8')) };
 const RUNTIME = fs.readFileSync(src('base.js'), 'utf8') + '\n' + fs.readFileSync(src('komori-dc.js'), 'utf8');
 
 const worker = fs.readFileSync(src('worker.js'), 'utf8').replace(/^import .*bundle\.js';\n/m, '');
 const out = `// Komori site — собранный файл, не редактировать вручную (исходники в site/src, сборка: node site/build.mjs)\n` +
-  `const PAGES = ${JSON.stringify(PAGES)};\nconst ASSETS = ${JSON.stringify(ASSETS)};\nconst RUNTIME = ${JSON.stringify(RUNTIME)};\n` + worker;
+  `const PAGES = ${JSON.stringify(PAGES)};\nconst ASSETS = ${JSON.stringify(ASSETS)};\nconst RUNTIME = ${JSON.stringify(RUNTIME)};\nconst CONTENT = ${JSON.stringify(CONTENT)};\n` + worker;
 fs.mkdirSync(path.join(dir, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(dir, 'dist', 'worker.js'), out);
 console.log('dist/worker.js', (out.length / 1024).toFixed(0) + ' КБ, страниц:', Object.keys(PAGES).join(', '));

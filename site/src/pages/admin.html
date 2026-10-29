@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Управление сайтом — Komori</title>
+<meta name="robots" content="noindex">
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.ad{max-width:1500px;margin:0 auto;padding:32px 20px 120px}
+.ad-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+.ad-head h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(28px,4vw,40px);color:#fff}
+.ad-head p{margin:6px 0 0;color:var(--muted)}
+.ad-quick{display:flex;flex-wrap:wrap;gap:10px}
+.ad-grid{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:start}
+@media (max-width:1200px){.ad-grid{grid-template-columns:200px minmax(0,1fr)}.ad-prev{display:none}}
+@media (max-width:720px){.ad-grid{grid-template-columns:1fr}}
+.ad-nav{display:flex;flex-direction:column;gap:4px;padding:8px;position:sticky;top:84px}
+@media (max-width:720px){.ad-nav{position:static;flex-direction:row;flex-wrap:wrap}}
+.ad-nav button{text-align:left;padding:11px 14px;min-height:44px;border-radius:10px;border:none;background:transparent;color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.ad-nav button:hover{background:var(--sel)}
+.ad-nav button[aria-current="page"]{background:var(--accent);color:#fff}
+.ad-form{padding:22px;display:flex;flex-direction:column;gap:14px}
+.ad-h{margin:0;font-family:'Montserrat',sans-serif;font-size:22px;color:#fff}
+.ad-hint{margin:-6px 0 0;color:var(--dim);font-size:14px}
+.ad-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+.ad-f input[type=text],.ad-f textarea,.ad-f select{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line2);background:#0B0716;color:#fff;font:inherit;font-size:15px;font-weight:500;outline:none}
+.ad-f textarea{min-height:76px;resize:vertical;line-height:1.5}
+.ad-f input:focus,.ad-f textarea:focus,.ad-f select:focus{border-color:var(--accent2)}
+.ad-chk{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);cursor:pointer}
+.ad-chk input{width:20px;height:20px;accent-color:#8B3DFF}
+.ad-item{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
+.ad-item b{color:var(--accent-text);font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.ad-item div{display:flex;gap:6px}
+.ad-mini{min-width:36px;min-height:36px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.ad-mini:hover{border-color:var(--accent2)}
+.ad-mini.del{color:var(--err)}
+.ad-slot{height:calc(100vh - 116px)}
+@media (max-width:1200px){.ad-slot{display:none}}
+.ad-prev{position:fixed;z-index:5;overflow:hidden;padding:0;display:none}
+.ad-prev .lbl{display:flex;justify-content:space-between;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--line)}
+.ad-prev iframe{display:block;width:100%;height:calc(100% - 39px);border:none;background:var(--bg)}
+.ad-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(18,12,34,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line3)}
+.ad-bar-in{max-width:1500px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+.ad-state{margin-right:auto;font-weight:600;color:var(--muted)}
+.ad-state.dirty{color:var(--gold)}
+.ad-state.ok{color:var(--ok)}
+.ad-md code{padding:1px 5px;border-radius:5px;background:var(--sel);color:var(--accent-text);font-family:inherit}
+.ad-deny{max-width:560px;margin:80px auto;padding:32px;text-align:center}
+.ad-hist{padding:16px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.ad-hist div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ad-hist small{color:var(--dim);margin-left:8px}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column">
+<!--KOMORI_HEADER-->
+<main style="flex:1">
+<sc-if value="{{deny}}">
+<div class="k-glass ad-deny"><h2 class="ad-h">Управление сайтом</h2><p style="color:var(--muted)">Сюда могут зайти только админы Komori. Войди через Discord с аккаунтом администратора.</p>
+<sc-if value="{{K.loggedOut}}"><a class="k-login" style="display:inline-flex" href="{{K.loginUrl}}">Войти через Discord</a></sc-if></div>
+</sc-if>
+<sc-if value="{{allow}}">
+<section class="ad">
+<div class="ad-head">
+<div><h1>Управление сайтом</h1><p>Тексты главной, плашка-объявление и ссылки. Справа — как будет выглядеть.</p></div>
+<div class="ad-quick"><a class="btn-s" href="/news">Посты и новости</a><a class="btn-s" href="/rules">Правила</a><a class="btn-s" href="/wiki">Вики</a></div>
+</div>
+<div class="ad-grid">
+<nav class="k-glass ad-nav" aria-label="Разделы">
+<sc-for list="{{groups}}" as="g"><button type="button" aria-current="{{g.current}}" onClick="{{g.pick}}">{{g.label}}</button></sc-for>
+</nav>
+<div>
+<div class="k-glass ad-form">
+<sc-for list="{{rows}}" as="r">
+<sc-if value="{{r.isH}}"><h2 class="ad-h">{{r.label}}</h2><sc-if value="{{r.hint}}"><p class="ad-hint">{{r.hint}}</p></sc-if></sc-if>
+<sc-if value="{{r.isText}}"><label class="ad-f">{{r.label}}<input type="text" id="{{r.id}}" value="{{r.value}}" placeholder="{{r.ph}}" onInput="{{r.set}}" maxlength="600"></label></sc-if>
+<sc-if value="{{r.isArea}}"><label class="ad-f">{{r.label}}<textarea id="{{r.id}}" placeholder="{{r.ph}}" onInput="{{r.set}}">{{r.value}}</textarea></label></sc-if>
+<sc-if value="{{r.isBool}}"><label class="ad-chk"><input type="checkbox" checked="{{r.value}}" onChange="{{r.set}}">{{r.label}}</label></sc-if>
+<sc-if value="{{r.isSelect}}"><label class="ad-f">{{r.label}}<select onChange="{{r.set}}"><sc-for list="{{r.options}}" as="o"><option value="{{o.v}}" selected="{{o.sel}}">{{o.label}}</option></sc-for></select></label></sc-if>
+<sc-if value="{{r.isItem}}"><div class="ad-item"><b>{{r.label}}</b><div>
+<button type="button" class="ad-mini" onClick="{{r.up}}" aria-label="Выше" title="Выше">↑</button><button type="button" class="ad-mini" onClick="{{r.down}}" aria-label="Ниже" title="Ниже">↓</button><button type="button" class="ad-mini del" onClick="{{r.del}}" aria-label="Удалить" title="Удалить">✕</button>
+</div></div></sc-if>
+<sc-if value="{{r.isAdd}}"><button type="button" class="btn-s" style="align-self:flex-start" onClick="{{r.add}}">{{r.label}}</button></sc-if>
+</sc-for>
+<p class="ad-hint ad-md" style="margin-top:6px">В текстах можно <code>**выделять жирным**</code> и ставить ссылки <code>[текст](https://...)</code>.</p>
+</div>
+<sc-if value="{{showHist}}">
+<div class="k-glass ad-hist">
+<b style="color:#fff">Прошлые версии</b>
+<sc-if value="{{histLoading}}"><span class="ad-hint">Загружаю…</span></sc-if>
+<sc-if value="{{histEmpty}}"><span class="ad-hint">Пока ничего не меняли.</span></sc-if>
+<sc-for list="{{hist}}" as="h"><div><span>{{h.label}}<small>{{h.author}}</small></span><button type="button" class="btn-s" onClick="{{h.restore}}">Вернуть</button></div></sc-for>
+<button type="button" class="{{resetCls}}" style="align-self:flex-start" onClick="{{reset}}">{{resetLabel}}</button>
+</div>
+</sc-if>
+</div>
+<div class="ad-slot" id="adSlot"></div>
+</div>
+</section>
+<div class="ad-bar"><div class="ad-bar-in">
+<span class="{{stateCls}}">{{stateText}}</span>
+<button type="button" class="btn-s" onClick="{{toggleHist}}">История</button>
+<button type="button" class="btn-s" onClick="{{discard}}" disabled="{{clean}}">Отменить изменения</button>
+<button type="button" class="btn-p" onClick="{{save}}" disabled="{{saveOff}}">{{saveLabel}}</button>
+</div></div>
+</sc-if>
+</main>
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+var site = (window.KOMORI || {}).site || {};
+this.state = { saved: site, draft: JSON.parse(JSON.stringify(site)), group: 'banner', busy: false, msg: '', err: '', showHist: false, hist: null, sureReset: false };
+}
+mounted() {
+var self = this;
+// Рамка с предпросмотром живёт вне шаблона: иначе при каждой букве она бы перезагружалась
+var box = document.createElement('div');
+box.className = 'k-glass ad-prev';
+box.innerHTML = '<div class="lbl"><span>Предпросмотр главной</span><span>не на сайте, пока не нажмёшь «Сохранить»</span></div><iframe id="adPrev" src="/?preview=1" title="Предпросмотр главной"></iframe>';
+document.body.appendChild(box);
+var place = function () {
+var slot = document.getElementById('adSlot');
+if (!slot || !slot.offsetWidth) { box.style.display = 'none'; return; }
+var r = slot.getBoundingClientRect();
+box.style.display = 'block';
+box.style.left = r.left + 'px'; box.style.width = r.width + 'px';
+box.style.top = Math.max(r.top, 84) + 'px'; box.style.height = Math.min(r.height, window.innerHeight - Math.max(r.top, 84) - 80) + 'px';
+};
+self.place = place;
+window.addEventListener('scroll', place, { passive: true });
+window.addEventListener('resize', place);
+place();
+window.addEventListener('beforeunload', function (e) { if (self.dirty()) { e.preventDefault(); e.returnValue = ''; } });
+var f = document.getElementById('adPrev');
+if (f) f.addEventListener('load', function () { self.loaded = true; self.lastSent = ''; self.push(); });
+}
+dirty() { return JSON.stringify(this.state.draft) !== JSON.stringify(this.state.saved); }
+push() {
+// отправляем черновик в предпросмотр (главная в рамке справа)
+var f = document.getElementById('adPrev'), msg = JSON.stringify({ site: this.state.draft, to: this.state.group });
+if (!f || !f.contentWindow || !this.loaded || msg === this.lastSent) return;
+this.lastSent = msg;
+f.contentWindow.postMessage({ komoriSite: this.state.draft, scrollTo: this.state.group }, location.origin);
+}
+renderVals() {
+var self = this, s = this.state, D = s.draft;
+if (!window.KomoriBase().admin) return { deny: true, allow: false };
+setTimeout(function () { self.push(); if (self.place) self.place(); }, 0);
+function set(path, v) { var dr = JSON.parse(JSON.stringify(self.state.draft)), o = dr; for (var i = 0; i < path.length - 1; i++) o = o[path[i]]; o[path[path.length - 1]] = v; self.setState({ draft: dr, msg: '' }); }
+function get(path) { var o = D; for (var i = 0; i < path.length; i++) o = o == null ? undefined : o[path[i]]; return o; }
+function listOp(path, fn) { var dr = JSON.parse(JSON.stringify(self.state.draft)), o = dr; path.forEach(function (k) { o = o[k]; }); fn(o); self.setState({ draft: dr, msg: '' }); }
+var rows = [], uid = 0;
+function H(label, hint) { rows.push({ isH: true, label: label, hint: hint || '' }); }
+function T(label, path, ph, area) { var id = 'f' + (uid++) + '_' + path.join('_'); rows.push({ isText: !area, isArea: !!area, id: id, label: label, ph: ph || '', value: get(path) == null ? '' : get(path), set: function (e) { set(path, e.target.value); } }); }
+function B(label, path) { rows.push({ isBool: true, label: label, value: get(path) ? 'true' : 'false', set: function (e) { set(path, e.target.checked); } }); }
+function S(label, path, opts) { var v = get(path) || ''; rows.push({ isSelect: true, label: label, options: opts.map(function (o) { return { v: o[0], label: o[1], sel: o[0] === v ? 'true' : 'false' }; }), set: function (e) { set(path, e.target.value); } }); }
+function L(path, noun, make, each) {
+var arr = get(path) || [];
+arr.forEach(function (x, i) {
+rows.push({ isItem: true, label: noun + ' ' + (i + 1),
+up: function () { listOp(path, function (a) { if (i > 0) { var t = a[i - 1]; a[i - 1] = a[i]; a[i] = t; } }); },
+down: function () { listOp(path, function (a) { if (i < a.length - 1) { var t = a[i + 1]; a[i + 1] = a[i]; a[i] = t; } }); },
+del: function () { listOp(path, function (a) { a.splice(i, 1); }); } });
+each(path.concat([i]), x);
+});
+rows.push({ isAdd: true, label: '+ Добавить: ' + noun.toLowerCase(), add: function () { listOp(path, function (a) { a.push(make()); }); } });
+}
+var icons = [['', 'Без иконки (число)']].concat(Object.keys(window.KomoriIcons).map(function (k) { return [k, window.KomoriIcons[k].name]; }));
+var G = s.group;
+if (G === 'banner') {
+H('Плашка-объявление', 'Цветная полоса под шапкой на всех страницах: техработы, розыгрыш, важная новость.');
+B('Показывать плашку', ['banner', 'on']);
+T('Текст', ['banner', 'text'], 'Например: Сегодня с 18:00 до 20:00 МСК техработы');
+T('Ссылка «Подробнее» (необязательно)', ['banner', 'link'], 'https://… или /news');
+S('Цвет', ['banner', 'tone'], [['accent', 'Фиолетовый'], ['gold', 'Жёлтый — внимание'], ['warn', 'Красный — важно'], ['ok', 'Зелёный — хорошая новость']]);
+} else if (G === 'hero') {
+H('Первый экран', 'Логотип и кнопка «Скачать лаунчер» остаются как есть.');
+T('Метка у статуса сервера', ['hero', 'pill'], 'ЗБТ');
+T('Адрес RU', ['hero', 'ru'], 'mc.komori.fun');
+T('Адрес EU', ['hero', 'eu'], 'eu.komori.fun');
+T('Подпись под адресами', ['hero', 'note']);
+} else if (G === 'features') {
+H('Что уже есть'); B('Показывать блок', ['features', 'show']);
+T('Надпись сверху', ['features', 'eyebrow']); T('Заголовок', ['features', 'title']); T('Подзаголовок', ['features', 'lead'], '', true);
+L(['features', 'items'], 'Карточка', function () { return { icon: 'star', big: '', title: 'Новая фишка', text: 'Описание' }; }, function (p) {
+S('Иконка', p.concat(['icon']), icons); T('Большое число вместо иконки (например 73)', p.concat(['big'])); T('Заголовок', p.concat(['title'])); T('Текст', p.concat(['text']), '', true);
+});
+} else if (G === 'soon') {
+H('Что будет дальше', 'Спойлеры будущих обновлений.'); B('Показывать блок', ['soon', 'show']);
+T('Надпись сверху', ['soon', 'eyebrow']); T('Заголовок', ['soon', 'title']);
+L(['soon', 'items'], 'Спойлер', function () { return { tag: 'Скоро', title: 'Новое', text: '' }; }, function (p) {
+T('Метка (Скоро, В планах…)', p.concat(['tag'])); T('Заголовок', p.concat(['title'])); T('Текст', p.concat(['text']), '', true);
+});
+} else if (G === 'zbt') {
+H('Проходка и розыгрыш'); B('Показывать блок', ['zbt', 'show']);
+T('Надпись сверху', ['zbt', 'eyebrow']); T('Заголовок', ['zbt', 'title']); T('Название билета', ['zbt', 'ticket']);
+H('Что даёт');
+L(['zbt', 'perks'], 'Пункт', function () { return 'Новый пункт'; }, function (p) { T('Текст', p); });
+H('Цены');
+L(['zbt', 'prices'], 'Цена', function () { return '0 ₽'; }, function (p) { T('Цена с валютой', p); });
+T('Как купить', ['zbt', 'how']);
+H('Розыгрыш (правая карточка)');
+T('Заголовок', ['zbt', 'giveTitle']); T('Текст', ['zbt', 'giveText'], '', true);
+} else if (G === 'steps') {
+H('Как начать'); B('Показывать блок', ['steps', 'show']);
+T('Надпись сверху', ['steps', 'eyebrow']); T('Заголовок', ['steps', 'title']);
+L(['steps', 'items'], 'Шаг', function () { return { title: 'Новый шаг', text: '' }; }, function (p) { T('Заголовок', p.concat(['title'])); T('Текст', p.concat(['text']), '', true); });
+} else if (G === 'links') {
+H('Ссылки', 'Используются в шапке, подвале, кнопках и в /download. Пустая соцсеть — не показывается.');
+T('Приглашение в Discord', ['links', 'discord'], 'https://discord.gg/…');
+T('Скачивание лаунчера', ['links', 'launcher'], 'https://…');
+T('Telegram', ['links', 'telegram'], 'https://t.me/…'); T('YouTube', ['links', 'youtube'], 'https://www.youtube.com/@…'); T('TikTok', ['links', 'tiktok'], 'https://www.tiktok.com/@…');
+}
+var GROUPS = [['banner', 'Плашка'], ['hero', 'Первый экран'], ['features', 'Что уже есть'], ['soon', 'Что будет дальше'], ['zbt', 'Проходка и цены'], ['steps', 'Как начать'], ['links', 'Ссылки']];
+var dirty = this.dirty();
+function when(ts) { return ts ? new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'стандартная версия'; }
+function apply(x) { self.setState({ saved: x.data, draft: JSON.parse(JSON.stringify(x.data)), busy: false, msg: 'Сохранено — уже на сайте', err: '', showHist: false, sureReset: false }); window.KOMORI.site = x.data; }
+function send(method, url, body) {
+self.setState({ busy: true, err: '' });
+fetch(url, { method: method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+.then(function (r) { return r.json().then(function (x) { if (!r.ok) throw new Error(x.error || 'Ошибка'); return x; }); })
+.then(apply, function (e) { self.setState({ busy: false, err: e.message === 'Failed to fetch' ? 'Нет связи с сайтом' : e.message }); });
+}
+return {
+deny: false, allow: true, rows: rows,
+groups: GROUPS.map(function (g) { return { label: g[1], current: g[0] === G ? 'page' : 'false', pick: function () { self.setState({ group: g[0] }); } }; }),
+stateText: s.err ? s.err : s.busy ? 'Сохраняю…' : dirty ? 'Есть несохранённые изменения' : s.msg || 'Всё сохранено',
+stateCls: 'ad-state' + (s.err ? '' : dirty ? ' dirty' : s.msg ? ' ok' : ''),
+clean: !dirty, saveOff: !dirty || s.busy, saveLabel: s.busy ? 'Сохраняю…' : 'Сохранить',
+discard: function () { self.setState({ draft: JSON.parse(JSON.stringify(self.state.saved)), msg: '' }); },
+save: function () { send('PUT', '/api/content/site', { data: self.state.draft }); },
+showHist: s.showHist, histLoading: s.showHist && !s.hist, histEmpty: !!(s.hist && !s.hist.length),
+hist: (s.hist || []).map(function (h) { return { label: when(h.at), author: h.author || '', restore: function () { send('POST', '/api/content/site/restore', { i: h.i }); } }; }),
+toggleHist: function () {
+if (self.state.showHist) { self.setState({ showHist: false }); return; }
+self.setState({ showHist: true, hist: null });
+fetch('/api/content/site/history').then(function (r) { return r.json(); }).then(function (h) { self.setState({ hist: Array.isArray(h) ? h : [] }); }).catch(function () { self.setState({ hist: [] }); });
+},
+resetLabel: s.sureReset ? 'Точно вернуть стандартные тексты?' : 'Вернуть стандартные тексты', resetCls: 'btn-s danger' + (s.sureReset ? ' sure' : ''),
+reset: function () { if (!self.state.sureReset) { self.setState({ sureReset: true }); return; } send('DELETE', '/api/content/site'); }
+};
+}
+}
+</script>
+</body>
+</html>

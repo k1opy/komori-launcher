@@ -17,6 +17,7 @@
 <div class="k-user">
 <sc-if value="{{K.loggedIn}}">
 <a href="/profile" class="k-me"><img src="{{K.avatar}}" alt="" width="32" height="32">{{K.name}}</a>
+<sc-if value="{{K.admin}}"><a href="/admin" class="k-out k-gear" aria-label="Управление сайтом" title="Управление сайтом"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></a></sc-if>
 <button type="button" class="k-out" onClick="{{K.logout}}" aria-label="Выйти" title="Выйти"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></button>
 </sc-if>
 <sc-if value="{{K.loggedOut}}">
@@ -24,6 +25,7 @@
 </sc-if>
 </div>
 </div>
+<sc-if value="{{K.banner}}"><div class="{{K.bannerTone}}" role="status"><span data-html="{{K.bannerHtml}}"></span><sc-if value="{{K.bannerHasLink}}"> <a href="{{K.bannerLink}}">Подробнее →</a></sc-if></div></sc-if>
 <sc-if value="{{K.flash}}">
 <div class="k-flash" role="status"><div>{{K.flash}} <sc-if value="{{K.flashJoin}}"><a href="{{K.discord}}" target="_blank" rel="noopener" style="color:#fff">Зайти на сервер Discord</a></sc-if></div></div>
 </sc-if>
@@ -35,4 +37,39 @@
 <nav class="k-foot-links" aria-label="Ссылки"><a href="/rules">Правила</a><a href="/wiki">Вики</a><a href="/map">Карта</a><a href="{{K.launcher}}">Лаунчер</a><a href="{{K.discord}}" target="_blank" rel="noopener">Discord</a><sc-for list="{{K.social}}" as="s"><a href="{{s.url}}" target="_blank" rel="noopener">{{s.name}}</a></sc-for></nav>
 </div>
 </footer>
+<!--DOCK-->
+<sc-if value="{{d.open}}">
+<aside class="dock" aria-label="{{d.title}}">
+<div class="dock-top"><h2>{{d.title}}</h2><button type="button" class="ed-x" onClick="{{d.cancel}}" aria-label="Закрыть">×</button></div>
+<div class="dock-body">
+<sc-if value="{{d.hasNote}}"><p class="dock-note">{{d.note}}</p></sc-if>
+<sc-if value="{{d.hasFields}}">
+<sc-for list="{{d.fields}}" as="fl"><label class="dock-field">{{fl.label}}<input type="text" id="{{fl.id}}" value="{{fl.value}}" onInput="{{fl.onInput}}" maxlength="80"></label></sc-for>
+</sc-if>
+<sc-if value="{{d.hasActions}}">
+<div class="ed-tools"><sc-for list="{{d.actions}}" as="ac"><button type="button" class="{{ac.cls}}" onClick="{{ac.fn}}">{{ac.label}}</button></sc-for></div>
+</sc-if>
+<sc-if value="{{d.hasText}}">
+<textarea id="dockText" class="dock-text" spellcheck="true" onInput="{{d.onText}}">{{d.text}}</textarea>
+<div class="ed-tools"><button type="button" class="btn-s" onClick="{{d.insertImage}}">{{d.insLabel}}</button></div>
+<span class="ed-hint" data-html="{{d.help}}"></span>
+</sc-if>
+<sc-if value="{{d.showHist}}">
+<div class="dock-hist">
+<b>Прошлые версии</b>
+<sc-if value="{{d.histLoading}}"><span class="ed-hint">Загружаю…</span></sc-if>
+<sc-if value="{{d.histEmpty}}"><span class="ed-hint">Пока ничего не меняли.</span></sc-if>
+<sc-for list="{{d.hist}}" as="h"><div class="dock-hrow"><span>{{h.label}}<small>{{h.author}}</small></span><button type="button" class="btn-s" onClick="{{h.restore}}">Вернуть</button></div></sc-for>
+<button type="button" class="{{d.resetCls}}" onClick="{{d.reset}}">{{d.resetLabel}}</button>
+</div>
+</sc-if>
+</div>
+<div class="dock-bottom">
+<sc-if value="{{d.err}}"><span class="ed-err">{{d.err}}</span></sc-if>
+<button type="button" class="btn-s" onClick="{{d.toggleHist}}">История</button>
+<button type="button" class="btn-s" onClick="{{d.cancel}}">Отмена</button>
+<button type="button" class="btn-p" onClick="{{d.save}}" disabled="{{d.busy}}">{{d.saveLabel}}</button>
+</div>
+</aside>
+</sc-if>
 <!--END-->

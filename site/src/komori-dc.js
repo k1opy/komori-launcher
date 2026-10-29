@@ -74,6 +74,13 @@
         if (typeof fn === 'function') el.addEventListener(name.slice(2), fn);
         continue;
       }
+      if (name === 'data-html') {
+        // Готовый безопасный HTML (например, текст новости после KomoriMD) — вставляем как разметку
+        el.removeAttribute(name);
+        var h = lookup(single(val) || '', scopes);
+        el.innerHTML = h == null ? '' : String(h);
+        continue;
+      }
       if (val.indexOf('{{') >= 0) {
         var v = interpolate(val, scopes);
         // булевы атрибуты: "false" или пусто — убрать атрибут
@@ -100,9 +107,13 @@
     var K = window.KomoriBase ? window.KomoriBase() : {};
     var active = document.activeElement, focusId = active && active.id, selS, selE;
     try { selS = active.selectionStart; selE = active.selectionEnd; } catch (e) {}
+    // прокрутку элементов с id (поле текста, превью) сохраняем — иначе при каждой букве всё прыгает наверх
+    var scrolls = {};
+    root.querySelectorAll('[id]').forEach(function (el) { if (el.scrollTop) scrolls[el.id] = el.scrollTop; });
     var out = [];
     buildChildren(tpl.content, [{ K: K }, vals], out);
     root.replaceChildren.apply(root, out);
+    for (var sid in scrolls) { var se = document.getElementById(sid); if (se) se.scrollTop = scrolls[sid]; }
     if (focusId) {
       var f = document.getElementById(focusId);
       if (f) { f.focus(); try { if (selS != null) f.setSelectionRange(selS, selE); } catch (e) {} }

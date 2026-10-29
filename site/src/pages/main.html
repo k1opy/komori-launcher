@@ -33,6 +33,15 @@
 .hero-stats .v small{margin-left:auto;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 @media (max-width:980px){.hero-stats{position:static;flex-direction:row;flex-wrap:wrap;justify-content:center;width:auto;margin-top:28px}.hero-stats .k-glass{min-width:200px}}
 
+.news3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:28px}
+.news3 a{display:flex;flex-direction:column;overflow:hidden;text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
+.news3 a:hover{border-color:var(--accent2);transform:translateY(-2px);color:var(--text)}
+.news3 .cv{height:150px;object-fit:cover;display:block;width:100%;background:radial-gradient(ellipse 70% 90% at 70% 40%,rgba(139,61,255,.5),transparent 70%),#140E26}
+.news3 .in{padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.news3 .dt{font-size:13px;color:var(--dim)}
+.news3 h3{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;color:#fff;line-height:1.3}
+.news3 p{margin:0;color:var(--muted);font-size:15px}
+.k-more{display:inline-flex;margin-top:18px;color:var(--accent-text);font-weight:700;text-decoration:none}
 .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:36px}
 .feat{padding:24px;display:flex;flex-direction:column;gap:12px}
 .feat h3{margin:4px 0 0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:#fff}
@@ -79,82 +88,113 @@
 <img class="hero-logo" src="/assets/logo.svg" alt="" width="140" height="140">
 <h1 class="hero-word">KOMORI</h1>
 <p class="hero-sub">MINECRAFT СЕРВЕР</p>
-<span class="hero-pill"><span class="k-dot {{dotCls}}"></span><b>ЗБТ</b> · {{statusText}}</span>
+<span class="hero-pill"><span class="k-dot {{dotCls}}"></span><sc-if value="{{h.pill}}"><b>{{h.pill}}</b> · </sc-if>{{statusText}}</span>
 <div class="hero-cta">
 <a class="k-btn" href="{{K.launcher}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>Скачать лаунчер</a>
 </div>
 <div class="ips">
-<span class="ip"><span class="rg">RU</span>mc.komori.fun<button type="button" onClick="{{copyRu}}">{{labelRu}}</button></span>
-<span class="ip"><span class="rg">EU</span>eu.komori.fun<button type="button" onClick="{{copyEu}}">{{labelEu}}</button></span>
+<sc-if value="{{h.ru}}"><span class="ip"><span class="rg">RU</span>{{h.ru}}<button type="button" onClick="{{copyRu}}">{{labelRu}}</button></span></sc-if>
+<sc-if value="{{h.eu}}"><span class="ip"><span class="rg">EU</span>{{h.eu}}<button type="button" onClick="{{copyEu}}">{{labelEu}}</button></span></sc-if>
 </div>
-<p class="hero-note">RU — для игроков из России, EU — из Украины и Европы · Minecraft 26.2</p>
+<sc-if value="{{h.note}}"><p class="hero-note">{{h.note}}</p></sc-if>
 </div>
 <div class="hero-stats">
-<div class="k-glass"><span class="t">Сервер</span><span class="v"><span class="k-dot {{dotCls}}"></span>mc.komori.fun<small>{{online}}</small></span></div>
+<div class="k-glass"><span class="t">Сервер</span><span class="v"><span class="k-dot {{dotCls}}"></span>{{h.ru}}<small>{{online}}</small></span></div>
 <div class="k-glass"><span class="t">Discord</span><span class="v">Участников<small>{{discordMembers}}</small></span></div>
 </div>
 </section>
 
+<sc-if value="{{hasNews}}">
+<section class="k-sec" id="news" style="padding-bottom:0">
+<div class="k-wrap">
+<span class="k-eyebrow">Новости</span>
+<h2 class="k-h2">Что нового на Komori</h2>
+<div class="news3">
+<sc-for list="{{news}}" as="n">
+<a class="k-glass" href="{{n.href}}">
+<sc-if value="{{n.image}}"><img class="cv" src="{{n.image}}" alt="" loading="lazy"></sc-if>
+<sc-if value="{{n.noImage}}"><div class="cv"></div></sc-if>
+<div class="in"><span class="dt">{{n.date}}</span><h3>{{n.title}}</h3><p>{{n.excerpt}}</p></div>
+</a>
+</sc-for>
+</div>
+<a class="k-more" href="/news">Все новости →</a>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{f.show}}">
 <section class="k-sec" id="features">
 <div class="k-wrap">
-<span class="k-eyebrow">Что уже есть</span>
-<h2 class="k-h2">Не ванилла — и это видно</h2>
-<p class="k-lead">Выживание на 26.2 со своими механиками, которых нет на других серверах.</p>
+<span class="k-eyebrow">{{f.eyebrow}}</span>
+<h2 class="k-h2">{{f.title}}</h2>
+<sc-if value="{{f.lead}}"><p class="k-lead">{{f.lead}}</p></sc-if>
 <div class="feats">
-<div class="k-glass feat"><span class="k-tile" style="--c:#5FD3F3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"></path><path d="M18 12v.5"></path><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"></path><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"></path></svg></span><h3>Своя рыбалка</h3><p>Мини-игра на 5 шкал при поклёвке, ранги рыбака от D до SS, сокровища и улов, который зависит от биома.</p></div>
-<div class="k-glass feat"><span class="big">73</span><h3>своих зачарования</h3><p>Метеор, Крылья, Гром, Бульдозер и ещё десятки — всё описано в <a href="/wiki">вики</a>.</p></div>
-<div class="k-glass feat"><span class="k-tile" style="--c:#7EDB8A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"></path></svg></span><h3>Новый мир</h3><p>Своя генерация: высокие горы, снежные долины и десятки новых биомов.</p></div>
-<div class="k-glass feat"><span class="k-tile" style="--c:#FFC24D"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg></span><h3>Топы игроков</h3><p>Топ охотников, рыбаков и другие рейтинги сервера.</p></div>
+<sc-for list="{{feats}}" as="x">
+<div class="k-glass feat">
+<sc-if value="{{x.big}}"><span class="big">{{x.big}}</span></sc-if>
+<sc-if value="{{x.icon}}"><span class="k-tile" style="--c:{{x.color}}" data-html="{{x.icon}}"></span></sc-if>
+<h3>{{x.title}}</h3><p data-html="{{x.text}}"></p></div>
+</sc-for>
 </div>
 </div>
 </section>
+</sc-if>
 
+<sc-if value="{{so.show}}">
 <section class="k-sec" id="soon" style="padding-top:0">
 <div class="k-wrap">
-<span class="k-eyebrow">Спойлеры</span>
-<h2 class="k-h2">Что будет дальше</h2>
+<span class="k-eyebrow">{{so.eyebrow}}</span>
+<h2 class="k-h2">{{so.title}}</h2>
 <div class="soon">
-<div class="k-glass"><span class="tag">Скоро</span><h3>Незерит — это не конец</h3><p>Новая ступень снаряжения выше незерита.</p><span class="q" aria-hidden="true">?</span></div>
-<div class="k-glass"><span class="tag">В планах</span><h3>Данжи и охота</h3><p>Обновляемые подземелья и система охоты на животных.</p><span class="q" aria-hidden="true">?</span></div>
+<sc-for list="{{soonItems}}" as="x">
+<div class="k-glass"><sc-if value="{{x.tag}}"><span class="tag">{{x.tag}}</span></sc-if><h3>{{x.title}}</h3><p data-html="{{x.text}}"></p><span class="q" aria-hidden="true">?</span></div>
+</sc-for>
 </div>
 </div>
 </section>
+</sc-if>
 
+<sc-if value="{{z.show}}">
 <section class="k-sec" id="zbt" style="padding-top:0">
 <div class="k-wrap">
-<span class="k-eyebrow">Закрытый бета-тест</span>
-<h2 class="k-h2" style="margin-bottom:28px">Попади в ЗБТ</h2>
+<span class="k-eyebrow">{{z.eyebrow}}</span>
+<h2 class="k-h2" style="margin-bottom:28px">{{z.title}}</h2>
 <div class="zbt">
 <div class="ticket">
-<h3><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2M13 17v2M13 11v2"></path></svg>Проходка</h3>
+<h3><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2M13 17v2M13 11v2"></path></svg>{{z.ticket}}</h3>
 <hr>
-<div class="row"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>Доступ к ЗБТ</div>
-<div class="row"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>VIP на 3 месяца в 1 сезоне</div>
+<sc-for list="{{z.perks}}" as="pk">
+<div class="row"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>{{pk}}</div>
+</sc-for>
 <hr>
-<div class="price">500 ₽<span>·</span>280 ₴<span>·</span>6.20 $</div>
-<span class="how">Купить проходку — через Discord.</span>
+<div class="price" data-html="{{priceHtml}}"></div>
+<sc-if value="{{z.how}}"><span class="how">{{z.how}}</span></sc-if>
 </div>
 <div class="k-glass give">
 <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#FFD15C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path></svg>
-<h3>Розыгрыш проходок</h3>
-<p>Регулярно разыгрываем проходки в нашем Discord. Заходи, чтобы участвовать и следить за новостями.</p>
+<h3>{{z.giveTitle}}</h3>
+<p data-html="{{giveHtml}}"></p>
 <a class="dc-btn" href="{{K.discord}}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 7.5c3-1.3 6-1.3 9 0 1.6 2.3 2.4 4.9 2.3 8.2-1.3 1-2.7 1.6-4.1 2l-1-1.6c-1.7.4-3.7.4-5.4 0l-1 1.6c-1.4-.4-2.8-1-4.1-2-.1-3.3.7-5.9 2.3-8.2z"></path><circle cx="9.5" cy="12.5" r="1"></circle><circle cx="14.5" cy="12.5" r="1"></circle></svg>Зайти в Discord</a>
 </div>
 </div>
 </div>
 </section>
+</sc-if>
 
+<sc-if value="{{st.show}}">
 <section class="k-sec" id="how" style="padding-top:0">
 <div class="k-wrap">
-<span class="k-eyebrow">Как начать</span>
-<h2 class="k-h2">Три шага до игры</h2>
+<span class="k-eyebrow">{{st.eyebrow}}</span>
+<h2 class="k-h2">{{st.title}}</h2>
 <div class="steps">
-<div class="k-glass step"><span class="n">1</span><h3>Скачай Komori Launcher</h3><p>Войди через Microsoft и нажми «Играть на Komori» — лаунчер сам поставит нужную версию и моды. <a href="{{K.launcher}}">Скачать для Windows</a></p></div>
-<div class="k-glass step"><span class="n">2</span><h3>Или зайди вручную</h3><p>Minecraft 26.2 → Сетевая игра → Добавить сервер → <b style="color:#fff">mc.komori.fun</b> (Россия) или <b style="color:#fff">eu.komori.fun</b> (Украина и Европа)</p></div>
-<div class="k-glass step"><span class="n">3</span><h3>Прими ресурспак</h3><p>Без него не будут видны текстуры своих предметов и зачарований.</p></div>
+<sc-for list="{{stepItems}}" as="x">
+<div class="k-glass step"><span class="n">{{x.n}}</span><h3>{{x.title}}</h3><p data-html="{{x.text}}"></p></div>
+</sc-for>
 </div>
 </div>
 </section>
+</sc-if>
 </main>
 
 <!--KOMORI_FOOTER-->
@@ -163,10 +203,24 @@
 class Component extends DCLogic {
 constructor(props) {
 super(props);
-this.state = { copied: '', stats: null };
+this.state = { copied: '', stats: null, news: [] };
 }
 mounted() {
 var self = this;
+// Предпросмотр в «Управлении сайтом»: черновик приходит из родительской страницы
+if (/[?&]preview=1/.test(location.search) && window.parent !== window) {
+window.addEventListener('message', function (e) {
+if (e.origin !== location.origin || !e.data || !e.data.komoriSite) return;
+window.KOMORI.site = e.data.komoriSite;
+window.KOMORI.cfg.discord = e.data.komoriSite.links.discord;
+self.setState({});
+var to = { banner: null, hero: null, links: null, features: 'features', soon: 'soon', zbt: 'zbt', steps: 'how' }[e.data.scrollTo];
+if (e.data.scrollTo === self._lastTo) return;
+self._lastTo = e.data.scrollTo;
+setTimeout(function () { var el = to && document.getElementById(to); if (el) el.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0); }, 30);
+});
+document.addEventListener('click', function (e) { if (e.target.closest('a')) e.preventDefault(); }, true);
+}
 var load = function (n) {
 fetch('/api/stats').then(function (r) { return r.json(); }).then(function (d) {
 self.setState({ stats: d });
@@ -174,8 +228,10 @@ if (!d.mc && n < 3) setTimeout(function () { load(n + 1); }, 20000); // стат
 }).catch(function () {});
 };
 load(0);
+fetch('/api/news').then(function (r) { return r.json(); }).then(function (d) { self.setState({ news: (d || []).slice(0, 3) }); }).catch(function () {});
 }
 renderVals() {
+var S = (window.KOMORI || {}).site, md = window.KomoriInline;
 var self = this, st = this.state.stats,
 copyIp = function (ip, k) {
 try { navigator.clipboard.writeText(ip); } catch (e) {}
@@ -187,10 +243,19 @@ statusText: !st || !mc ? 'проверяем сервер…' : mc.online ? 'с�
 dotCls: !st || !mc ? 'wait' : mc.online ? '' : 'off',
 online: !st || !mc ? '…' : mc.online ? mc.players + ' / ' + mc.max : 'офлайн',
 discordMembers: dc ? dc.members : '—',
+hasNews: this.state.news.length > 0,
+news: this.state.news.map(function (n) { return { href: '/news/' + n.id, title: n.title, excerpt: n.excerpt.length > 120 ? n.excerpt.slice(0, 119) + '…' : n.excerpt,
+date: new Date(n.created).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }), image: n.image ? '/news-img/' + n.id + '?v=' + n.image : '', noImage: !n.image }; }),
 labelRu: this.state.copied === 'ru' ? 'Скопировано' : 'Копировать',
 labelEu: this.state.copied === 'eu' ? 'Скопировано' : 'Копировать',
-copyRu: function () { copyIp('mc.komori.fun', 'ru'); },
-copyEu: function () { copyIp('eu.komori.fun', 'eu'); }
+copyRu: function () { copyIp(S.hero.ru, 'ru'); },
+copyEu: function () { copyIp(S.hero.eu, 'eu'); },
+h: S.hero, f: S.features, so: S.soon, z: S.zbt, st: S.steps,
+feats: S.features.items.map(function (x) { var ic = window.KomoriIcons[x.icon]; return { big: x.big, icon: !x.big && ic ? window.KomoriIcon(x.icon) : '', color: ic ? ic.c : '', title: x.title, text: md(x.text) }; }),
+soonItems: S.soon.items.map(function (x) { return { tag: x.tag, title: x.title, text: md(x.text) }; }),
+priceHtml: S.zbt.prices.filter(Boolean).map(function (x) { return md(x); }).join('<span>·</span>'),
+giveHtml: md(S.zbt.giveText),
+stepItems: S.steps.items.map(function (x, i) { return { n: i + 1, title: x.title, text: md(x.text) }; })
 };
 }
 }
