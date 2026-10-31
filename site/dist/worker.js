@@ -111,6 +111,11 @@ async function route(req, env, ctx) {
   if (r && m === 'GET') return newsImage(env, r[1]);
 
   // ----- управление сайтом: тексты главной, правила, вики, картинки -----
+  // ----- ник и аватарка по Discord ID (для колеса розыгрышей) -----
+  r = p.match(/^\/wheel\/user\/(\d{15,21})$/);
+  if (r && m === 'GET') return wheelUser(env, ctx, r[1], req);
+  if (p.startsWith('/wheel/') && m === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET' } });
+
   // ----- CurseForge через сайт (ключ остаётся только здесь) -----
   r = p.match(/^\/api\/cf(\/[\w\/]*)$/);
   if (r) return cfProxy(req, env, ctx, r[1], url);
@@ -601,6 +606,28 @@ async function packUpload(req, env, ctx) {
     out.push({ sha1, size: bin.length });
   }
   return json(out);
+}
+
+// ===== колесо розыгрышей: ник и аватарка пользователя Discord через бота сайта =====
+const WHEEL_HITS = new Map();
+async function wheelUser(env, ctx, id, req) {
+  const cors = { 'access-control-allow-origin': '*', 'content-type': 'application/json; charset=utf-8' };
+  const cache = caches.default, key = new Request('https://komori.fun/wheel/user/' + id);
+  const c = await cache.match(key);
+  if (c) return new Response(c.body, { headers: Object.assign({}, cors, { 'cache-control': 'public, max-age=3600' }) });
+  const ip = req.headers.get('cf-connecting-ip') || 'x', now = Date.now();
+  const hit = WHEEL_HITS.get(ip) || { n: 0, t: now };
+  if (now - hit.t > 60000) { hit.n = 0; hit.t = now; }
+  if (++hit.n > 120) return new Response(JSON.stringify({ error: 'Слишком много запросов' }), { status: 429, headers: cors });
+  WHEEL_HITS.set(ip, hit); if (WHEEL_HITS.size > 5000) WHEEL_HITS.clear();
+  const r = await fetch('https://discord.com/api/v10/users/' + id, { headers: { authorization: 'Bot ' + env.DISCORD_BOT_TOKEN } });
+  if (r.status === 429) return new Response(JSON.stringify({ error: 'Discord просит подождать' }), { status: 429, headers: cors });
+  if (!r.ok) return new Response(JSON.stringify({ error: 'Не найден' }), { status: r.status === 404 ? 404 : 502, headers: cors });
+  const u = await r.json();
+  const out = JSON.stringify({ id: u.id, name: u.global_name || u.username, username: u.username,
+    avatar: u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${u.avatar.startsWith('a_') ? 'gif' : 'png'}?size=128` : null });
+  ctx.waitUntil(cache.put(key, new Response(out, { headers: Object.assign({}, cors, { 'cache-control': 'public, max-age=3600' }) })));
+  return new Response(out, { headers: Object.assign({}, cors, { 'cache-control': 'public, max-age=3600' }) });
 }
 
 // ===== CurseForge =====
