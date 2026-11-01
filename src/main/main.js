@@ -367,8 +367,8 @@ ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId,
   const ctx = await profileCtx(profileId);
   const t = TYPES.includes(type) ? type : 'mod';
   const step = title => send('mods:step', { projectId, title });
-  if (ctx.profile.id === serverpack.SERVER_PROFILE_ID && CONFIG.serverManifestUrl) {
-    // Сборка сервера: свои моды — только из списка, который разрешили админы; то, что уже есть в сборке, не дублируем
+  if (t === 'mod' && ctx.profile.id === serverpack.SERVER_PROFILE_ID && CONFIG.serverManifestUrl) {
+    // Сборка сервера (только моды; шейдеры и ресурспаки ставятся свободно): свои моды — только из списка, который разрешили админы; то, что уже есть в сборке, не дублируем
     const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, store.getSettings().gameDir, CONFIG.trustedHosts, CONFIG.serverManifestFallback);
     const key = src === 'curseforge' ? 'cf' + projectId : projectId;
     if (m.allowed && !m.allowed.some(a => a.projectId === key)) throw new Error('Этот мод не разрешён на сервере Komori');

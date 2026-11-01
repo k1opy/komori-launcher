@@ -277,7 +277,7 @@ function viewMods() {
       }).join('') + (M.hits.length < M.total ? `<div style="padding:14px;text-align:center"><button type="button" class="btn2" data-act="mMore" ${M.loading ? 'disabled' : ''}>${M.loading ? 'Загружаю…' : 'Показать ещё'}</button></div>` : '');
     }
     const forWhat = M.type === 'mod' ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
-    const hint = M.serverList ? `<span class="note">Это сборка сервера: можно поставить только моды, которые разрешили админы. Остальные лаунчер отключит перед входом.</span>` : isPack
+    const hint = M.serverList ? `<span class="note">Это сборка сервера: моды — только те, что разрешили админы, остальные лаунчер отключит перед входом. Шейдеры и ресурспаки — любые.</span>` : isPack
       ? `<span class="note">Сборка ставится в новый профиль со своим ядром и версией.</span>`
       : (M.mc ? `<span class="note">Показаны только подходящие для ${esc(forWhat)}. Зависимости ставятся сами.</span>` : '');
     body = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${srcSeg}<div class="chips">${chips}</div><span class="grow"></span>
@@ -322,7 +322,7 @@ async function modsSearch(reset) {
   if (reset) { M.offset = 0; M.hits = []; }
   M.loading = true; M.error = null; render();
   // Сборка сервера Komori: вместо всего Modrinth — только то, что разрешили админы
-  if (S.info.serverManifest && p.id === S.info.serverProfileId && M.type !== 'modpack') {
+  if (S.info.serverManifest && p.id === S.info.serverProfileId && M.type === 'mod') {   // шейдеры и ресурспаки — свободно
     try {
       if (!M.allowedAt || Date.now() - M.allowedAt > 60000) { const st = await K.server.status(); M.allowed = st.manifest ? st.manifest.allowed : null; M.allowedAt = Date.now(); }
     } catch { M.allowed = null; }

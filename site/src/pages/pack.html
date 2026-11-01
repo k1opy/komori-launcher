@@ -130,10 +130,10 @@
 
 <sc-if value="{{isAllow}}">
 <div class="k-glass pk-box">
-<p class="pk-note">Игроки могут поставить себе сверху только эти моды (в лаунчере, вкладка «Каталог»). Остальные лишние моды в сборке сервера лаунчер отключит перед запуском. Нужные им библиотеки добавляются сами.</p>
+<p class="pk-note">Игроки могут поставить себе сверху только эти моды (в лаунчере, вкладка «Каталог»). Остальные лишние моды в сборке сервера лаунчер отключит перед запуском. Нужные им библиотеки добавляются сами. Шейдеры и ресурспаки игроки ставят любые — их разрешать не нужно.</p>
 <div class="pk-row"><input class="pk-in" id="pkSearch2" type="search" placeholder="Найти мод и разрешить игрокам" value="{{q}}" onInput="{{onQ}}">
 <sc-for list="{{srcs}}" as="sr"><button type="button" class="pk-mini" aria-pressed="{{sr.on}}" style="{{sr.style}}" onClick="{{sr.pick}}">{{sr.label}}</button></sc-for>
-<sc-for list="{{types}}" as="ty"><button type="button" class="pk-mini" aria-pressed="{{ty.on}}" style="{{ty.style}}" onClick="{{ty.pick}}">{{ty.label}}</button></sc-for></div>
+</div>
 <sc-if value="{{showHits}}"><div class="pk-hits">
 <sc-if value="{{hitsEmpty}}"><div class="pk-empty">{{hitsMsg}}</div></sc-if>
 <sc-for list="{{hits}}" as="h"><div class="pk-item"><img class="pk-ic" src="{{h.icon}}" alt="" loading="lazy"><div class="pk-t"><b>{{h.title}}</b><span>{{h.desc}}</span></div><button type="button" class="pk-mini ok" onClick="{{h.allow}}" disabled="{{h.aoff}}">{{h.alabel}}</button></div></sc-for>
@@ -432,7 +432,7 @@ loaderName: { fabric: 'Fabric', quilt: 'Quilt', forge: 'Forge', neoforge: 'NeoFo
 modCount: D.mods.filter(function (m) { return m.enabled; }).length, cfgCount: D.configs.length, allowCount: D.allowed.filter(function (a) { return !a.dep; }).length,
 report: s.report, busy: !!s.busy,
 importLabel: s.busy && /Импорт|Загружаю/.test(s.busy) ? s.busy : 'Загрузить .mrpack или .zip',
-tabs: TABS.map(function (t) { return { label: t[1], current: s.tab === t[0] ? 'page' : 'false', pick: function () { self.setState({ tab: t[0], q: '', hits: null }); } }; }),
+tabs: TABS.map(function (t) { return { label: t[1], current: s.tab === t[0] ? 'page' : 'false', pick: function () { self.setState({ tab: t[0], q: '', hits: null, type: t[0] === 'allowed' ? 'mod' : self.state.type }); } }; }),
 isMods: s.tab === 'mods', isCfg: s.tab === 'configs', isAllow: s.tab === 'allowed', isParams: s.tab === 'params',
 q: s.q, onQ: function (e) { self.setState({ q: e.target.value }); search(e.target.value, self.state.type); },
 srcs: [['mr', 'Modrinth'], ['cf', 'CurseForge']].map(function (t) { var on = s.src === t[0]; return { label: t[1], on: on ? 'true' : 'false', style: on ? 'background:#2A1E4A;border-color:var(--accent2);color:#fff' : '', pick: function () { self.setState({ src: t[0], hits: null }); search(self.state.q, self.state.type); } }; }),
