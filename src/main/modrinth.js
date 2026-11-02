@@ -24,8 +24,9 @@ function loadersFor(loader) {
 }
 
 // ctx: { loader, mc }
-async function search({ query, type, sort, offset }, ctx) {
+async function search({ query, type, sort, offset, category }, ctx) {
   const facets = [[`project_type:${type}`]];
+  if (category) facets.push([`categories:${category}`]);
   if (type !== 'modpack') facets.push([`versions:${ctx.mc}`]);
   if (type === 'mod') facets.push(loadersFor(ctx.loader).map(l => `categories:${l}`));
   const params = new URLSearchParams({

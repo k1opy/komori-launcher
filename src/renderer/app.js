@@ -22,7 +22,7 @@ const S = {
   stats: null, look: { avatarBg: null }, avatar: null, actPeriod: 'w',
   // Аккаунт Komori: вход при запуске, смена пароля в настройках
   kacc: { checked: false, account: null }, auth: blankAuth(), kpw: { old: '', n1: '', n2: '' }, kStatus: null, kLinkWait: false,
-  mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', hits: [], total: 0, offset: 0,
+  mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', category: '', hits: [], total: 0, offset: 0,
     loading: false, error: null, needLoader: false, mc: '', loader: '', items: [], updates: null, checking: false, busy: {} }
 };
 
@@ -222,6 +222,10 @@ function viewVersions() {
     <div class="list">${body}</div></section>`;
 }
 
+// Категории модов: ключи — теги Modrinth, для CurseForge лаунчер сам подбирает категорию по названию
+const MOD_CATS = [['', 'Все категории'], ['optimization', 'Оптимизация'], ['technology', 'Технологии'], ['magic', 'Магия'], ['adventure', 'Приключения'],
+  ['worldgen', 'Генерация мира'], ['equipment', 'Снаряжение'], ['mobs', 'Мобы'], ['food', 'Еда'], ['storage', 'Хранение'], ['decoration', 'Декор'],
+  ['utility', 'Утилиты'], ['transportation', 'Транспорт'], ['game-mechanics', 'Механики'], ['management', 'Для сервера'], ['library', 'Библиотеки']];
 const MTYPES = { mod: 'Моды', resourcepack: 'Ресурспаки', shader: 'Шейдеры', modpack: 'Сборки' };
 const SOURCE_NAMES = { modrinth: 'Modrinth', curseforge: 'CurseForge', manual: 'вручную' };
 const MTYPE_ONE = { mod: 'Мод', resourcepack: 'Ресурспак', shader: 'Шейдер' };
@@ -240,7 +244,7 @@ function viewMods() {
   const options = S.profiles.list.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)} — ${esc(profMeta(x))}</option>`).join('');
   const installedKeys = new Set(M.items.filter(i => i.projectId).map(i => i.projectId));
   const tabs = `<div class="tabs" role="tablist">
-    <button type="button" role="tab" aria-selected="${M.tab === 'catalog'}" class="${M.tab === 'catalog' ? 'on' : ''}" data-act="mTab" data-id="catalog">Каталог Modrinth</button>
+    <button type="button" role="tab" aria-selected="${M.tab === 'catalog'}" class="${M.tab === 'catalog' ? 'on' : ''}" data-act="mTab" data-id="catalog">Каталог</button>
     <button type="button" role="tab" aria-selected="${M.tab === 'installed'}" class="${M.tab === 'installed' ? 'on' : ''}" data-act="mTab" data-id="installed">Установленные (${M.items.length})</button></div>`;
   let body;
   if (M.tab === 'catalog') {
@@ -275,7 +279,8 @@ function viewMods() {
     body = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${srcSeg}<div class="chips">${chips}</div><span class="grow"></span>
         ${isPack ? `<button type="button" class="btn2" data-act="mImport" ${S.busy ? 'disabled' : ''}>Импорт из файла</button>` : ''}</div>
       ${isPack && S.busy ? progressHtml() : ''}
-      <div style="display:flex;gap:10px"><div class="search" style="flex:1">${SEARCH}<input type="search" id="modsQuery" placeholder="Поиск на Modrinth…" value="${esc(M.query)}" aria-label="Поиск на Modrinth"></div>
+      <div style="display:flex;gap:10px"><div class="search" style="flex:1">${SEARCH}<input type="search" id="modsQuery" placeholder="Поиск на ${M.source === 'curseforge' ? 'CurseForge' : 'Modrinth'}…" value="${esc(M.query)}" aria-label="Поиск модов"></div>
+      ${M.type === 'mod' && !M.serverList ? `<select id="modsCat" class="input" aria-label="Категория">${MOD_CATS.map(([v, l]) => `<option value="${v}" ${M.category === v ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
       <select id="modsSort" class="input" aria-label="Сортировка">${[['relevance', 'По совпадению'], ['downloads', 'Популярные'], ['follows', 'Избранные'], ['newest', 'Новые'], ['updated', 'Обновлённые']].map(([v, l]) => `<option value="${v}" ${M.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       ${hint}
       <div class="list">${list}</div>`;
@@ -290,7 +295,7 @@ function viewMods() {
         ${u ? `<button type="button" class="btn" data-act="mUpdate" data-id="${esc(it.key)}" ${busy ? 'disabled' : ''}>${busy ? 'Обновляю…' : 'Обновить до ' + esc(u.to)}</button>` : ''}
         ${sw(it.enabled, 'mToggle').replace('data-act="mToggle"', `data-act="mToggle" data-id="${esc(it.key)}" aria-label="Включён"`)}
         <button type="button" class="icon-btn" data-act="mRemove" data-id="${esc(it.key)}" aria-label="Удалить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger-text)" stroke-width="2.2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
-    }).join('') : `<div class="empty">Пока ничего не установлено. Найди моды во вкладке «Каталог Modrinth».</div>`;
+    }).join('') : `<div class="empty">Пока ничего не установлено. Найди моды во вкладке «Каталог».</div>`;
     body = `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button type="button" class="btn2" data-act="mCheck" ${M.checking ? 'disabled' : ''}>${M.checking ? 'Проверяю…' : 'Проверить обновления'}</button>
         ${upd.length ? `<button type="button" class="btn" data-act="mUpdateAll">Обновить всё (${upd.length})</button>` : M.updates ? '<span class="note">Все моды актуальны</span>' : ''}
@@ -311,7 +316,7 @@ async function modsSearch(reset) {
   const p = modsProfile();
   if (!p) return;
   M.profileId = p.id;
-  if (reset) { M.offset = 0; M.hits = []; }
+  if (reset) { M.offset = 0; M.hits = []; S._resetScroll = true; }
   M.loading = true; M.error = null; render();
   // Сборка сервера Komori: вместо всего Modrinth — только то, что разрешили админы
   if (S.info.serverManifest && p.id === S.info.serverProfileId && M.type === 'mod') {   // шейдеры и ресурспаки — свободно
@@ -329,7 +334,7 @@ async function modsSearch(reset) {
   }
   M.serverList = false;
   try {
-    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset });
+    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, category: M.type === 'mod' ? M.category : '' });
     M.needLoader = !!r.needLoader; M.needKey = !!r.needKey; M.mc = r.mc || M.mc; M.total = r.total;
     M.hits = reset ? r.hits : M.hits.concat(r.hits);
   } catch (e) { M.error = errText(e); }
@@ -706,9 +711,14 @@ function render() {
   const v = { home: viewHome, komori: viewKomori, profiles: viewProfiles, versions: viewVersions, mods: viewMods, profile: viewProfile, settings: viewSettings }[S.screen] || viewHome;
   const focused = document.activeElement && document.activeElement.id;
   const caret = focused && document.activeElement.selectionStart;
+  // Прокрутку списков сохраняем между перерисовками того же экрана (например, после установки мода)
+  const keepScroll = S._rendered === S.screen && !S._resetScroll;
+  const scrolls = keepScroll ? Array.from($('#view').querySelectorAll('.list,.page,.page2')).map(e => e.scrollTop) : null;
+  S._rendered = S.screen; S._resetScroll = false;
   let html = v();
   if (NAV_OF[S.screen] || S.screen === 'profiles') html = html.replace(/^(\s*<section class="page"[^>]*>)/, '$1' + buildsTabs());
   $('#view').innerHTML = html;
+  if (scrolls) Array.from($('#view').querySelectorAll('.list,.page,.page2')).forEach((e, i) => { if (scrolls[i]) e.scrollTop = scrolls[i]; });
   // Плашки справа появляются плавно только при входе на главную, а не при каждой перерисовке (иначе мерцают во время запуска)
 
   if (focused) {
@@ -1052,6 +1062,7 @@ document.addEventListener('change', async (ev) => {
   if (ev.target.id === 'ram') { S.settings = await K.settings.set({ ram: Number(ev.target.value) }); }
   if (ev.target.id === 'modsProfile') { S.mods.profileId = ev.target.value; S.mods.updates = null; modsLoadInstalled(); modsSearch(true); }
   if (ev.target.id === 'modsSort') { S.mods.sort = ev.target.value; modsSearch(true); }
+  if (ev.target.id === 'modsCat') { S.mods.category = ev.target.value; modsSearch(true); }
   if (ev.target.id === 'srvProfile') { S.srv.profileId = ev.target.value; S.srv.built = null; render(); }
   if (ev.target.id === 'capeSel') { const a = selectedAccount(); const v = ev.target.value; if (a) skinAction(() => K.accounts.capeSet(a.id, v)); }
 });

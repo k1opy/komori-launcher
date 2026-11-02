@@ -620,7 +620,7 @@ async function wheelUser(env, ctx, id, req) {
 // ===== CurseForge =====
 // Пропускаем только то, что нужно лаунчеру и странице сборки: поиск, мод, файлы, отпечатки.
 const CF_ROUTES = [
-  ['GET', /^\/mods\/search$/], ['GET', /^\/mods\/\d{1,10}$/], ['GET', /^\/mods\/\d{1,10}\/files$/], ['GET', /^\/mods\/\d{1,10}\/files\/\d{1,12}$/],
+  ['GET', /^\/mods\/search$/], ['GET', /^\/categories$/], ['GET', /^\/mods\/\d{1,10}$/], ['GET', /^\/mods\/\d{1,10}\/files$/], ['GET', /^\/mods\/\d{1,10}\/files\/\d{1,12}$/],
   ['POST', /^\/mods$/], ['POST', /^\/mods\/files$/], ['POST', /^\/fingerprints\/432$/]
 ];
 const CF_HITS = new Map();   // простая защита от злоупотреблений: не больше 240 запросов за 5 минут с одного адреса
