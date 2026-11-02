@@ -31,5 +31,6 @@
       "icon": "tiktok",
       "url": "https://www.tiktok.com/@_k1opy_"
     }
-  ]
+  ],
+  "allowOffline": true
 }

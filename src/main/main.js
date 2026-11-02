@@ -180,7 +180,7 @@ ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl), yggDefault: CONFIG.yggdrasilDefaultUrl, site: (() => { try { return new URL(CONFIG.websiteUrl || 'https://komori.fun').origin; } catch { return 'https://komori.fun'; } })() }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl), yggDefault: CONFIG.yggdrasilDefaultUrl, allowOffline: CONFIG.allowOffline === true, site: (() => { try { return new URL(CONFIG.websiteUrl || 'https://komori.fun').origin; } catch { return 'https://komori.fun'; } })() }));
 
 // ---------- настройки и профили ----------
 ipcMain.handle('link:open', (e, id) => { const l = LINKS[String(id)]; if (l) shell.openExternal(l.url); return !!l; });
@@ -208,11 +208,12 @@ ipcMain.handle('accounts:remove', (e, id) => store.removeAccount(id));
 
 // Офлайн-аккаунт: в тестовой сборке — всегда, в обычной — только когда есть вход Microsoft (игра куплена).
 function hasMicrosoft() { return store.getAccounts().list.some(a => a.type === 'microsoft'); }
-function offlineAllowed() { return DEV || hasMicrosoft(); }
+// allowOffline в komori.config.json: офлайн-ники (и Yggdrasil) без входа через Microsoft
+function offlineAllowed() { return DEV || CONFIG.allowOffline === true || hasMicrosoft(); }
 
 ipcMain.handle('accounts:dev', (e, name) => {
   if (!offlineAllowed()) throw new Error('Офлайн-аккаунт можно добавить только после входа через Microsoft');
-  return store.upsertAccount(auth.devAccount(String(name || '').trim(), hasMicrosoft() ? 'offline' : 'dev'));
+  return store.upsertAccount(auth.devAccount(String(name || '').trim(), hasMicrosoft() || CONFIG.allowOffline === true ? 'offline' : 'dev'));
 });
 
 // ===== Yggdrasil-вход (LittleSkin, Ely.by и др.) =====

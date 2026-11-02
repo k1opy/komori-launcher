@@ -509,11 +509,12 @@ function viewSettings() {
     const code = S.msCode ? `<div class="codebox"><span>Открой страницу входа Microsoft и введи код:</span><span class="code">${esc(S.msCode.userCode)}</span>
       <div style="display:flex;gap:8px;align-items:center"><button type="button" class="btn2" data-act="msOpen">Открыть страницу</button><button type="button" class="btn2" data-act="msCopy">Скопировать код</button><button type="button" class="btn-ghost" data-act="msCancel">Отмена</button><span class="note">Жду подтверждения…</span></div></div>` : '';
     const hasMs = S.accounts.list.some(x => x.type === 'microsoft');
-    const dev = (hasMs || S.info.dev) ? `<div class="codebox" style="border-color:${hasMs ? 'var(--line4)' : '#8A6A2A'}"><div class="field"><label for="devName">${hasMs ? 'Офлайн-аккаунт' : 'DEV: тестовый вход'}</label><input class="input" id="devName" maxlength="16" placeholder="${hasMs ? 'Ник для офлайн-аккаунта' : 'Ник для теста'}" value="${esc(S.devName)}"></div>
-      <div style="display:flex;gap:8px;align-items:center"><button type="button" class="${hasMs ? 'btn2' : 'btn-dev'}" data-act="devLogin">${hasMs ? '+ Добавить офлайн-аккаунт' : 'Войти для теста'}</button><span class="note">${hasMs ? 'Доступно, потому что ты вошёл через Microsoft с купленной игрой.' : 'Есть только в тестовой сборке.'}</span></div></div>`
+    const offOk = hasMs || S.info.allowOffline;   // офлайн-ники разрешены всем (allowOffline) или после входа через Microsoft
+    const dev = (offOk || S.info.dev) ? `<div class="codebox" style="border-color:${offOk ? 'var(--line4)' : '#8A6A2A'}"><div class="field"><label for="devName">${offOk ? 'Офлайн-аккаунт' : 'DEV: тестовый вход'}</label><input class="input" id="devName" maxlength="16" placeholder="${offOk ? 'Ник для офлайн-аккаунта' : 'Ник для теста'}" value="${esc(S.devName)}"></div>
+      <div style="display:flex;gap:8px;align-items:center"><button type="button" class="${offOk ? 'btn2' : 'btn-dev'}" data-act="devLogin">${offOk ? '+ Добавить офлайн-аккаунт' : 'Войти для теста'}</button><span class="note">${S.info.allowOffline ? '3–16 символов: латиница, цифры и _. Вход через Microsoft не нужен.' : hasMs ? 'Доступно, потому что ты вошёл через Microsoft с купленной игрой.' : 'Есть только в тестовой сборке.'}</span></div></div>`
       : `<span class="note">Офлайн-аккаунты можно добавить после входа через Microsoft.</span>`;
     // ===== Вкладки входа: Microsoft / Офлайн / Yggdrasil =====
-    const gate = hasMs || S.info.dev;
+    const gate = offOk || S.info.dev;
     const ltabs = [['microsoft', 'Microsoft'], ['offline', 'Офлайн'], ['ygg', 'Yggdrasil']].map(([id, l]) =>
       `<button type="button" class="${S.loginTab === id ? 'on' : ''}" data-act="loginTab" data-id="${id}">${l}</button>`).join('');
     let login;
@@ -1133,6 +1134,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
     applyTheme();
     S.profiles = await K.profiles.get();
     S.accounts = await K.accounts.get();
+    if (S.info.allowOffline && !S.accounts.list.length) S.loginTab = 'offline';
     S.update = await K.update.state();
     S.running = await K.game.running();
   } catch (e) { toast(errText(e)); }
