@@ -438,7 +438,7 @@ ipcMain.handle('catalog:search', async (e, q) => {
   if (src === 'curseforge' && !curseforge.hasKey()) return { total: 0, hits: [], needKey: true };
   const ctx = type === 'modpack' ? { mc: '', loader: '' } : await profileCtx(q.profileId);
   if (type === 'mod' && ctx.loader === 'vanilla') return { total: 0, hits: [], needLoader: true, mc: ctx.mc };
-  const category = type === 'mod' && /^[a-z-]{3,20}$/.test(String(q.category || '')) ? String(q.category) : '';
+  const category = type !== 'modpack' && /^[A-Za-z0-9+ &,-]{2,30}$/.test(String(q.category || '')) ? String(q.category) : '';
   const r = await source(src).search({ query: String(q.query || '').slice(0, 100), type, sort: q.sort, offset: q.offset, category }, ctx);
   return Object.assign(r, { mc: ctx.mc, loader: ctx.loader });
 });

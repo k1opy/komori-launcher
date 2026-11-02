@@ -73,13 +73,14 @@ function mapMod(m) {
 const CF_CATS = { optimization: ['Performance', 6814], technology: ['Technology', 412], magic: ['Magic', 419], adventure: ['Adventure and RPG', 422],
   worldgen: ['World Gen', 406], equipment: ['Armor, Tools, and Weapons', 434], mobs: ['Mobs', 411], food: ['Food', 436], storage: ['Storage', 420],
   decoration: ['Cosmetic', 424], utility: ['Utility & QoL', 5191], transportation: ['Player Transport', 414], management: ['Server Utility', 435], library: ['API and Library', 421] };
-let cfCats = null;
-async function categoryId(key) {
-  const c = CF_CATS[key];
+const cfCats = {};
+// Моды — наш ключ из CF_CATS; ресурспаки и шейдеры — название категории CurseForge
+async function categoryId(type, key) {
+  const c = type === 'mod' ? CF_CATS[key] : [key, null];
   if (!c) return null;
-  if (!cfCats) { try { const r = await api('/categories?gameId=' + GAME_ID + '&classId=' + CLASS.mod); cfCats = r.data || []; } catch { cfCats = []; } }
-  const norm = s => String(s).toLowerCase().replace(/[^a-z]/g, '');
-  const f = cfCats.find(x => norm(x.name) === norm(c[0]));
+  if (!cfCats[type]) { try { const r = await api('/categories?gameId=' + GAME_ID + '&classId=' + CLASS[type]); cfCats[type] = r.data || []; } catch { cfCats[type] = []; } }
+  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const f = cfCats[type].find(x => norm(x.name) === norm(c[0]));
   return f ? f.id : c[1];
 }
 
@@ -91,7 +92,7 @@ async function search({ query, type, sort, offset, category }, ctx) {
   });
   if (type === 'mod' || type === 'resourcepack') p.set('gameVersion', ctx.mc);
   if (type === 'mod' && LOADER_TYPE[ctx.loader]) p.set('modLoaderType', String(LOADER_TYPE[ctx.loader]));
-  if (type === 'mod' && category) { const id = await categoryId(category); if (id) p.set('categoryId', String(id)); }
+  if (category && CLASS[type]) { const id = await categoryId(type, category); if (id) p.set('categoryId', String(id)); }
   const r = await api('/mods/search?' + p);
   return { total: Math.min(r.pagination ? r.pagination.totalCount : 0, 10000), hits: r.data.map(mapMod) };
 }

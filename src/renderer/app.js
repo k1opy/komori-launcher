@@ -222,10 +222,28 @@ function viewVersions() {
     <div class="list">${body}</div></section>`;
 }
 
-// Категории модов: ключи — теги Modrinth, для CurseForge лаунчер сам подбирает категорию по названию
-const MOD_CATS = [['', 'Все категории'], ['optimization', 'Оптимизация'], ['technology', 'Технологии'], ['magic', 'Магия'], ['adventure', 'Приключения'],
+// Категории каталога. Modrinth — его теги; CurseForge — для модов наши ключи (лаунчер сам подберёт id),
+// для ресурспаков — названия категорий CurseForge как есть
+const MOD_CATS = [['optimization', 'Оптимизация'], ['technology', 'Технологии'], ['magic', 'Магия'], ['adventure', 'Приключения'],
   ['worldgen', 'Генерация мира'], ['equipment', 'Снаряжение'], ['mobs', 'Мобы'], ['food', 'Еда'], ['storage', 'Хранение'], ['decoration', 'Декор'],
   ['utility', 'Утилиты'], ['transportation', 'Транспорт'], ['game-mechanics', 'Механики'], ['management', 'Для сервера'], ['library', 'Библиотеки']];
+const CATS = {
+  modrinth: {
+    mod: MOD_CATS,
+    resourcepack: [['vanilla-like', 'Ванильный стиль'], ['realistic', 'Реалистичные'], ['simplistic', 'Простые'], ['themed', 'Тематические'], ['decoration', 'Декор'],
+      ['tweaks', 'Мелкие улучшения'], ['utility', 'Полезные'], ['modded', 'Для модов'], ['combat', 'Для PvP'], ['gui', 'Интерфейс'], ['fonts', 'Шрифты'], ['audio', 'Звуки'],
+      ['items', 'Предметы'], ['blocks', 'Блоки'], ['entities', 'Мобы'], ['environment', 'Окружение'], ['16x', '16x'], ['32x', '32x'], ['64x', '64x'], ['128x', '128x'], ['256x', '256x'], ['512x+', '512x и больше']],
+    shader: [['vanilla-like', 'Ванильный стиль'], ['semi-realistic', 'Полуреалистичные'], ['realistic', 'Реалистичные'], ['fantasy', 'Фэнтези'], ['cartoon', 'Мультяшные'],
+      ['potato', 'Для слабых ПК'], ['low', 'Лёгкие'], ['medium', 'Средние'], ['high', 'Тяжёлые']]
+  },
+  curseforge: {
+    mod: MOD_CATS.filter(c => c[0] !== 'game-mechanics'),
+    resourcepack: [['16x', '16x'], ['32x', '32x'], ['64x', '64x'], ['128x', '128x'], ['256x', '256x'], ['512x and Higher', '512x и больше'], ['Photo Realistic', 'Фотореализм'],
+      ['Traditional', 'Традиционные'], ['Medieval', 'Средневековые'], ['Modern', 'Современные'], ['Steampunk', 'Стимпанк'], ['Animated', 'Анимированные'],
+      ['Mod Support', 'Для модов'], ['Font Packs', 'Шрифты'], ['Miscellaneous', 'Разное']]
+  }
+};
+function catList() { const M = S.mods; return M.serverList ? null : (CATS[M.source] || {})[M.type] || null; }
 const MTYPES = { mod: 'Моды', resourcepack: 'Ресурспаки', shader: 'Шейдеры', modpack: 'Сборки' };
 const SOURCE_NAMES = { modrinth: 'Modrinth', curseforge: 'CurseForge', manual: 'вручную' };
 const MTYPE_ONE = { mod: 'Мод', resourcepack: 'Ресурспак', shader: 'Шейдер' };
@@ -280,7 +298,7 @@ function viewMods() {
         ${isPack ? `<button type="button" class="btn2" data-act="mImport" ${S.busy ? 'disabled' : ''}>Импорт из файла</button>` : ''}</div>
       ${isPack && S.busy ? progressHtml() : ''}
       <div style="display:flex;gap:10px"><div class="search" style="flex:1">${SEARCH}<input type="search" id="modsQuery" placeholder="Поиск на ${M.source === 'curseforge' ? 'CurseForge' : 'Modrinth'}…" value="${esc(M.query)}" aria-label="Поиск модов"></div>
-      ${M.type === 'mod' && !M.serverList ? `<select id="modsCat" class="input" aria-label="Категория">${MOD_CATS.map(([v, l]) => `<option value="${v}" ${M.category === v ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+      ${catList() ? `<select id="modsCat" class="input" aria-label="Категория"><option value="">Все категории</option>${catList().map(([v, l]) => `<option value="${esc(v)}" ${M.category === v ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
       <select id="modsSort" class="input" aria-label="Сортировка">${[['relevance', 'По совпадению'], ['downloads', 'Популярные'], ['follows', 'Избранные'], ['newest', 'Новые'], ['updated', 'Обновлённые']].map(([v, l]) => `<option value="${v}" ${M.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       ${hint}
       <div class="list">${list}</div>`;
@@ -334,7 +352,7 @@ async function modsSearch(reset) {
   }
   M.serverList = false;
   try {
-    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, category: M.type === 'mod' ? M.category : '' });
+    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, category: catList() ? M.category : '' });
     M.needLoader = !!r.needLoader; M.needKey = !!r.needKey; M.mc = r.mc || M.mc; M.total = r.total;
     M.hits = reset ? r.hits : M.hits.concat(r.hits);
   } catch (e) { M.error = errText(e); }
@@ -860,10 +878,10 @@ const ACTIONS = {
     render();
   },
   mTab: (id) => { S.mods.tab = id; if (id === 'installed') modsLoadInstalled(); render(); },
-  mType: (id) => { S.mods.type = id; modsSearch(true); },
+  mType: (id) => { S.mods.type = id; S.mods.category = ''; modsSearch(true); },
   mRetry: () => modsSearch(true),
   mMore: () => { S.mods.offset = S.mods.hits.length; modsSearch(false); },
-  mSource: (id) => { S.mods.source = id; modsSearch(true); },
+  mSource: (id) => { S.mods.source = id; S.mods.category = ''; modsSearch(true); },
   mOpen: (slug, el) => K.mods.open(S.mods.source, slug, el.dataset.type, el.dataset.url),
   mInstall: async (projectId, el) => {
     const M = S.mods;
