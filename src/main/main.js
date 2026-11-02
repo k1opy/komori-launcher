@@ -14,6 +14,7 @@ const modrinth = require('./modrinth');
 const curseforge = require('./curseforge');
 const modpacks = require('./modpacks');
 const serverpack = require('./serverpack');
+const manual = require('./manual');
 const pkg = require('../../package.json');
 
 // DEV-режим: в разработке — флаг --dev, в собранном виде — только сборка `npm run dist:dev`.
@@ -376,6 +377,7 @@ ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId,
   }
   if (src === 'curseforge') {
     const r = await curseforge.install(ctx.dir, projectId, t, ctx, step);
+    if (r.manual.length) manual.add(ctx.dir, r.manual);
     return { installed: r.installed, manual: r.manual, items: modrinth.list(ctx.dir) };
   }
   const names = await modrinth.install(ctx.dir, projectId, t, ctx, step);
@@ -410,6 +412,7 @@ async function installPackFile(file, extra) {
   const progress = makeProgress();
   const r = await modpacks.installFromFile(file, Object.assign({ root, saveProfile: store.saveProfile, progress }, extra || {}));
   send('game:progress', { stage: 'Готово', done: 1, total: 1 });
+  if (r.manual && r.manual.length) manual.add(path.join(root, 'instances', r.profile.id), r.manual);
   return { profiles: store.getProfiles(), profileId: r.profile.id, name: r.profile.name, manual: r.manual };
 }
 
@@ -506,6 +509,18 @@ ipcMain.handle('mods:openFolder', async (e, { profileId, type }) => {
   fs.mkdirSync(d, { recursive: true });
   return shell.openPath(d);
 });
+
+// ---------- файлы, которые нужно скачать вручную ----------
+const manualFolders = () => [...new Set([app.getPath('downloads'), app.getPath('desktop'), store.getSettings().manualDir].filter(Boolean))];
+ipcMain.handle('manual:pending', async (e, profileId) => manual.pending((await profileCtx(profileId)).dir));
+ipcMain.handle('manual:scan', async (e, profileId) => manual.scan((await profileCtx(profileId)).dir, manualFolders()));
+ipcMain.handle('manual:pickFolder', async (e, profileId) => {
+  const r = await dialog.showOpenDialog(win, { title: 'Где лежат скачанные файлы', properties: ['openDirectory'] });
+  if (r.canceled || !r.filePaths[0]) return null;
+  store.setSettings({ manualDir: r.filePaths[0] });
+  return manual.scan((await profileCtx(profileId)).dir, manualFolders());
+});
+ipcMain.handle('manual:open', (e, url) => { if (/^https:\/\/(www\.)?curseforge\.com\//.test(String(url))) shell.openExternal(url); });
 
 // Плашка «Сервер» на главной: онлайн и игроки
 ipcMain.handle('server:ping', () => ping(CONFIG.server.host, CONFIG.server.port).catch(() => ({ online: false })));

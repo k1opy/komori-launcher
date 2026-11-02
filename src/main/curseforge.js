@@ -116,7 +116,9 @@ async function install(dir, modId, type, ctx, onStep) {
     const title = mod.name;
     onStep && onStep(title);
     if (!file.downloadUrl || !CDN.test(file.downloadUrl)) {
-      manual.push({ title, url: (mod.links && mod.links.websiteUrl) || '' });
+      const site = (mod.links && mod.links.websiteUrl) || '';
+      manual.push({ title, url: site ? site.replace(/\/$/, '') + '/files/' + file.id : '', file: file.fileName, sha1: sha1Of(file), size: file.fileLength,
+        type: CLASS_TO_TYPE[mod.classId] || type, modId: String(id), fileId: String(file.id) });
     } else {
       const name = mr.safeName(file.fileName);
       const folder = mr.FOLDERS[CLASS_TO_TYPE[mod.classId] || type];
@@ -197,6 +199,7 @@ async function resolvePackFiles(entries) {
       out.push({
         fileId: f.id, modId: f.modId, name: f.fileName, title: m.name || f.fileName,
         url: f.downloadUrl && CDN.test(f.downloadUrl) ? f.downloadUrl : null,
+        page: (m.links && m.links.websiteUrl) ? m.links.websiteUrl.replace(/\/$/, '') + '/files/' + f.id : '',
         sha1: sha1Of(f), size: f.fileLength, type: CLASS_TO_TYPE[m.classId] || 'mod', website: (m.links && m.links.websiteUrl) || ''
       });
     }

@@ -37,6 +37,7 @@ function setSettings(patch) {
   s.ram = Math.max(1, Math.min(32, Math.round(Number(s.ram) || 4)));
   if (!THEMES.includes(s.theme)) s.theme = 'system';
   s.skinServerUrl = String(s.skinServerUrl || '').trim().replace(/\/+$/, '').slice(0, 200);
+  s.manualDir = typeof s.manualDir === 'string' ? s.manualDir.slice(0, 500) : '';   // своя папка загрузок для ручных файлов
   writeJson('settings.json', s);
   return s;
 }

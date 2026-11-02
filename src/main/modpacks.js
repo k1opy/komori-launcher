@@ -111,7 +111,7 @@ async function installCfPack(zip, m, deps) {
   const tasks = [];
   const meta = mr.readMeta(dir);
   for (const f of files) {
-    if (!f.url) { manual.push({ title: f.title, url: f.website }); continue; }
+    if (!f.url) { manual.push({ title: f.title, url: f.page || f.website, file: f.name, sha1: f.sha1, size: f.size, type: f.type, modId: String(f.modId), fileId: String(f.fileId) }); continue; }
     const name = mr.safeName(f.name);
     tasks.push({ url: f.url, dest: path.join(dir, mr.FOLDERS[f.type], name), sha1: f.sha1, size: f.size, verify: true });
     meta.items[`${f.type}/${name}`] = { source: 'curseforge', projectId: String(f.modId), versionId: String(f.fileId), versionNumber: name, file: name, type: f.type, sha1: f.sha1, title: f.title };

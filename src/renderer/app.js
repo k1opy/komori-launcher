@@ -356,7 +356,7 @@ async function installPack(run, busyId) {
       S.profiles = r.profiles;
       S.mods.profileId = r.profileId;
       toast('Сборка «' + r.name + '» установлена — новый профиль выбран', true);
-      if (r.manual && r.manual.length) S.manual = { title: 'Эти файлы автор разрешил скачивать только с сайта', items: r.manual, profileId: r.profileId };
+      if (r.manual && r.manual.length) openManual(r.profileId, 'Скачай ещё ' + r.manual.length + ' ' + (r.manual.length === 1 ? 'файл' : r.manual.length < 5 ? 'файла' : 'файлов'));
       modsLoadInstalled();
     }
   } catch (e) { toast(errText(e)); }
@@ -365,14 +365,54 @@ async function installPack(run, busyId) {
   render(); renderManual();
 }
 
+// Файлы, которые автор разрешил качать только с сайта CurseForge: игрок скачивает их сам,
+// а лаунчер раз в 3 секунды ищет их в «Загрузках» и кладёт в сборку (как в Prism Launcher)
+let manualTimer = null;
+async function openManual(profileId, title, launchAfter) {
+  const items = await K.manual.pending(profileId).catch(() => []);
+  if (!items.length) { if (launchAfter) launchAfter(); return; }
+  S.manual = { title, profileId, items, done: [], launchAfter: launchAfter || null, scanning: false };
+  renderManual();
+  clearInterval(manualTimer);
+  manualTimer = setInterval(() => manualScan(false), 3000);
+}
+async function manualScan(manualClick, viaPicker) {
+  const M = S.manual;
+  if (!M || M.scanning) return;
+  M.scanning = manualClick;
+  if (manualClick) renderManual();
+  try {
+    const r = viaPicker ? await K.manual.pickFolder(M.profileId) : await K.manual.scan(M.profileId);
+    if (!S.manual || !r) { if (S.manual) { S.manual.scanning = false; renderManual(); } return; }
+    if (r.found.length) { M.done = M.done.concat(r.found); toast('Нашёл и добавил в сборку: ' + r.found.join(', '), true); }
+    else if (manualClick) toast('Пока ничего не нашёл. Проверь, что файлы скачались в «Загрузки».');
+    M.items = r.pending;
+  } catch (e) { if (manualClick) toast(errText(e)); }
+  if (S.manual) S.manual.scanning = false;
+  if (S.manual && !S.manual.items.length) clearInterval(manualTimer);
+  renderManual();
+  if (S.screen === 'mods') modsLoadInstalled();
+}
+function closeManual() { clearInterval(manualTimer); S.manual = null; renderManual(); }
+
 function renderManual() {
   const m = $('#manual');
   if (!S.manual) { m.classList.add('hidden'); m.innerHTML = ''; return; }
-  m.innerHTML = `<div class="dialog" role="dialog" aria-label="Ручная загрузка" style="width:640px">
-    <div class="dialog-head"><h2>${esc(S.manual.title)}</h2><button type="button" class="icon-btn" data-act="manualClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
-    <p class="note" style="margin:0">Автор запретил скачивание этих файлов в сторонних лаунчерах. Открой страницу, скачай файл и положи его в папку mods профиля.</p>
-    <div class="list" style="max-height:320px">${S.manual.items.map((it, i) => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(it.title)}</b></div>${it.url ? `<button type="button" class="btn2" data-act="manualOpen" data-id="${i}">Открыть страницу</button>` : ''}</div>`).join('')}</div>
-    <div class="dialog-foot"><button type="button" class="btn2" data-act="manualFolder">Открыть папку mods</button><button type="button" class="btn" data-act="manualClose">Готово</button></div></div>`;
+  const M = S.manual, all = !M.items.length;
+  const rows = M.done.map(t => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(t)}</b><span class="mby">в сборке</span></div><span class="tag ok">✓ Готово</span></div>`).join('') +
+    M.items.map((it, i) => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(it.title)}</b><span class="mby">${esc(it.file || '')}</span></div>${it.url ? `<button type="button" class="btn" data-act="manualOpen" data-id="${i}">Скачать</button>` : ''}</div>`).join('');
+  m.innerHTML = `<div class="dialog" role="dialog" aria-label="Ручная загрузка" style="width:660px">
+    <div class="dialog-head"><h2>${esc(all ? 'Все файлы на месте' : M.title)}</h2><button type="button" class="icon-btn" data-act="manualClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+    <p class="note" style="margin:0">${all ? 'Всё скачано и уже лежит в сборке. Можно играть.' :
+      'Авторы этих модов разрешили скачивать их только с сайта CurseForge. Нажми «Скачать» у каждого и скачай файл на странице — в обычную папку «Загрузки». Лаунчер сам найдёт файлы и положит их в сборку, ничего переносить не нужно.'}</p>
+    <div class="list" style="max-height:320px">${rows}</div>
+    <div class="dialog-foot">
+      ${all ? '' : `<span class="note" style="margin-right:auto">${M.scanning ? 'Ищу…' : 'Слежу за «Загрузками»…'}</span>
+      <button type="button" class="btn2" data-act="manualPick">Файлы в другой папке…</button>
+      <button type="button" class="btn2" data-act="manualScanNow">Определить</button>`}
+      ${all && M.launchAfter ? `<button type="button" class="btn" data-act="manualPlay">Играть</button>` : `<button type="button" class="btn${all ? '' : '2'}" data-act="manualClose">${all ? 'Готово' : 'Позже'}</button>`}
+      ${!all && M.launchAfter ? `<button type="button" class="btn2" data-act="manualPlay">Играть без них</button>` : ''}
+    </div></div>`;
   m.classList.remove('hidden');
 }
 
@@ -767,10 +807,14 @@ async function loadVersions() {
   render(); if (S.form) renderForm();
 }
 
-async function launch(profileId, join) {
+async function launch(profileId, join, skipManual) {
   if (S.busy) return;
   const target = join && S.info.serverManifest ? S.info.serverProfileId : (profileId || S.profiles.selected);
   if (S.running.includes(target)) { toast('Эта сборка уже запущена. Для второй игры выбери другую сборку.'); return; }
+  if (!skipManual && !(join && S.info.serverManifest)) {
+    const left = await K.manual.pending(target).catch(() => []);
+    if (left.length) { openManual(target, 'Перед игрой скачай ' + left.length + ' ' + (left.length === 1 ? 'файл' : left.length < 5 ? 'файла' : 'файлов'), () => launch(profileId, join, true)); return; }
+  }
   S.busy = true; S.prog = { stage: 'Подготовка', done: 0, total: 0 }; S.menuOpen = false; S.log = '';
   render();
   try {
@@ -819,14 +863,16 @@ const ACTIONS = {
       M.items = r.items;
       if (r.installed.length > 1) toast('Установлено: ' + r.installed.join(', '), true);
       else if (r.installed.length === 1) toast('Установлен «' + r.installed[0] + '»', true);
-      if (r.manual && r.manual.length) S.manual = { title: 'Скачай вручную', items: r.manual, profileId: M.profileId };
+      if (r.manual && r.manual.length) openManual(M.profileId, 'Скачай вручную');
     } catch (e) { toast(errText(e)); }
     delete M.busy[projectId]; render(); renderManual();
   },
   mImport: () => installPack(() => K.mods.importPack(), null),
-  manualOpen: (i) => { const it = S.manual && S.manual.items[Number(i)]; if (it && it.url) K.mods.open('curseforge', '', '', it.url); },
-  manualFolder: () => S.manual && K.mods.openFolder(S.manual.profileId, 'mod'),
-  manualClose: () => { S.manual = null; renderManual(); },
+  manualOpen: (i) => { const it = S.manual && S.manual.items[Number(i)]; if (it && it.url) K.manual.open(it.url); },
+  manualScanNow: () => manualScan(true),
+  manualPick: () => manualScan(true, true),
+  manualPlay: () => { const go = S.manual && S.manual.launchAfter; closeManual(); if (go) go(); },
+  manualClose: () => closeManual(),
   mToggle: async (key) => { try { S.mods.items = await K.mods.toggle(S.mods.profileId, key); } catch (e) { toast(errText(e)); } render(); },
   mRemove: async (key) => {
     try { S.mods.items = await K.mods.remove(S.mods.profileId, key); if (S.mods.updates) S.mods.updates = S.mods.updates.filter(u => u.key !== key); }

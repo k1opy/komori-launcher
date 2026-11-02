@@ -70,6 +70,12 @@ contextBridge.exposeInMainWorld('komori', {
     openFolder: (profileId, type) => ipcRenderer.invoke('mods:openFolder', { profileId, type }),
     onStep: on('mods:step')
   },
+  manual: {
+    pending: (profileId) => ipcRenderer.invoke('manual:pending', profileId),
+    scan: (profileId) => ipcRenderer.invoke('manual:scan', profileId),
+    pickFolder: (profileId) => ipcRenderer.invoke('manual:pickFolder', profileId),
+    open: (url) => ipcRenderer.invoke('manual:open', url)
+  },
   server: {
     ping: () => ipcRenderer.invoke('server:ping'),
     status: () => ipcRenderer.invoke('server:status'),
