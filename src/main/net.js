@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const UA = 'KomoriLauncher/0.6';
+const UA = 'KomoriLauncher/0.8';
 
 async function fetchJson(url, opts = {}) {
   const res = await fetch(url, Object.assign({ headers: { 'User-Agent': UA } }, opts));
