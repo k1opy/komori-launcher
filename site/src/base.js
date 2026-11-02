@@ -24,7 +24,7 @@
       },
       nav: NAV.map(function (n) {
         var on = n.id === k.page;
-        return { label: n.label, href: n.href, current: on ? 'page' : 'false', bg: on ? '#8B3DFF' : 'transparent', color: on ? '#FFFFFF' : '#C7BBE6' };
+        return { label: n.label, href: n.href, current: on ? 'page' : 'false', bg: on ? '#8B5CF6' : 'transparent', color: on ? '#FFFFFF' : '#A1A9B4' };
       }),
       discord: cfg.discord, launcher: cfg.launcher, map: cfg.map, social: cfg.social || [],
       flash: k.flash || '', flashJoin: false
@@ -39,7 +39,7 @@
  * Пинги ролей <@&id> скрываются. */
 (function () {
   'use strict';
-  var RANK = { D: '#A9A2C0', C: '#7BD88F', B: '#6FA8FF', A: '#C99BFF', S: '#FFC857', SS: '#FF7EDB' };
+  var RANK = { D: '#8A93A0', C: '#7BD88F', B: '#6FA8FF', A: '#A78BFA', S: '#FFC857', SS: '#FF7EDB' };
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function safeUrl(u) { u = u.replace(/&amp;/g, '&'); return /^(https:\/\/|\/(?!\/))[^\s"'<>]*$/.test(u) ? esc(u) : ''; }
   function inline(t) {
@@ -146,13 +146,13 @@ window.KomoriIcons = {
   fish: { c: '#5FD3F3', name: 'Рыба', d: '<path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"/><path d="M18 12v.5"/><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/>' },
   mountain: { c: '#7EDB8A', name: 'Горы', d: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>' },
   trophy: { c: '#FFC24D', name: 'Кубок', d: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>' },
-  sparkles: { c: '#C99BFF', name: 'Магия', d: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>' },
+  sparkles: { c: '#A78BFA', name: 'Магия', d: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>' },
   sword: { c: '#FF8A8A', name: 'Меч', d: '<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/>' },
   shield: { c: '#6FA8FF', name: 'Щит', d: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>' },
   map: { c: '#5FE0C8', name: 'Карта', d: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>' },
   users: { c: '#FF7EDB', name: 'Игроки', d: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
   gift: { c: '#FFD15C', name: 'Подарок', d: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>' },
-  pickaxe: { c: '#B9AED6', name: 'Кирка', d: '<path d="M14.5 5.5 4 16l4 4 10.5-10.5"/><path d="M3 9c4-4 10-6 18-6-1 8-3 14-6 18"/>' },
+  pickaxe: { c: '#8A93A0', name: 'Кирка', d: '<path d="M14.5 5.5 4 16l4 4 10.5-10.5"/><path d="M3 9c4-4 10-6 18-6-1 8-3 14-6 18"/>' },
   coins: { c: '#9FE3B4', name: 'Монеты', d: '<circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18"/><path d="M7 6h1v4"/>' },
   star: { c: '#FFC857', name: 'Звезда', d: '<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/>' }
 };
@@ -163,7 +163,7 @@ window.KomoriIcon = function (id) {
 
 /* Рубрики постов */
 window.KomoriCats = [
-  { id: 'news', label: 'Новости', c: '#C99BFF' },
+  { id: 'news', label: 'Новости', c: '#A78BFA' },
   { id: 'update', label: 'Обновления', c: '#7BD88F' },
   { id: 'devblog', label: 'Девблог', c: '#6FA8FF' },
   { id: 'giveaway', label: 'Розыгрыш', c: '#FFC857' },

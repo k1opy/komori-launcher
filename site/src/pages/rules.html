@@ -11,32 +11,32 @@
 <helmet>
 <style>
 .rl-hero{max-width:1240px;margin:0 auto;padding:56px 24px 32px;display:flex;flex-direction:column;gap:24px}
-.rl-hero h1{margin:0;font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(32px,4.5vw,52px);color:#fff}
+.rl-hero h1{margin:0;font-family:'Inter',sans-serif;font-weight:700;font-size:clamp(32px,4.5vw,52px);color:#fff}
 .rl-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
-.rl-intro{margin:0;color:#C7BBE6;max-width:720px;font-size:18px}
+.rl-intro{margin:0;color:#A1A9B4;max-width:720px;font-size:18px}
 .rl-intro p{margin:0 0 8px}
 .rl-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
-.rl-card{background:#170F2B;border:1px solid #2E2250;border-radius:14px;padding:18px;display:flex;gap:12px;align-items:flex-start}
+.rl-card{background:#12151A;border:1px solid #262B33;border-radius:14px;padding:18px;display:flex;gap:12px;align-items:flex-start}
 .rl-card svg{flex:0 0 auto;width:26px;height:26px}
 .rl-card b{color:#fff}
-.rl-card span span{color:#C7BBE6;font-size:15px}
+.rl-card span span{color:#A1A9B4;font-size:15px}
 .rl-main{max-width:1240px;margin:0 auto;padding:0 24px 80px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
-.rl-nav{flex:1 1 240px;background:#170F2B;border:1px solid #2E2250;border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:2px;position:sticky;top:84px}
-.rl-nav a{display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;text-decoration:none;color:#EFE8FF;font-weight:600}
-.rl-nav a:hover{background:#1F1638;color:#fff}
-.rl-nav a span{min-width:28px;height:28px;border-radius:8px;background:#2A1E4A;color:#D9B8FF;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800}
+.rl-nav{flex:1 1 240px;background:#12151A;border:1px solid #262B33;border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:2px;position:sticky;top:84px}
+.rl-nav a{display:flex;gap:10px;align-items:center;padding:12px;border-radius:10px;text-decoration:none;color:#E6E8EB;font-weight:600}
+.rl-nav a:hover{background:#1D2229;color:#fff}
+.rl-nav a span{min-width:28px;height:28px;border-radius:8px;background:#1D2229;color:#A78BFA;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:13px;font-weight:700}
 .rl-list{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:24px}
-.rl-sec{background:#130D24;border:1px solid #2E2250;border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:90px}
+.rl-sec{background:#12151A;border:1px solid #262B33;border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:90px}
 .rl-sec-h{display:flex;align-items:center;gap:14px}
-.rl-sec-h span{width:52px;height:52px;border-radius:14px;background:#8B3DFF;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;flex:0 0 auto}
-.rl-sec-h h2{margin:0;font-family:'Montserrat',sans-serif;font-size:24px;color:#fff}
-.rl-sec .md h4{font-size:18px;color:#E6D2FF;margin:14px 0 8px;font-family:'Inter',sans-serif}
+.rl-sec-h span{width:52px;height:52px;border-radius:14px;background:#8B5CF6;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-size:22px;font-weight:700;flex:0 0 auto}
+.rl-sec-h h2{margin:0;font-family:'Inter',sans-serif;font-size:24px;color:#fff}
+.rl-sec .md h4{font-size:18px;color:#C4B5FD;margin:14px 0 8px;font-family:'Inter',sans-serif}
 .rl-sec .md-card b{color:#FF9FD8;font-family:'Inter',sans-serif;font-size:16px}
-.rl-sec .md p{color:#C7BBE6;font-size:15px}
+.rl-sec .md p{color:#A1A9B4;font-size:15px}
 @media (max-width:840px){.rl-nav{position:static}}
 </style>
 </helmet>
-<div class="{{wrapCls}}" style="min-height:100vh;background:#0E0A1A;color:#EFE8FF;line-height:1.6">
+<div class="{{wrapCls}}" style="min-height:100vh;background:#0D0F12;color:#E6E8EB;line-height:1.6">
 
 <!--KOMORI_HEADER-->
 
@@ -99,7 +99,7 @@ canEdit: !!(window.KomoriBase().admin && !s.dock),
 introHtml: md(intro.join('\n')),
 hasCards: cards.length > 0,
 cards: cards.map(function (c, i) {
-return { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#B57BFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[i % ICONS.length] + '</svg>', title: inl(c.title), text: inl(c.text) };
+return { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[i % ICONS.length] + '</svg>', title: inl(c.title), text: inl(c.text) };
 }),
 sections: secs.map(function (sec, i) {
 var n = 0, body = sec.lines.map(function (l) {
