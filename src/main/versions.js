@@ -238,18 +238,38 @@ async function installAssets(v, root, gameDir, onProgress) {
 
 // ---------- полная установка ----------
 // progress(stage, done, total)
+// Копия клиента в versions/<id>/<id>.jar. Перекопирует, если размер не совпадает (обновился клиент).
+function linkOwnJar(root, id, baseJar) {
+  if (!fs.existsSync(baseJar)) return baseJar;
+  const own = path.join(versionDir(root, id), id + '.jar');
+  let same = false;
+  try { same = fs.statSync(own).size === fs.statSync(baseJar).size; } catch {}
+  if (!same) {
+    fs.mkdirSync(path.dirname(own), { recursive: true });
+    const tmp = own + '.tmp';
+    fs.copyFileSync(baseJar, tmp);
+    fs.renameSync(tmp, own);
+  }
+  return own;
+}
+
 async function installVersion(root, id, gameDir, progress) {
   progress('Версия', 0, 1);
   const v = await resolveFull(root, id);
 
   const tasks = [];
-  const jarPath = path.join(versionDir(root, v.jarId), v.jarId + '.jar');
+  const baseJar = path.join(versionDir(root, v.jarId), v.jarId + '.jar');
   if (v.downloads && v.downloads.client) {
-    tasks.push({ url: v.downloads.client.url, dest: jarPath, sha1: v.downloads.client.sha1, size: v.downloads.client.size });
+    tasks.push({ url: v.downloads.client.url, dest: baseJar, sha1: v.downloads.client.sha1, size: v.downloads.client.size });
   }
   const libs = collectLibraries(v, root);
   tasks.push(...libs.tasks);
   await downloadAll(tasks, (d, t) => progress('Библиотеки', d, t));
+
+  // Как в официальном лаунчере: у версии-наследника (Forge, NeoForge, Fabric, Quilt) клиент лежит
+  // под её собственным именем. Forge 1.17+ исключает из classpath jar с именем версии (ignoreList),
+  // а ванильный 1.20.1.jar под своим именем грузился бы второй раз → ResolutionException.
+  const jarPath = v.jarId !== v.id ? linkOwnJar(root, v.id, baseJar) : baseJar;
 
   const nativesDir = path.join(versionDir(root, v.id), 'natives');
   extractNatives(libs.natives, nativesDir);
