@@ -9,120 +9,159 @@
 <x-dc>
 <helmet>
 <style>
-body{margin:0;background:#0E0A1A}
-a{color:#D9B8FF}a:hover{color:#F3E6FF}
+.pf{max-width:1100px;width:100%;margin:0 auto;padding:28px 20px 90px;display:flex;flex-direction:column;gap:18px;flex:1}
+.pf-card{border-radius:16px;border:1px solid var(--line2);background:var(--card)}
+.pf-pad{padding:20px;display:flex;flex-direction:column;gap:14px}
+.pf h2{margin:0;font-size:17px;color:#fff}
+.pf-ban{height:220px;background-size:cover;background-position:center;border-radius:16px 16px 0 0;background-color:var(--card2)}
+.pf-ban.empty{background-image:repeating-linear-gradient(135deg,#171030 0 16px,#140E28 16px 32px)}
+.pf-row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;padding:0 24px 20px;margin-top:-56px}
+.pf-av{width:120px;height:120px;border-radius:20px;border:5px solid var(--card);background:var(--card2);display:block;object-fit:cover}
+.pf-t{flex:1 1 240px;display:flex;flex-direction:column;gap:6px;padding-bottom:4px}
+.pf-name{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pf-name b{font-family:'Montserrat',sans-serif;font-size:28px;color:#fff}
+.pf-lvl{padding:2px 9px;border-radius:7px;border:1px solid var(--accent2);color:var(--accent-text);font-size:12px;font-weight:700}
+.pf-bdg{padding:2px 10px;border-radius:999px;border:1px solid;font-size:12px;font-weight:700}
+.pf-status{color:#D9CCF5}
+.pf-acts{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:4px}
+.pf-btn{padding:0 16px;min-height:42px;border-radius:10px;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.pf-btn2{padding:0 16px;min-height:42px;border-radius:10px;border:1px solid var(--line2);background:var(--card2);color:var(--text);font:inherit;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.pf-btn2:hover{border-color:var(--line3);color:#fff}
+.pf-del{color:var(--err)}
+.pf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.pf-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pf-tile{padding:16px;border-radius:14px;border:1px solid var(--line2);background:var(--card)}
+.pf-tile span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pf-tile b{display:block;margin-top:6px;font-size:22px;color:#fff}
+.pf-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pf-chip{padding:6px 12px;border-radius:10px;background:var(--card2);color:var(--muted);font-size:14px;text-decoration:none}
+a.pf-chip{color:var(--accent-text)}
+.pf-f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:var(--muted)}
+.pf-f input,.pf-f textarea{padding:11px 13px;min-height:44px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:#fff;font:inherit;font-weight:500;outline:none}
+.pf-f textarea{resize:vertical}
+.pf-f input:focus,.pf-f textarea:focus{border-color:var(--accent2)}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.pf-colors{display:flex;flex-wrap:wrap;gap:10px}
+.pf-colors button{width:56px;height:56px;padding:0;border-radius:14px;border:3px solid transparent;cursor:pointer;overflow:hidden;background:none}
+.pf-colors button[aria-pressed="true"]{border-color:#fff}
+.pf-colors img{width:100%;height:100%;display:block}
+.pf-err{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:#2A1430;border:1px solid #6A2A4A;color:#FFD6E2;font-weight:600}
+.pf-ok{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:12px;background:#12301F;border:1px solid #2E7D4F;color:#C9F2D6;font-weight:600}
+.pf-note{margin:0;color:var(--dim);font-size:14px}
+.pf-file{position:absolute;width:1px;height:1px;opacity:0}
 </style>
 </helmet>
-<div style="min-height: 100vh; background: #0E0A1A; color: #EFE8FF; font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.55; display: flex; flex-direction: column">
+<div style="min-height: 100vh; display: flex; flex-direction: column">
 <!--KOMORI_HEADER-->
+<main class="pf">
 
-<sc-if value="{{loading}}">
-<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 64px 24px; color: #B9AED6">Загружаю профиль…</section>
+<sc-if value="{{loading}}"><p style="color: var(--muted)">Загружаю профиль…</p></sc-if>
+
+<sc-if value="{{needLogin}}">
+<section class="pf-card pf-pad" style="align-items: flex-start">
+<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; color: #fff">Аккаунт Komori</h1>
+<p class="pf-note">Войди или зарегистрируйся — нужен только логин, пароль и возраст. Тот же аккаунт работает в лаунчере.</p>
+<div class="pf-acts"><a class="pf-btn" href="/login?next=/profile">Войти</a><a class="pf-btn2" href="/login?next=/profile#reg">Зарегистрироваться</a></div>
+</section>
 </sc-if>
 
 <sc-if value="{{notFound}}">
-<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 64px 24px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start">
-<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">{{notFoundTitle}}</h1>
-<p style="margin: 0; color: #C7BBE6">{{notFoundText}}</p>
-<sc-if value="{{K.loggedOut}}">
-<a href="{{K.loginUrl}}" style="padding: 14px 22px; border-radius: 12px; background: #5865F2; color: #FFFFFF; text-decoration: none; font-weight: 800">Войти через Discord</a>
-</sc-if>
-</section>
+<section class="pf-card pf-pad"><h1 style="margin: 0; color: #fff">Профиль не найден</h1><p class="pf-note">Такого аккаунта Komori нет.</p></section>
 </sc-if>
 
 <sc-if value="{{ready}}">
-<section style="max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 28px 24px 0">
-<div style="position: relative; border-radius: 20px; overflow: hidden; border: 2px solid {{accent}}; background: #170F2B">
-<div aria-hidden="true" style="width: 100%; height: 220px; background: radial-gradient(ellipse 60% 90% at 80% 30%, {{accent}}, transparent 70%), radial-gradient(ellipse 50% 80% at 0% 100%, rgba(139,61,255,.45), transparent 70%), #140E26"></div>
-<div style="padding: 0 28px 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; margin-top: -64px; position: relative">
-<img src="{{p.avatar}}" alt="Аватар {{p.name}}" width="128" height="128" style="width: 128px; height: 128px; border-radius: 22px; background: #2A1E4A; border: 5px solid {{accent}}; box-shadow: 0 0 0 5px #170F2B; display: block; object-fit: cover">
-<div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px">
-<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
-<span style="font-family: 'Montserrat', sans-serif; font-size: 28px; font-weight: 800; color: #FFFFFF">{{p.name}}</span>
-<sc-for list="{{badges}}" as="b">
-<span style="padding: 3px 12px; border-radius: 999px; border: 1px solid {{b.color}}; color: {{b.color}}; font-size: 13px; font-weight: 700">{{b.label}}</span>
-</sc-for>
+<section class="pf-card">
+<div class="{{banCls}}" style="{{banStyle}}"></div>
+<div class="pf-row">
+<img class="pf-av" src="{{p.avatar}}" alt="Аватарка {{p.login}}">
+<div class="pf-t">
+<div class="pf-name"><b>{{p.login}}</b><span class="pf-lvl">УР. {{p.stats.level}}</span>
+<sc-for list="{{p.badges}}" as="b"><span class="pf-bdg" style="border-color: {{b.color}}; color: {{b.color}}">{{b.label}}</span></sc-for>
 </div>
-<span style="color: #D9CCF5">{{statusShown}}</span>
+<span class="pf-status">{{statusShown}}</span>
 </div>
-<div style="display: flex; flex-wrap: wrap; gap: 10px; padding-bottom: 6px">
-<sc-if value="{{own}}">
-<button type="button" onClick="{{toggleEdit}}" style="padding: 12px 18px; min-height: 44px; border-radius: 10px; border: none; background: #8B3DFF; color: #FFFFFF; font: inherit; font-weight: 700; cursor: pointer">{{editLabel}}</button>
-</sc-if>
-<button type="button" onClick="{{share}}" style="padding: 12px 18px; min-height: 44px; border-radius: 10px; border: 1px solid #2E2250; background: #1F1638; color: #EFE8FF; font: inherit; font-weight: 700; cursor: pointer">{{shareLabel}}</button>
-</div>
+<div class="pf-acts">
+<sc-if value="{{own}}"><button type="button" class="pf-btn" onClick="{{toggleEdit}}">{{editLabel}}</button></sc-if>
+<button type="button" class="pf-btn2" onClick="{{share}}">{{shareLabel}}</button>
 </div>
 </div>
 </section>
 
-<section style="flex: 1; max-width: 1240px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 24px 24px 80px; display: flex; flex-direction: column; gap: 20px">
+<div class="pf-stats">
+<div class="pf-tile"><span>Всего в игре</span><b>{{hTotal}}</b></div>
+<div class="pf-tile"><span>На Komori</span><b>{{hKomori}}</b></div>
+<div class="pf-tile"><span>Запусков</span><b>{{p.stats.launches}}</b></div>
+<div class="pf-tile"><span>На сайте с</span><b style="font-size: 17px">{{p.since}}</b></div>
+</div>
 
 <sc-if value="{{viewing}}">
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
-<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">О себе</h2>
+<section class="pf-card pf-pad">
+<h2>О себе</h2>
 <p style="margin: 0; color: #E2DAF5; white-space: pre-line">{{bioShown}}</p>
-<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px">
-<span style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #C7BBE6; font-size: 14px">На сайте с {{p.since}}</span>
-<sc-if value="{{p.discordTag}}"><span style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #C7BBE6; font-size: 14px">Discord: {{p.discordTag}}</span></sc-if>
-<sc-for list="{{linkList}}" as="l">
-<a href="{{l.url}}" target="_blank" rel="noopener nofollow ugc" style="padding: 6px 12px; border-radius: 10px; background: #1F1638; color: #D9B8FF; font-size: 14px; text-decoration: none">{{l.label}}</a>
-</sc-for>
+<div class="pf-chips">
+<sc-if value="{{p.discord}}"><span class="pf-chip">Discord: {{p.discord.name}}</span></sc-if>
+<sc-for list="{{linkList}}" as="l"><a class="pf-chip" href="{{l.url}}" target="_blank" rel="noopener nofollow ugc">{{l.label}}</a></sc-for>
 </div>
-</div>
+</section>
 </sc-if>
 
 <sc-if value="{{editing}}">
-<div style="display: flex; flex-direction: column; gap: 20px">
-<h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; color: #FFFFFF">Настройки профиля</h1>
-<p style="margin: 0; color: #C7BBE6">Аватарка и ник берутся из Discord. Профиль видят все — правила сервера действуют и здесь.</p>
+<section class="pf-card pf-pad">
+<h2>Аватарка</h2>
+<p class="pf-note">Выбери базовую или загрузи свою картинку. В лаунчере можно поставить 3D-аватарку из скина.</p>
+<div class="pf-colors" role="group" aria-label="Базовые аватарки">
+<sc-for list="{{colors}}" as="c"><button type="button" aria-pressed="{{c.on}}" aria-label="{{c.name}}" title="{{c.name}}" onClick="{{c.pick}}"><img src="{{c.src}}" alt=""></button></sc-for>
+</div>
+<div class="pf-acts"><label class="pf-btn2">Загрузить картинку<input class="pf-file" type="file" accept="image/png,image/jpeg,image/webp" onChange="{{onAvFile}}"></label></div>
+</section>
 
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
-<div style="display: flex; flex-direction: column; gap: 6px">
-<label for="status" style="font-weight: 700; color: #FFFFFF">Статус</label>
-<input id="status" type="text" maxlength="60" value="{{f.status}}" onInput="{{onStatus}}" placeholder="Коротко: чем занят сейчас" style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit">
-<span style="align-self: flex-end; font-size: 13px; color: #B9AED6">{{statusCount}} / 60</span>
-</div>
-<div style="display: flex; flex-direction: column; gap: 6px">
-<label for="bio" style="font-weight: 700; color: #FFFFFF">О себе</label>
-<textarea id="bio" rows="5" maxlength="300" onInput="{{onBio}}" placeholder="Расскажи о себе: во что играешь, что строишь, кого ищешь в команду" style="padding: 12px 14px; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit; resize: vertical">{{f.bio}}</textarea>
-<span style="align-self: flex-end; font-size: 13px; color: #B9AED6">{{bioCount}} / 300</span>
-</div>
-</div>
+<section class="pf-card pf-pad">
+<h2>Баннер</h2>
+<p class="pf-note">Как обложка YouTube: 2560×1440. Лишнее обрежется по центру.</p>
+<div class="pf-acts"><label class="pf-btn2">{{banBtn}}<input class="pf-file" type="file" accept="image/png,image/jpeg,image/webp" onChange="{{onBanFile}}"></label>
+<sc-if value="{{p.banner}}"><button type="button" class="pf-btn2 pf-del" onClick="{{banRemove}}">Убрать баннер</button></sc-if></div>
+</section>
 
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
-<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Цвет профиля</h2>
-<div role="radiogroup" aria-label="Цвет профиля" style="display: flex; flex-wrap: wrap; gap: 10px">
-<sc-for list="{{colors}}" as="c">
-<button type="button" role="radio" aria-checked="{{c.on}}" aria-label="{{c.name}}" onClick="{{c.pick}}" style="width: 48px; height: 48px; border-radius: 12px; border: 3px solid {{c.ring}}; background: {{c.hex}}; cursor: pointer"></button>
-</sc-for>
+<section class="pf-card pf-pad">
+<h2>О себе</h2>
+<label class="pf-f">Статус<input type="text" maxlength="60" value="{{f.status}}" onInput="{{onStatus}}" placeholder="Коротко: чем занят сейчас"></label>
+<label class="pf-f">О себе<textarea rows="4" maxlength="300" onInput="{{onBio}}" placeholder="Во что играешь, что строишь, кого ищешь в команду">{{f.bio}}</textarea></label>
+<div class="pf-grid">
+<label class="pf-f">YouTube<input type="url" value="{{f.youtube}}" onInput="{{onYoutube}}" placeholder="https://youtube.com/@..."></label>
+<label class="pf-f">Twitch<input type="url" value="{{f.twitch}}" onInput="{{onTwitch}}" placeholder="https://twitch.tv/..."></label>
+<label class="pf-f">TikTok<input type="url" value="{{f.tiktok}}" onInput="{{onTiktok}}" placeholder="https://tiktok.com/@..."></label>
 </div>
-<span style="font-size: 14px; color: #B9AED6">Цвет рамки профиля и аватарки.</span>
-</div>
+<div class="pf-acts"><button type="button" class="pf-btn" onClick="{{save}}">{{saveLabel}}</button></div>
+</section>
 
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px">
-<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Ссылки</h2>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
-<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">YouTube<input id="lnYoutube" type="url" value="{{f.youtube}}" onInput="{{onYoutube}}" placeholder="https://youtube.com/@..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
-<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">Twitch<input id="lnTwitch" type="url" value="{{f.twitch}}" onInput="{{onTwitch}}" placeholder="https://twitch.tv/..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
-<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #B9AED6">TikTok<input id="lnTiktok" type="url" value="{{f.tiktok}}" onInput="{{onTiktok}}" placeholder="https://tiktok.com/@..." style="padding: 12px 14px; min-height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid #2E2250; background: #0E0A1A; color: #FFFFFF; font: inherit"></label>
-</div>
-</div>
-
-<div style="background: #170F2B; border: 1px solid #2E2250; border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 12px">
-<h2 style="margin: 0; font-size: 18px; color: #FFFFFF">Приватность</h2>
-<label style="display: flex; gap: 10px; align-items: center; color: #E2DAF5"><input id="showDiscord" type="checkbox" checked="{{f.showDiscord}}" onChange="{{onShowDiscord}}" style="width: 18px; height: 18px; accent-color: #8B3DFF">Показывать мой Discord в профиле</label>
-</div>
-
-<sc-if value="{{error}}"><div role="alert" style="padding: 12px 16px; border-radius: 10px; background: #2A1430; color: #FFD6E2; font-weight: 600">{{error}}</div></sc-if>
-<div style="display: flex; flex-wrap: wrap; gap: 10px">
-<button type="button" onClick="{{save}}" style="padding: 14px 24px; min-height: 48px; border-radius: 12px; border: none; background: #8B3DFF; color: #FFFFFF; font: inherit; font-weight: 800; cursor: pointer">{{saveLabel}}</button>
-<button type="button" onClick="{{toggleEdit}}" style="padding: 14px 24px; min-height: 48px; border-radius: 12px; border: 1px solid #2E2250; background: #1F1638; color: #EFE8FF; font: inherit; font-weight: 700; cursor: pointer">Отмена</button>
-</div>
-</div>
+<section class="pf-card pf-pad">
+<h2>Discord</h2>
+<sc-if value="{{p.discordLinked}}">
+<p class="pf-note">Привязан: <b style="color: #fff">{{dsName}}</b>. Через него можно войти на сайт и восстановить пароль; роли сервера показываются значками.</p>
+<label style="display: flex; gap: 10px; align-items: center; color: #E2DAF5"><input type="checkbox" checked="{{p.showDiscord}}" onChange="{{onShowDiscord}}" style="width: 18px; height: 18px; accent-color: #8B3DFF">Показывать Discord в профиле</label>
+<div class="pf-acts"><button type="button" class="pf-btn2 pf-del" onClick="{{unlink}}">Отвязать Discord</button></div>
 </sc-if>
+<sc-if value="{{dsNone}}">
+<p class="pf-note">Привяжи Discord — без него забытый пароль можно сбросить только через админа.</p>
+<div class="pf-acts"><a class="pf-btn" href="/auth/link">Привязать Discord</a></div>
+</sc-if>
+</section>
+
+<section class="pf-card pf-pad">
+<h2>Пароль</h2>
+<div class="pf-grid">
+<label class="pf-f">Старый пароль<input type="password" autocomplete="current-password" value="{{pw.old}}" onInput="{{onPwOld}}"></label>
+<label class="pf-f">Новый пароль<input type="password" autocomplete="new-password" value="{{pw.n1}}" onInput="{{onPw1}}"></label>
+<label class="pf-f">Повтори новый<input type="password" autocomplete="new-password" value="{{pw.n2}}" onInput="{{onPw2}}"></label>
+</div>
+<div class="pf-acts"><button type="button" class="pf-btn2" onClick="{{changePw}}">Сменить пароль</button></div>
 </section>
 </sc-if>
 
+<sc-if value="{{err}}"><div class="pf-err" role="alert">{{err}}</div></sc-if>
+<sc-if value="{{ok}}"><div class="pf-ok" role="status">{{ok}}</div></sc-if>
+</sc-if>
+</main>
 <!--KOMORI_FOOTER-->
 </div>
 </x-dc>
@@ -130,68 +169,95 @@ a{color:#D9B8FF}a:hover{color:#F3E6FF}
 class Component extends DCLogic {
 constructor(props) {
 super(props);
-this.state = { p: null, missing: false, editing: false, f: null, copied: false, saving: false, error: '' };
+this.state = { p: null, missing: false, needLogin: false, editing: false, f: null, pw: { old: '', n1: '', n2: '' }, copied: false, busy: false, err: '', ok: '' };
 }
 mounted() {
 var self = this, k = window.KOMORI || {};
-var m = location.pathname.match(/^\/u\/(\d{5,25})$/);
-var url = m ? '/api/user/' + m[1] : '/api/me';
-if (!m && !k.me) { this.setState({ missing: true }); return; }
-fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
-if (!p) self.setState({ missing: true }); else self.setState({ p: p });
+var m = location.pathname.match(/^\/u\/([A-Za-z0-9_]{3,16})$/);
+if (!m && !(k.me && !k.me.legacy)) { this.setState({ needLogin: true }); return; }
+fetch(m ? '/api/acc/u/' + m[1] : '/api/acc/me').then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+if (!p) self.setState(m ? { missing: true } : { needLogin: true }); else self.setState({ p: p });
 }).catch(function () { self.setState({ missing: true }); });
 }
 renderVals() {
 var self = this, s = this.state, p = s.p, k = window.KOMORI || {};
-var own = !!(p && k.me && k.me.id === p.id);
-var f = s.f || (p ? { status: p.status || '', bio: p.bio || '', accent: p.accent, youtube: (p.links || {}).youtube || '', twitch: (p.links || {}).twitch || '', tiktok: (p.links || {}).tiktok || '', showDiscord: !!p.showDiscord } : {});
-var accent = (s.editing ? f.accent : p && p.accent) || '#B57BFF';
-var COLORS = [['#B57BFF', 'Фиолетовый'], ['#FF7EDB', 'Розовый'], ['#6FA8FF', 'Синий'], ['#5FE0C8', 'Бирюзовый'], ['#7BD88F', 'Зелёный'], ['#FFC857', 'Золотой'], ['#FF8A6B', 'Коралловый']];
-function setF(key) { return function (e) { var n = Object.assign({}, f); n[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; self.setState({ f: n }); }; }
+var own = !!(p && k.me && k.me.id === p.id && p.age !== undefined);
+var f = s.f || (p ? { status: p.status || '', bio: p.bio || '', youtube: (p.links || {}).youtube || '', twitch: (p.links || {}).twitch || '', tiktok: (p.links || {}).tiktok || '' } : {});
+var COLORS = [['graphite', 'Графит'], ['beige', 'Бежевый'], ['blue', 'Синий'], ['violet', 'Фиолетовый'], ['green', 'Зелёный'], ['red', 'Красный'], ['pink', 'Розовый'], ['yellow', 'Жёлтый'], ['orange', 'Оранжевый']];
+function setF(key) { return function (e) { var n = Object.assign({}, f); n[key] = e.target.value; self.setState({ f: n }); }; }
+function setPw(key) { return function (e) { var n = Object.assign({}, s.pw); n[key] = e.target.value; self.setState({ pw: n }); }; }
+function hours(sec) { var h = Math.floor((sec || 0) / 3600); return h ? h.toLocaleString('ru-RU') + ' ч' : Math.round((sec || 0) / 60) + ' мин'; }
+function send(method, url, body, okText) {
+self.setState({ busy: true, err: '', ok: '' });
+return fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+.then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+.then(function (res) {
+if (!res.ok) { self.setState({ busy: false, err: res.d.error || 'Не удалось сохранить' }); return null; }
+self.setState({ busy: false, ok: okText || 'Сохранено', p: res.d.login ? res.d : self.state.p });
+clearTimeout(self._t); self._t = setTimeout(function () { self.setState({ ok: '' }); }, 2500);
+return res.d;
+}).catch(function () { self.setState({ busy: false, err: 'Нет связи с сайтом, попробуй ещё раз' }); });
+}
+// Картинку уменьшаем и обрезаем по центру прямо в браузере, на сайт уходит готовый JPEG
+function pickImage(w, h, max, done) {
+return function (e) {
+var file = e.target.files && e.target.files[0];
+e.target.value = '';
+if (!file) return;
+if (file.size > 25 * 1024 * 1024) return self.setState({ err: 'Картинка больше 25 МБ' });
+var img = new Image(), url = URL.createObjectURL(file);
+img.onload = function () {
+var want = w / h, sw = img.width, sh = Math.round(img.width / want);
+if (sh > img.height) { sh = img.height; sw = Math.round(img.height * want); }
+var cw = Math.min(w, sw), ch = Math.round(cw / want);
+var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+c.getContext('2d').drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, cw, ch);
+URL.revokeObjectURL(url);
+var q = 0.88, data = c.toDataURL('image/jpeg', q);
+while (data.length > max && q > 0.5) { q -= 0.1; data = c.toDataURL('image/jpeg', q); }
+done(data);
+};
+img.onerror = function () { self.setState({ err: 'Не получилось открыть картинку' }); };
+img.src = url;
+};
+}
 var links = p ? p.links || {} : {};
-var shown = s.editing ? f : (p || {});
 return {
-loading: !p && !s.missing,
-notFound: s.missing,
-notFoundTitle: k.me || /^\/u\//.test(location.pathname) ? 'Профиль не найден' : 'Войди, чтобы открыть профиль',
-notFoundText: k.me || /^\/u\//.test(location.pathname) ? 'Такого игрока нет или он ещё не заходил на сайт.' : 'Профиль создаётся автоматически при первом входе через Discord.',
-ready: !!p,
-own: own,
-p: p || {},
-accent: accent,
-badges: (p && p.badges) || [],
-statusShown: shown.status || 'Без статуса',
+loading: !p && !s.missing && !s.needLogin, needLogin: s.needLogin, notFound: s.missing, ready: !!p,
+own: own, p: p || { stats: {} },
+banCls: 'pf-ban' + (p && p.banner ? '' : ' empty'), banStyle: p && p.banner ? "background-image: url('" + p.banner + "')" : '',
+statusShown: (p && p.status) || '',
 bioShown: (p && p.bio) || 'Игрок пока ничего не рассказал о себе.',
+hTotal: hours(p && p.stats.total), hKomori: hours(p && p.stats.komori),
 linkList: [['youtube', 'YouTube'], ['twitch', 'Twitch'], ['tiktok', 'TikTok']].filter(function (x) { return links[x[0]]; }).map(function (x) { return { url: links[x[0]], label: x[1] }; }),
 viewing: !s.editing, editing: s.editing && own,
 editLabel: s.editing ? 'Готово' : 'Редактировать профиль',
-toggleEdit: function () { self.setState({ editing: !s.editing, f: null, error: '' }); },
+toggleEdit: function () { self.setState({ editing: !s.editing, f: null, err: '', ok: '' }); },
 shareLabel: s.copied ? 'Ссылка скопирована' : 'Поделиться',
 share: function () {
-try { navigator.clipboard.writeText(location.origin + '/u/' + p.id); } catch (e) {}
+try { navigator.clipboard.writeText(location.origin + '/u/' + p.login); } catch (e) {}
 self.setState({ copied: true }); setTimeout(function () { self.setState({ copied: false }); }, 1500);
 },
-f: f,
-statusCount: (f.status || '').length, bioCount: (f.bio || '').length,
-onStatus: setF('status'), onBio: setF('bio'), onYoutube: setF('youtube'), onTwitch: setF('twitch'), onTiktok: setF('tiktok'), onShowDiscord: setF('showDiscord'),
 colors: COLORS.map(function (c) {
-var on = c[0] === f.accent;
-return { hex: c[0], name: c[1], on: on ? 'true' : 'false', ring: on ? '#FFFFFF' : '#2E2250', pick: function () { self.setState({ f: Object.assign({}, f, { accent: c[0] }) }); } };
+var on = p && p.avatarType === 'd' && p.avatarColor === c[0];
+return { name: c[1], on: on ? 'true' : 'false', src: '/acc-def/' + c[0], pick: function () { send('POST', '/api/acc/avatar', { type: 'default', color: c[0] }, 'Аватарка обновлена'); } };
 }),
-error: s.error,
-saveLabel: s.saving ? 'Сохраняю…' : 'Сохранить',
-save: function () {
-if (s.saving) return;
-self.setState({ saving: true, error: '' });
-fetch('/api/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-status: f.status, bio: f.bio, accent: f.accent, showDiscord: f.showDiscord,
-links: { youtube: f.youtube, twitch: f.twitch, tiktok: f.tiktok } }) })
-.then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-.then(function (res) {
-if (!res.ok) { self.setState({ saving: false, error: res.d.error || 'Не удалось сохранить' }); return; }
-self.setState({ saving: false, editing: false, f: null, p: res.d });
-}).catch(function () { self.setState({ saving: false, error: 'Нет связи с сайтом, попробуй ещё раз' }); });
-}
+onAvFile: pickImage(512, 512, 1300000, function (d) { send('POST', '/api/acc/avatar', { type: 'image', data: d }, 'Аватарка обновлена'); }),
+onBanFile: pickImage(2560, 1440, 4000000, function (d) { send('POST', '/api/acc/banner', { data: d }, 'Баннер обновлён'); }),
+banBtn: p && p.banner ? 'Заменить баннер' : 'Загрузить баннер',
+banRemove: function () { send('POST', '/api/acc/banner', { data: null }, 'Баннер убран'); },
+f: f, onStatus: setF('status'), onBio: setF('bio'), onYoutube: setF('youtube'), onTwitch: setF('twitch'), onTiktok: setF('tiktok'),
+saveLabel: s.busy ? 'Сохраняю…' : 'Сохранить',
+save: function () { send('PUT', '/api/acc/me', { status: f.status, bio: f.bio, links: { youtube: f.youtube, twitch: f.twitch, tiktok: f.tiktok } }).then(function (d) { if (d) self.setState({ f: null }); }); },
+dsName: p && p.discord ? p.discord.name : '', dsNone: !!(p && !p.discordLinked),
+onShowDiscord: function (e) { send('PUT', '/api/acc/me', { showDiscord: e.target.checked }); },
+unlink: function () { send('DELETE', '/api/acc/discord', undefined, 'Discord отвязан'); },
+pw: s.pw, onPwOld: setPw('old'), onPw1: setPw('n1'), onPw2: setPw('n2'),
+changePw: function () {
+if (s.pw.n1 !== s.pw.n2) return self.setState({ err: 'Новые пароли не совпадают' });
+send('POST', '/api/acc/password', { old: s.pw.old, password: s.pw.n1 }, 'Пароль изменён').then(function (d) { if (d) self.setState({ pw: { old: '', n1: '', n2: '' } }); });
+},
+err: s.err, ok: s.ok
 };
 }
 }

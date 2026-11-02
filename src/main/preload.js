@@ -93,6 +93,24 @@ contextBridge.exposeInMainWorld('komori', {
     komori: (force) => ipcRenderer.invoke('news:komori', force),
     open: (id) => ipcRenderer.invoke('news:open', id)
   },
+  kacc: {
+    me: () => ipcRenderer.invoke('kacc:me'),
+    login: (login, password) => ipcRenderer.invoke('kacc:login', { login, password }),
+    register: (login, password, age) => ipcRenderer.invoke('kacc:register', { login, password, age }),
+    logout: () => ipcRenderer.invoke('kacc:logout'),
+    recover: (login) => ipcRenderer.invoke('kacc:recover', { login }),
+    recoverFinish: (login, code, password) => ipcRenderer.invoke('kacc:recoverFinish', { login, code, password }),
+    update: (patch) => ipcRenderer.invoke('kacc:update', patch),
+    password: (old, password) => ipcRenderer.invoke('kacc:password', { old, password }),
+    avatarDefault: (color) => ipcRenderer.invoke('kacc:avatarDefault', { color }),
+    avatarPick: () => ipcRenderer.invoke('kacc:avatarPick'),
+    avatarSkin: (data) => ipcRenderer.invoke('kacc:avatarSkin', { data }),
+    bannerPick: () => ipcRenderer.invoke('kacc:bannerPick'),
+    bannerReset: () => ipcRenderer.invoke('kacc:bannerReset'),
+    discordLink: () => ipcRenderer.invoke('kacc:discordLink'),
+    discordUnlink: () => ipcRenderer.invoke('kacc:discordUnlink'),
+    openProfile: () => ipcRenderer.invoke('kacc:openProfile')
+  },
   look: {
     get: () => ipcRenderer.invoke('look:get'),
     pick: (kind) => ipcRenderer.invoke('look:pick', kind),

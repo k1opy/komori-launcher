@@ -36,6 +36,8 @@ const { ping } = require('./ping');
 const crash = require('./crash');
 const playtime = require('./playtime');
 const news = require('./news');
+const kacc = require('./kacc');
+kacc.setBase(CONFIG.websiteUrl || 'https://komori.fun');
 let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
 CONFIG.serverManifestFallback = /^https:\/\//.test(String(CONFIG.serverManifestFallback || '')) ? CONFIG.serverManifestFallback : '';
@@ -108,35 +110,77 @@ ipcMain.handle('news:mc', (e, force) => news.minecraft(!!force));
 ipcMain.handle('news:komori', (e, force) => news.komori(CONFIG.websiteUrl || 'https://komori.fun', !!force));
 ipcMain.handle('news:open', (e, id) => { const u = news.linkFor(id); if (u) shell.openExternal(u); return !!u; });
 
-// Картинки оформления лежат в папке лаунчера: баннер (2560×1440, как обложка YouTube) и фон аватарки
-const LOOK = { banner: { w: 2560, h: 1440, file: 'look-banner.jpg' }, avatarBg: { w: 512, h: 512, file: 'look-avatar-bg.jpg' } };
+// Картинки: фон 3D-аватарки хранится в лаунчере, аватарка и баннер — в аккаунте Komori на сайте
+const LOOK = { banner: { w: 2560, h: 1440, max: 3000000 }, avatar: { w: 512, h: 512, max: 1000000 }, avatarBg: { w: 512, h: 512, file: 'look-avatar-bg.jpg' } };
 function lookPath(kind) { return path.join(app.getPath('userData'), LOOK[kind].file); }
 function lookData(kind) { try { return 'data:image/jpeg;base64,' + fs.readFileSync(lookPath(kind)).toString('base64'); } catch { return null; } }
-ipcMain.handle('look:get', () => ({ banner: lookData('banner'), avatarBg: lookData('avatarBg') }));
-ipcMain.handle('look:pick', async (e, kind) => {
-  if (!LOOK[kind]) throw new Error('Неизвестная картинка');
-  const r = await dialog.showOpenDialog(win, { title: kind === 'banner' ? 'Баннер профиля (лучше 2560×1440)' : 'Фон аватарки', properties: ['openFile'], filters: [{ name: 'Картинки', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+// Выбрать картинку, обрезать по центру под пропорции, уменьшить → JPEG
+async function pickImage(kind, title) {
+  const r = await dialog.showOpenDialog(win, { title, properties: ['openFile'], filters: [{ name: 'Картинки', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
   if (r.canceled || !r.filePaths[0]) return null;
   if (fs.statSync(r.filePaths[0]).size > 25 * 1024 * 1024) throw new Error('Картинка больше 25 МБ');
   let img = nativeImage.createFromPath(r.filePaths[0]);
   if (img.isEmpty()) throw new Error('Не получилось открыть картинку');
-  // Обрезаем по центру под нужные пропорции и уменьшаем
   const L = LOOK[kind], sz = img.getSize(), want = L.w / L.h;
   let cw = sz.width, ch = Math.round(sz.width / want);
   if (ch > sz.height) { ch = sz.height; cw = Math.round(sz.height * want); }
   img = img.crop({ x: Math.floor((sz.width - cw) / 2), y: Math.floor((sz.height - ch) / 2), width: cw, height: ch });
   if (cw > L.w) img = img.resize({ width: L.w, height: L.h, quality: 'best' });
-  fs.writeFileSync(lookPath(kind), img.toJPEG(88));
+  let q = 88, buf = img.toJPEG(q);
+  while (L.max && buf.length > L.max && q > 50) { q -= 8; buf = img.toJPEG(q); }
+  return buf;
+}
+ipcMain.handle('look:get', () => ({ avatarBg: lookData('avatarBg') }));
+ipcMain.handle('look:pick', async (e, kind) => {
+  if (kind !== 'avatarBg') throw new Error('Неизвестная картинка');
+  const buf = await pickImage(kind, 'Фон 3D-аватарки');
+  if (!buf) return null;
+  fs.writeFileSync(lookPath(kind), buf);
   return lookData(kind);
 });
-ipcMain.handle('look:reset', (e, kind) => { if (LOOK[kind]) { try { fs.unlinkSync(lookPath(kind)); } catch {} } return null; });
+
+// ---------- аккаунт Komori ----------
+const kaWrap = fn => async (e, a) => fn(a || {});
+ipcMain.handle('kacc:me', async () => { const r = await kacc.me(); if (r.account && !r.offline) kacc.syncStats(playtime.get()); return r; });
+ipcMain.handle('kacc:login', kaWrap(async a => { const r = await kacc.login(String(a.login || ''), String(a.password || '')); kacc.syncStats(playtime.get()); return r; }));
+ipcMain.handle('kacc:register', kaWrap(async a => { const r = await kacc.register(String(a.login || ''), String(a.password || ''), Number(a.age)); kacc.syncStats(playtime.get()); return r; }));
+ipcMain.handle('kacc:logout', () => kacc.logout());
+ipcMain.handle('kacc:recover', kaWrap(a => kacc.recover(String(a.login || ''))));
+ipcMain.handle('kacc:recoverFinish', kaWrap(a => kacc.recoverFinish(String(a.login || ''), String(a.code || ''), String(a.password || ''))));
+ipcMain.handle('kacc:update', kaWrap(a => kacc.update({ status: a.status, bio: a.bio, showDiscord: a.showDiscord })));
+ipcMain.handle('kacc:password', kaWrap(a => kacc.password(String(a.old || ''), String(a.password || ''))));
+ipcMain.handle('kacc:avatarDefault', kaWrap(a => kacc.avatar({ type: 'default', color: String(a.color || '') })));
+ipcMain.handle('kacc:avatarPick', async () => {
+  const buf = await pickImage('avatar', 'Своя аватарка');
+  return buf ? kacc.avatar({ type: 'image', data: 'data:image/jpeg;base64,' + buf.toString('base64') }) : null;
+});
+// 3D-аватарка из скина: рисует интерфейс, сюда приходит готовый PNG 512×512
+ipcMain.handle('kacc:avatarSkin', kaWrap(a => {
+  const d = String(a.data || '');
+  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(d) || d.length > 1400000) throw new Error('Не получилось подготовить аватарку');
+  return kacc.avatar({ type: 'skin', data: d });
+}));
+ipcMain.handle('kacc:bannerPick', async () => {
+  const buf = await pickImage('banner', 'Баннер профиля (лучше 2560×1440)');
+  return buf ? kacc.banner('data:image/jpeg;base64,' + buf.toString('base64')) : null;
+});
+ipcMain.handle('kacc:bannerReset', () => kacc.banner(null));
+ipcMain.handle('kacc:discordLink', async () => {
+  const url = await kacc.discordStart();
+  if (!/^https:\/\/[^/]+\/auth\/link\?s=[0-9a-f]{32}$/.test(url)) throw new Error('Сайт вернул неверную ссылку');
+  shell.openExternal(url);
+  return true;
+});
+ipcMain.handle('kacc:discordUnlink', () => kacc.discordUnlink());
+ipcMain.handle('kacc:openProfile', () => { shell.openExternal(kacc.profileUrl()); return true; });
+ipcMain.handle('look:reset', (e, kind) => { if (kind === 'avatarBg') { try { fs.unlinkSync(lookPath(kind)); } catch {} } return null; });
 
 // ---------- окно ----------
 ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:maximize', () => { if (!win) return; win.isMaximized() ? win.unmaximize() : win.maximize(); });
 ipcMain.on('win:close', () => win && win.close());
 
-ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl), yggDefault: CONFIG.yggdrasilDefaultUrl }));
+ipcMain.handle('app:info', () => ({ dev: DEV, version: app.getVersion(), server: CONFIG.server, hasMsClient: !!CONFIG.msClientId, hasCurseforge: curseforge.hasKey(), serverManifest: !!CONFIG.serverManifestUrl, serverProfileId: serverpack.SERVER_PROFILE_ID, canReport: crash.validWebhook(CONFIG.crashWebhookUrl), packaged: app.isPackaged, links: publicLinks(), skinServerDefault: offlineskin.validServerUrl(CONFIG.skinServerUrl), yggDefault: CONFIG.yggdrasilDefaultUrl, site: (() => { try { return new URL(CONFIG.websiteUrl || 'https://komori.fun').origin; } catch { return 'https://komori.fun'; } })() }));
 
 // ---------- настройки и профили ----------
 ipcMain.handle('link:open', (e, id) => { const l = LINKS[String(id)]; if (l) shell.openExternal(l.url); return !!l; });
@@ -324,6 +368,7 @@ async function launchGame(settings, profileId, join) {
     (code, err) => {
       games.delete(profile.id);
       playtime.stop(profile.id);
+      kacc.syncStats(playtime.get());
       sendRunning();
       let crashInfo = null;
       if (err || (code !== 0 && code !== null)) {

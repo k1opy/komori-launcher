@@ -28,7 +28,7 @@ async function loadStats() {
   if (S.screen === 'profile') render();
 }
 async function loadLook() {
-  try { S.look = await K.look.get(); } catch { S.look = { banner: null, avatarBg: null }; }
+  try { S.look = await K.look.get(); } catch { S.look = { avatarBg: null }; }
   refreshAvatar();
 }
 
@@ -56,9 +56,14 @@ async function refreshAvatar() {
   if (['profile', 'settings'].includes(S.screen)) render();
 }
 function avatarHtml(cls) {
-  const a = selectedAccount();
-  if (S.avatar && S.avatar.url) return `<span class="${cls}"><img src="${S.avatar.url}" alt=""></span>`;
-  return `<span class="${cls} letter">${esc(a ? a.name.charAt(0).toUpperCase() : '?')}</span>`;
+  const a = kAcc();
+  if (a && a.avatar) return `<span class="${cls}"><img src="${esc(a.avatar)}" alt=""></span>`;
+  return `<span class="${cls} letter">${esc(a ? a.login.charAt(0).toUpperCase() : '?')}</span>`;
+}
+// Превью 3D-аватарки из скина (в настройках); на аккаунт уходит только по кнопке
+function avatar3dHtml(cls) {
+  if (S.avatar && S.avatar.url) return `<span class="${cls}"><img src="${S.avatar.url}" alt="3D-аватарка из скина"></span>`;
+  return `<span class="${cls} letter">${S.avatar ? '—' : '…'}</span>`;
 }
 
 // ---------- быстрый запуск (на Главной) ----------
@@ -145,7 +150,7 @@ function viewKomori() {
 
 // ---------- Профиль ----------
 function viewProfile() {
-  const a = selectedAccount();
+  const ka = kAcc();
   const st = S.stats || { total: 0, komori: 0, launches: 0, days: {}, hours: {}, profiles: {} };
   const lv = levelInfo(st.total), sk = streaks(st.days || {});
   const bd = badges(st, lv, sk);
@@ -159,19 +164,21 @@ function viewProfile() {
   ];
   const recent = S.profiles.list.slice().sort((x, y) => (y.lastPlayed || 0) - (x.lastPlayed || 0)).slice(0, 4);
   const periods = PERIODS.map(([id, l]) => `<button type="button" class="seg-b ${S.actPeriod === id ? 'on' : ''}" aria-pressed="${S.actPeriod === id}" data-act="actPeriod" data-id="${id}">${l}</button>`).join('');
-  const banner = S.look && S.look.banner;
+  const banner = ka && ka.banner;
+  const srvBadges = (ka && ka.badges || []).map(b => `<span class="bdg got" style="color:${esc(b.color)};border-color:${esc(b.color)}">${esc(b.label)}</span>`).join('');
   return `<section class="page2 prof">
     <section class="card ph" aria-label="Шапка профиля">
-      <div class="ph-banner ${banner ? '' : 'empty'}" ${banner ? `style="background-image:url('${banner}')"` : ''}>${banner ? '' : '<button type="button" class="ph-set" data-act="goLook">Поставить баннер</button>'}</div>
+      <div class="ph-banner ${banner ? '' : 'empty'}" ${banner ? `style="background-image:url('${esc(banner)}')"` : ''}>${banner ? '' : '<button type="button" class="ph-set" data-act="goLook">Поставить баннер</button>'}</div>
       <div class="ph-row">
         ${avatarHtml('ph-av')}
         <div class="ph-t">
-          <div class="ph-name"><h1>${esc(a ? a.name : 'Без аккаунта')}</h1><span class="lvl">УР. ${lv.level}</span></div>
+          <div class="ph-name"><h1>${esc(ka ? ka.login : 'Без аккаунта')}</h1><span class="lvl">УР. ${lv.level}</span>${ka && ka.discordLinked && ka.discord ? `<span class="ph-ds">Discord · ${esc(ka.discord.name)}</span>` : ''}</div>
+          ${ka && ka.status ? `<div class="ph-status">${esc(ka.status)}</div>` : ''}
           <div class="ph-xp"><div class="xpbar"><div style="width:${lv.pct}%"></div></div><span>${lv.xp.toLocaleString('ru-RU')} / ${lv.need.toLocaleString('ru-RU')} опыта до ${lv.level + 1} уровня</span></div>
         </div>
         <button type="button" class="btn2" data-act="goLook">Изменить профиль</button>
       </div>
-      <div class="ph-badges" aria-label="Значки">${bd.map(b => `<span class="bdg ${b.got ? 'got' : ''}" title="${esc(b.t)}${b.got ? '' : ' — ещё не получен'}">${esc(b.n)}</span>`).join('')}<span class="note">1 минута в игре = 1 опыт</span></div>
+      <div class="ph-badges" aria-label="Значки">${srvBadges}${bd.map(b => `<span class="bdg ${b.got ? 'got' : ''}" title="${esc(b.t)}${b.got ? '' : ' — ещё не получен'}">${esc(b.n)}</span>`).join('')}<span class="note">1 минута в игре = 1 опыт</span></div>
     </section>
     <div class="tiles">${tiles.map(t => `<div class="card tile"><span class="lbl">${t[0]}</span><b>${esc(t[1])}</b><small>${esc(t[2])}</small></div>`).join('')}</div>
     <div class="prof-grid">
@@ -194,27 +201,39 @@ function lookTab() {
   const st = S.settings || {};
   const seg = (list, cur, act) => `<div class="seg2" role="radiogroup">${list.map(([id, l]) => `<button type="button" role="radio" class="seg-b ${cur === id ? 'on' : ''}" aria-checked="${cur === id}" data-act="${act}" data-id="${id}">${l}</button>`).join('')}</div>`;
   const swatches = (cur, act) => `<div class="swatches">${ACCENTS.map(([id, name]) => `<button type="button" class="swatch ${cur === id ? 'on' : ''}" style="--c:${accentHex(id, act === 'setAvColor' ? true : undefined)}" aria-label="${name}" title="${name}" aria-pressed="${cur === id}" data-act="${act}" data-id="${id}"></button>`).join('')}</div>`;
-  const banner = S.look && S.look.banner;
+  const ka = kAcc(), banner = ka && ka.banner;
   const bg = st.avatarBg || 'glow';
+  const curAv = ka ? (ka.avatarType === 'd' ? 'd:' + ka.avatarColor : ka.avatarType) : '';
+  const hasSkin = !!(S.skin.info && S.skin.info.skinData);
+  const accNote = ka ? '' : '<div class="prow note">Аватарка и баннер хранятся в аккаунте Komori — войди, чтобы их поменять.</div>';
   return `<div class="look">
     <div class="panel">
       <div class="prow"><span>Тема</span>${seg(THEME_NAMES, st.theme || 'system', 'setTheme')}</div>
       <div class="prow"><span>Цвет акцента<br><span class="note">Кнопки, выделение, график, уровень</span></span>${swatches(st.accent || 'violet', 'setAccent')}</div>
     </div>
     <div class="panel av-panel">
-      <div class="av-prev">${avatarHtml('av-big')}<span class="note">Аватарка собирается из твоего скина</span></div>
+      <div class="av-prev">${avatarHtml('av-big')}<span class="note">Твоя аватарка сейчас — её видят в лаунчере и на сайте</span></div>
       <div class="av-opts">
+        ${accNote}
+        <div class="prow"><span>Базовая<br><span class="note">При регистрации выпала случайная</span></span><div class="av-defs">${ACCENTS.map(([id, name]) => `<button type="button" class="av-def ${curAv === 'd:' + id ? 'on' : ''}" aria-pressed="${curAv === 'd:' + id}" title="${name}" aria-label="Базовая аватарка: ${name}" data-act="kAvDefault" data-id="${id}" ${ka ? '' : 'disabled'}><img src="${esc(siteUrl('/acc-def/' + id))}" alt=""></button>`).join('')}</div></div>
+        <div class="prow"><span>Своя картинка<br><span class="note">Обрежется в квадрат</span></span><button type="button" class="btn2" data-act="kAvPick" ${ka ? '' : 'disabled'}>${curAv === 'i' ? 'Заменить картинку' : 'Загрузить картинку'}</button></div>
+      </div>
+    </div>
+    <div class="panel av-panel">
+      <div class="av-prev">${avatar3dHtml('av-big')}<button type="button" class="btn" data-act="kAvSkin" ${ka && hasSkin && S.avatar && S.avatar.url ? '' : 'disabled'}>${curAv === 's' ? 'Обновить 3D-аватарку' : 'Поставить как аватарку'}</button></div>
+      <div class="av-opts">
+        <div class="prow"><b style="font-weight:500">3D-аватарка из скина</b>${curAv === 's' ? '<span class="tag ok">Стоит сейчас</span>' : ''}</div>
         <div class="prow"><span>Поза</span>${seg(AV_POSES, st.avatarPose || 'bust', 'setAvPose')}</div>
         <div class="prow"><span>Свет</span>${seg(AV_LIGHTS, st.avatarLight || 'studio', 'setAvLight')}</div>
         <div class="prow"><span>Фон</span>${seg(AV_BGS, bg, 'setAvBg')}</div>
         ${bg === 'glow' || bg === 'solid' ? `<div class="prow"><span>Цвет фона</span>${swatches(st.avatarColor || st.accent || 'violet', 'setAvColor')}</div>` : ''}
         ${bg === 'image' ? `<div class="prow"><span>Картинка фона</span><span class="row-btns"><button type="button" class="btn2" data-act="lookPick" data-id="avatarBg">${S.look && S.look.avatarBg ? 'Заменить' : 'Выбрать картинку'}</button>${S.look && S.look.avatarBg ? '<button type="button" class="btn-ghost" data-act="lookReset" data-id="avatarBg">Убрать</button>' : ''}</span></div>` : ''}
-        ${!(S.skin.info && S.skin.info.skinData) ? '<div class="prow note">Скин не найден — пока вместо аватарки буква ника. Скин ставится в Настройки → Аккаунт.</div>' : ''}
+        ${hasSkin ? '' : '<div class="prow note">Скин не найден. Он ставится в Настройки → Minecraft.</div>'}
       </div>
     </div>
     <div class="panel">
       <div class="prow"><span>Баннер профиля<br><span class="note">2560×1440, как обложка YouTube. Лишнее обрежется по центру.</span></span>
-        <span class="row-btns">${banner ? `<span class="ban-prev" style="background-image:url('${banner}')"></span>` : ''}<button type="button" class="btn2" data-act="lookPick" data-id="banner">${banner ? 'Заменить' : 'Загрузить картинку'}</button>${banner ? '<button type="button" class="btn-ghost" data-act="lookReset" data-id="banner">Убрать</button>' : ''}</span></div>
+        <span class="row-btns">${banner ? `<span class="ban-prev" style="background-image:url('${esc(banner)}')"></span>` : ''}<button type="button" class="btn2" data-act="kBanPick" ${ka ? '' : 'disabled'}>${banner ? 'Заменить' : 'Загрузить картинку'}</button>${banner ? '<button type="button" class="btn-ghost" data-act="kBanReset">Убрать</button>' : ''}</span></div>
     </div>
   </div>`;
 }
@@ -234,7 +253,7 @@ const PAGE_ACTIONS = {
   koReload: () => loadKomoriNews(true),
   newsOpen: (id) => K.news.open(id),
   actPeriod: (id) => { S.actPeriod = id; render(); },
-  goLook: () => { S.screen = 'settings'; S.sTab = 'look'; render(); },
+  goLook: () => { S.screen = 'settings'; S.sTab = 'look'; render(); refreshAvatar(); },
   setAccent: async (id) => { S.settings = await K.settings.set({ accent: id }); applyAccent(); render(); },
   setAvPose: async (id) => { S.settings = await K.settings.set({ avatarPose: id }); refreshAvatar(); },
   setAvLight: async (id) => { S.settings = await K.settings.set({ avatarLight: id }); refreshAvatar(); },
@@ -245,7 +264,7 @@ const PAGE_ACTIONS = {
   },
   setAvColor: async (id) => { S.settings = await K.settings.set({ avatarColor: id }); render(); refreshAvatar(); },
   lookPick: async (kind) => {
-    try { const d = await K.look.pick(kind); if (d) { S.look[kind] = d; render(); refreshAvatar(); } }
+    try { const d = await K.look.pick(kind); if (d) { S.look[kind] = d; refreshAvatar(); render(); } }
     catch (e) { toast(errText(e)); }
   },
   lookReset: async (kind) => { await K.look.reset(kind); S.look[kind] = null; render(); refreshAvatar(); }

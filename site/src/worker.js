@@ -77,21 +77,14 @@ async function route(req, env, ctx) {
   if (m === 'GET' && p === '/download') return Response.redirect((await siteCfg(env)).links.launcher, 302);
 
   // ----- вход через Discord -----
-  if (m === 'GET' && p === '/auth/login') return login(url, env);
+  if (m === 'GET' && p === '/auth/login') return login(url, env, 'I', safeNext(url.searchParams.get('next')));
   if (m === 'GET' && p === '/auth/callback') return callback(req, url, env);
   if (m === 'POST' && p === '/auth/logout') return logout(req, env);
 
   // ----- API -----
-  if (p === '/api/me' && m === 'GET') {
-    const me = await currentUser(req, env, ctx);
-    return me ? json(publicProfile(me, true)) : json({ error: 'Не выполнен вход' }, 401);
-  }
-  if (p === '/api/me' && m === 'PUT') return saveProfile(req, env, ctx);
-  let r = p.match(/^\/api\/user\/(\d{5,25})$/);
-  if (r && m === 'GET') {
-    const u = await env.SITE.get('u:' + r[1], { type: 'json' });
-    return u ? json(publicProfile(u, false)) : json({ error: 'Не найден' }, 404);
-  }
+  const acc = await accRoutes(req, env, ctx, url, p, m);
+  if (acc) return acc;
+  let r;
   if (p === '/api/stats' && m === 'GET') return stats(ctx, env);
 
   // ----- новости -----
@@ -136,13 +129,17 @@ async function route(req, env, ctx) {
   if (r && m === 'GET') return newsImage(env, r[1], 'img:');
 
   // ----- страницы -----
-  const pages = { '/': 'main', '/news': 'news', '/rules': 'rules', '/wiki': 'wiki', '/map': 'map', '/profile': 'profile', '/admin': 'admin', '/admin/pack': 'pack' };
-  let page = pages[p] || (/^\/u\/\d{5,25}$/.test(p) ? 'profile' : /^\/news\/[a-z0-9]{6,20}$/.test(p) ? 'news' : null);
+  const pages = { '/': 'main', '/news': 'news', '/rules': 'rules', '/wiki': 'wiki', '/map': 'map', '/profile': 'profile', '/login': 'login', '/admin': 'admin', '/admin/pack': 'pack', '/admin/accounts': 'accounts' };
+  let page = pages[p] || (/^\/u\/[A-Za-z0-9_]{3,16}$/.test(p) ? 'profile' : /^\/news\/[a-z0-9]{6,20}$/.test(p) ? 'news' : null);
   if (page && m === 'GET') {
     const me = await currentUser(req, env, ctx);
-    const flash = { notmember: 'Сначала зайди на наш сервер Discord, потом войди на сайт.', denied: 'Вход отменён.', error: 'Не получилось войти через Discord, попробуй ещё раз.' }[url.searchParams.get('login')] || '';
+    const meAcc = await currentAccount(req, env);
+    const flash = { denied: 'Вход отменён.', error: 'Не получилось связаться с Discord, попробуй ещё раз.',
+      nolink: 'Этот Discord не привязан ни к одному аккаунту Komori. Войди по логину и паролю и привяжи Discord в профиле.',
+      taken: 'Этот Discord уже привязан к другому аккаунту Komori.', linked: 'Discord привязан. Если начинал из лаунчера — можно вернуться в него.' }[url.searchParams.get('login')] || '';
     const site = await siteCfg(env);
-    const boot = { me: me ? { id: me.id, name: displayName(me), avatar: avatarUrl(me), admin: isNewsAdmin(me, env) } : null, page, flash,
+    const boot = { me: meAcc ? { id: meAcc.id, name: meAcc.login, avatar: accAvatarUrl(meAcc), admin: isNewsAdmin(me, env) }
+      : me ? { id: me.id, name: displayName(me), avatar: avatarUrl(me), admin: isNewsAdmin(me, env), legacy: true } : null, page, flash,
       cfg: publicCfg(site), site };
     if (page === 'rules' || page === 'wiki' || page === 'pack') boot.content = (await contentGet(env, page)).data;
     const html = PAGES[page].replace('<!--BOOT-->', '<script>window.KOMORI=' + JSON.stringify(boot).replace(/</g, '\\u003c') + ';</script>');
@@ -159,19 +156,20 @@ const SECURITY = {
 };
 
 // ===== вход =====
-async function login(url, env) {
+// mode: 'I' — войти в аккаунт Komori через привязанный Discord, 'L<state>' — привязать Discord к аккаунту
+async function login(url, env, mode, next) {
   const state = randomHex(16);
-  const next = safeNext(url.searchParams.get('next'));
+  next = safeNext(next);
   const redirect = url.origin + '/auth/callback';
   const q = new URLSearchParams({ client_id: CFG.clientId, response_type: 'code', redirect_uri: redirect, scope: 'identify', state, prompt: 'none' });
   const h = new Headers({ location: 'https://discord.com/oauth2/authorize?' + q });
-  h.append('set-cookie', cookie('ks_state', state + '|' + next, 600));
+  h.append('set-cookie', cookie('ks_state', state + '|' + next + '|' + mode, 600));
   return new Response(null, { status: 302, headers: h });
 }
 
 async function callback(req, url, env) {
   const cookies = parseCookies(req);
-  const [state, next] = String(cookies.ks_state || '').split('|');
+  const [state, next, mode] = String(cookies.ks_state || '').split('|');
   const back = (code) => redirect((next || '/') + (code ? (String(next || '/').includes('?') ? '&' : '?') + 'login=' + code : ''), [cookie('ks_state', '', 0)]);
   if (url.searchParams.get('error')) return back('denied');
   if (!state || state !== url.searchParams.get('state')) return back('error');
@@ -191,26 +189,48 @@ async function callback(req, url, env) {
   const ur = await fetch('https://discord.com/api/v10/users/@me', { headers: { authorization: 'Bearer ' + access_token } });
   if (!ur.ok) return back('error');
   const du = await ur.json();
-  // 3. бот проверяет, что он есть на сервере Komori, и берёт роли
-  const member = await guildMember(env, du.id);
-  if (!member) return back('notmember');
-
+  // 3. бот берёт роли на сервере Komori (для значков и прав админа)
+  const member = await guildMember(env, du.id).catch(() => null);
   const old = await env.SITE.get('u:' + du.id, { type: 'json' });
-  const user = Object.assign({ accent: ACCENTS[0], status: '', bio: '', links: {}, showDiscord: false, since: Date.now() }, old || {}, {
+  const user = Object.assign({ since: Date.now() }, old || {}, {
     id: du.id, username: du.username, globalName: du.global_name || null, avatar: du.avatar || null,
-    nick: member.nick || null, roles: member.roles || [], rolesAt: Date.now()
+    nick: member ? member.nick || null : null, roles: member ? member.roles || [] : [], rolesAt: Date.now()
   });
   await env.SITE.put('u:' + du.id, JSON.stringify(user));
-  const sid = randomHex(32);
-  await env.SITE.put('s:' + await sha256hex(sid), du.id, { expirationTtl: SESSION_DAYS * 86400 });
-  return redirect(next || '/', [cookie('ks_state', '', 0), cookie('ks', sid, SESSION_DAYS * 86400)]);
+  const clear = cookie('ks_state', '', 0);
+
+  // 4а. привязка Discord к аккаунту Komori
+  if (mode && mode[0] === 'L') {
+    const s = mode.slice(1);
+    const accId = /^[0-9a-f]{32}$/.test(s) ? await env.SITE.get('kls:' + s) : null;
+    if (!accId) return back('error');
+    await env.SITE.delete('kls:' + s);
+    const owner = await env.SITE.get('kd:' + du.id);
+    if (owner && owner !== accId) return back('taken');
+    const a = await accGet(env, accId);
+    if (!a) return back('error');
+    if (a.discord && a.discord.id !== du.id) await env.SITE.delete('kd:' + a.discord.id);
+    a.discord = { id: du.id, name: du.global_name || du.username, username: du.username };
+    await env.SITE.put('kd:' + du.id, a.id);
+    await accPut(env, a);
+    return redirect('/profile?login=linked', [clear]);
+  }
+  // 4б. вход: только если этот Discord привязан к аккаунту Komori
+  const accId = await env.SITE.get('kd:' + du.id);
+  if (!accId) return back('nolink');
+  const t = await newSession(env, accId);
+  return redirect(next || '/', [clear, accCookie(t)]);
 }
 
 async function logout(req, env) {
   if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
   const sid = parseCookies(req).ks;
   if (sid) await env.SITE.delete('s:' + await sha256hex(sid));
-  return new Response(null, { status: 204, headers: { 'set-cookie': cookie('ks', '', 0) } });
+  const tk = accToken(req);
+  if (tk) await env.SITE.delete('kt:' + await sha256hex(tk.t));
+  const h = new Headers({ 'set-cookie': cookie('ks', '', 0) });
+  h.append('set-cookie', accCookie(''));
+  return new Response(null, { status: 204, headers: h });
 }
 
 async function guildMember(env, userId) {
@@ -220,9 +240,11 @@ async function guildMember(env, userId) {
   return r.json();
 }
 
+// Discord-запись текущего посетителя (для прав админа): через аккаунт Komori с привязанным Discord
+// или по старой сессии входа через Discord
 async function currentUser(req, env, ctx) {
   const sid = parseCookies(req).ks;
-  if (!sid || !/^[0-9a-f]{64}$/.test(sid)) return null;
+  if (!sid || !/^[0-9a-f]{64}$/.test(sid)) return linkedDiscordUser(env, ctx, await currentAccount(req, env));
   const id = await env.SITE.get('s:' + await sha256hex(sid));
   if (!id) return null;
   const u = await env.SITE.get('u:' + id, { type: 'json' });
@@ -248,41 +270,6 @@ function badges(u) {
   const map = ROLE_MAP;
   return (u.roles || []).filter(r => map[r]).map(r => ({ label: String(map[r].label).slice(0, 20), color: /^#[0-9a-fA-F]{6}$/.test(map[r].color) ? map[r].color : '#B57BFF' }));
 }
-function publicProfile(u, own) {
-  return {
-    id: u.id, name: displayName(u), avatar: avatarUrl(u), accent: u.accent, status: u.status, bio: u.bio,
-    links: u.links || {}, badges: badges(u),
-    since: new Date(u.since || Date.now()).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
-    discordTag: own || u.showDiscord ? '@' + u.username : '',
-    showDiscord: own ? !!u.showDiscord : undefined
-  };
-}
-
-async function saveProfile(req, env, ctx) {
-  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
-  const u = await currentUser(req, env, ctx);
-  if (!u) return json({ error: 'Не выполнен вход' }, 401);
-  let b;
-  try { b = await req.json(); } catch { return json({ error: 'Неверные данные' }, 400); }
-  const clean = (s, n) => String(s || '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, n);
-  u.status = clean(b.status, 60);
-  u.bio = clean(b.bio, 300);
-  if (ACCENTS.includes(b.accent)) u.accent = b.accent;
-  u.showDiscord = !!b.showDiscord;
-  const links = {};
-  for (const k of Object.keys(LINK_HOSTS)) {
-    const v = clean(b.links && b.links[k], 200);
-    if (!v) continue;
-    let x;
-    try { x = new URL(v); } catch { return json({ error: `Ссылка ${k} должна начинаться с https://` }, 400); }
-    if (x.protocol !== 'https:' || !LINK_HOSTS[k].includes(x.hostname)) return json({ error: `Ссылка ${k} должна вести на ${LINK_HOSTS[k][0]}` }, 400);
-    links[k] = x.href;
-  }
-  u.links = links;
-  await env.SITE.put('u:' + u.id, JSON.stringify(u));
-  return json(publicProfile(u, true));
-}
-
 // ===== онлайн сервера и Discord (кэш 60 сек) =====
 async function stats(ctx, env) {
   const key = new Request('https://cache.komori/stats');
@@ -672,6 +659,380 @@ function asset(name) {
   const bin = Uint8Array.from(atob(a.b64), c => c.charCodeAt(0));
   return new Response(bin, { headers: { 'content-type': a.type, 'cache-control': 'public, max-age=86400' } });
 }
+// ===== аккаунты Komori (свой логин и пароль, без почты и телефона) =====
+// KV: ka:<id> — аккаунт, kl:<логин> → id, kd:<Discord id> → id, kt:<sha256 токена> → id (сессия, 90 дней),
+//     kai:<id> — своя аватарка, kab:<id> — баннер, kr:<id> — код восстановления, kls:<state> → id (привязка Discord),
+//     rl:* — счётчики против перебора
+const ACC_DAYS = 90;
+const ACC_COLORS = { graphite: '#C9CDD3', beige: '#E3D3B4', blue: '#3B82F6', violet: '#8B5CF6', green: '#22C55E', red: '#EF4444', pink: '#EC4899', yellow: '#EAB308', orange: '#F97316' };
+const LOGIN_RE = /^[A-Za-z0-9_]{3,16}$/;
+const RESERVED = ['admin', 'administrator', 'komori', 'moderator', 'support', 'system', 'server', 'root', 'console'];
+
+function ip(req) { return req.headers.get('cf-connecting-ip') || 'x'; }
+async function rateHit(env, key, limit, ttl) {
+  const n = Number(await env.SITE.get('rl:' + key)) || 0;
+  if (n >= limit) return false;
+  await env.SITE.put('rl:' + key, String(n + 1), { expirationTtl: Math.max(60, ttl) });
+  return true;
+}
+async function rateClear(env, key) { await env.SITE.delete('rl:' + key); }
+
+async function pbkdf2(password, saltHex, iter) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const salt = Uint8Array.from(saltHex.match(/../g).map(h => parseInt(h, 16)));
+  return hex(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, key, 256)));
+}
+async function hashPassword(pw) { const s = randomHex(16), i = 100000; return { s, i, h: await pbkdf2(pw, s, i) }; }
+async function checkPassword(pw, rec) {
+  if (!rec || !rec.s) return false;
+  const h = await pbkdf2(pw, rec.s, rec.i || 100000);
+  let d = h.length ^ rec.h.length;
+  for (let i = 0; i < h.length && i < rec.h.length; i++) d |= h.charCodeAt(i) ^ rec.h.charCodeAt(i);
+  return d === 0;
+}
+function pwProblem(pw, login) {
+  if (typeof pw !== 'string' || pw.length < 8) return 'Пароль — минимум 8 символов';
+  if (pw.length > 72) return 'Пароль слишком длинный (до 72 символов)';
+  if (login && pw.toLowerCase() === String(login).toLowerCase()) return 'Пароль не должен совпадать с логином';
+  return '';
+}
+
+async function accGet(env, id) { return id ? env.SITE.get('ka:' + id, { type: 'json' }) : null; }
+async function accPut(env, a) { a.updated = Date.now(); await env.SITE.put('ka:' + a.id, JSON.stringify(a)); }
+async function accByLogin(env, login) { const id = await env.SITE.get('kl:' + String(login || '').toLowerCase()); return accGet(env, id); }
+
+// Токен: из заголовка Authorization (лаунчер) или из cookie ka (сайт)
+function accToken(req) {
+  const h = req.headers.get('authorization') || '';
+  const m = /^Bearer ([0-9a-f]{64})$/.exec(h);
+  if (m) return { t: m[1], cookie: false };
+  const c = parseCookies(req).ka;
+  return c && /^[0-9a-f]{64}$/.test(c) ? { t: c, cookie: true } : null;
+}
+async function currentAccount(req, env) {
+  const tk = accToken(req);
+  if (!tk) return null;
+  const id = await env.SITE.get('kt:' + await sha256hex(tk.t));
+  return accGet(env, id);
+}
+async function newSession(env, id) {
+  const t = randomHex(32);
+  await env.SITE.put('kt:' + await sha256hex(t), id, { expirationTtl: ACC_DAYS * 86400 });
+  return t;
+}
+function accCookie(t) { return cookie('ka', t, t ? ACC_DAYS * 86400 : 0); }
+
+function accAvatarUrl(a) { return '/acc-av/' + a.id + '?v=' + (a.avatar && a.avatar.v || 0) + (a.avatar && a.avatar.c || ''); }
+function accLevel(sec) { const xp = Math.floor((sec || 0) / 60); let L = 1; while (15 * (L + 1) * L <= xp) L++; return L; }
+function accPublic(a, own, du) {
+  const st = a.stats || {};
+  const out = {
+    id: a.id, login: a.login, avatar: accAvatarUrl(a), avatarType: a.avatar ? a.avatar.t : 'd', avatarColor: a.avatar && a.avatar.c || 'violet',
+    banner: a.banner ? '/acc-ban/' + a.id + '?v=' + a.banner : null,
+    status: a.status || '', bio: a.bio || '', links: a.links || {},
+    since: new Date(a.created).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
+    stats: { total: st.total || 0, komori: st.komori || 0, launches: st.launches || 0, level: accLevel(st.total) },
+    badges: du ? badges(du) : [],
+    discord: a.discord && (own || a.showDiscord) ? { name: a.discord.name } : null
+  };
+  if (own) { out.age = a.age; out.showDiscord = !!a.showDiscord; out.discordLinked = !!a.discord; out.created = a.created; }
+  return out;
+}
+
+// Discord-запись (роли для значков и прав админа) привязанного аккаунта
+async function linkedDiscordUser(env, ctx, a) {
+  if (!a || !a.discord) return null;
+  const u = await env.SITE.get('u:' + a.discord.id, { type: 'json' });
+  if (u && env.DISCORD_BOT_TOKEN && Date.now() - (u.rolesAt || 0) > ROLE_REFRESH_MS) {
+    ctx.waitUntil(guildMember(env, u.id).then(mem => {
+      u.rolesAt = Date.now();
+      if (mem) { u.roles = mem.roles || []; u.nick = mem.nick || null; } else u.roles = [];
+      return env.SITE.put('u:' + u.id, JSON.stringify(u));
+    }).catch(() => {}));
+  }
+  return u;
+}
+
+async function readJson(req) { try { return await req.json(); } catch { return null; } }
+
+async function accRegister(req, env) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const b = await readJson(req);
+  if (!b) return json({ error: 'Неверные данные' }, 400);
+  const login = String(b.login || '').trim(), age = Number(b.age);
+  if (!LOGIN_RE.test(login)) return json({ error: 'Логин: 3–16 символов, латиница, цифры и _' }, 400);
+  if (RESERVED.includes(login.toLowerCase())) return json({ error: 'Этот логин занят' }, 400);
+  const pe = pwProblem(b.password, login);
+  if (pe) return json({ error: pe }, 400);
+  if (!Number.isInteger(age) || age < 5 || age > 100) return json({ error: 'Укажи возраст числом' }, 400);
+  if (!await rateHit(env, 'reg:' + ip(req), 5, 3600)) return json({ error: 'Слишком много регистраций с этого адреса, попробуй через час' }, 429);
+  if (await env.SITE.get('kl:' + login.toLowerCase())) return json({ error: 'Этот логин занят' }, 409);
+  const colors = Object.keys(ACC_COLORS);
+  const a = { id: Date.now().toString(36) + randomHex(4), login, pass: await hashPassword(b.password), age, created: Date.now(),
+    avatar: { t: 'd', c: colors[crypto.getRandomValues(new Uint8Array(1))[0] % colors.length], v: 1 }, banner: 0, status: '', bio: '', links: {}, discord: null, showDiscord: false, stats: null };
+  await env.SITE.put('kl:' + login.toLowerCase(), a.id);
+  await accPut(env, a);
+  const t = await newSession(env, a.id);
+  return json({ token: t, account: accPublic(a, true) }, 200, { 'set-cookie': accCookie(t) });
+}
+
+async function accLogin(req, env) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const b = await readJson(req);
+  if (!b) return json({ error: 'Неверные данные' }, 400);
+  const login = String(b.login || '').trim().toLowerCase();
+  const rk = 'login:' + ip(req) + ':' + login;
+  if (!await rateHit(env, rk, 10, 900)) return json({ error: 'Слишком много попыток. Подожди 15 минут' }, 429);
+  const a = LOGIN_RE.test(login) ? await accByLogin(env, login) : null;
+  if (!a || !await checkPassword(String(b.password || ''), a.pass)) return json({ error: 'Неверный логин или пароль' }, 401);
+  await rateClear(env, rk);
+  const t = await newSession(env, a.id);
+  return json({ token: t, account: accPublic(a, true) }, 200, { 'set-cookie': accCookie(t) });
+}
+
+async function accLogout(req, env) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const tk = accToken(req);
+  if (tk) await env.SITE.delete('kt:' + await sha256hex(tk.t));
+  return new Response(null, { status: 204, headers: { 'set-cookie': accCookie('') } });
+}
+
+// Общая обёртка для изменений своего аккаунта
+async function accAuthed(req, env, fn) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const a = await currentAccount(req, env);
+  if (!a) return json({ error: 'Войди в аккаунт Komori' }, 401);
+  return fn(a);
+}
+
+async function accSaveMe(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req);
+    if (!b) return json({ error: 'Неверные данные' }, 400);
+    const clean = (s, n) => cleanStr(s, n).trim();
+    if (b.status !== undefined) a.status = clean(b.status, 60);
+    if (b.bio !== undefined) a.bio = clean(b.bio, 300);
+    if (b.showDiscord !== undefined) a.showDiscord = !!b.showDiscord;
+    if (b.links) {
+      const links = {};
+      for (const k of Object.keys(LINK_HOSTS)) {
+        const v = clean(b.links[k], 200);
+        if (!v) continue;
+        let x;
+        try { x = new URL(v); } catch { return json({ error: `Ссылка ${k} должна начинаться с https://` }, 400); }
+        if (x.protocol !== 'https:' || !LINK_HOSTS[k].includes(x.hostname)) return json({ error: `Ссылка ${k} должна вести на ${LINK_HOSTS[k][0]}` }, 400);
+        links[k] = x.href;
+      }
+      a.links = links;
+    }
+    await accPut(env, a);
+    return json(accPublic(a, true));
+  });
+}
+
+const IMG_RE = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/;
+async function accAvatar(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req);
+    if (!b) return json({ error: 'Неверные данные' }, 400);
+    if (b.type === 'default') {
+      if (!ACC_COLORS[b.color]) return json({ error: 'Нет такого цвета' }, 400);
+      a.avatar = { t: 'd', c: b.color, v: Date.now() };
+      await env.SITE.delete('kai:' + a.id);
+    } else if (b.type === 'image' || b.type === 'skin') {
+      const m = IMG_RE.exec(String(b.data || ''));
+      if (!m) return json({ error: 'Аватарка должна быть PNG, JPG или WEBP' }, 400);
+      if (m[2].length > 1400000) return json({ error: 'Аватарка больше 1 МБ' }, 400);
+      await env.SITE.put('kai:' + a.id, JSON.stringify({ type: m[1], b64: m[2] }));
+      a.avatar = { t: b.type === 'skin' ? 's' : 'i', c: a.avatar && a.avatar.c || 'violet', v: Date.now() };
+    } else return json({ error: 'Неверные данные' }, 400);
+    await accPut(env, a);
+    return json(accPublic(a, true));
+  });
+}
+async function accBanner(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req);
+    if (!b) return json({ error: 'Неверные данные' }, 400);
+    if (b.data === null) { a.banner = 0; await env.SITE.delete('kab:' + a.id); }
+    else {
+      const m = IMG_RE.exec(String(b.data || ''));
+      if (!m) return json({ error: 'Баннер должен быть PNG, JPG или WEBP' }, 400);
+      if (m[2].length > 4200000) return json({ error: 'Баннер больше 3 МБ' }, 400);
+      await env.SITE.put('kab:' + a.id, JSON.stringify({ type: m[1], b64: m[2] }));
+      a.banner = Date.now();
+    }
+    await accPut(env, a);
+    return json(accPublic(a, true));
+  });
+}
+async function accPassword(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req);
+    if (!b) return json({ error: 'Неверные данные' }, 400);
+    if (!await rateHit(env, 'pw:' + a.id, 10, 900)) return json({ error: 'Слишком много попыток, подожди 15 минут' }, 429);
+    if (!await checkPassword(String(b.old || ''), a.pass)) return json({ error: 'Старый пароль неверный' }, 400);
+    const pe = pwProblem(b.password, a.login);
+    if (pe) return json({ error: pe }, 400);
+    a.pass = await hashPassword(b.password);
+    await accPut(env, a);
+    return json({ ok: true });
+  });
+}
+// Время в игре присылает лаунчер — для уровня и цифр в профиле на сайте
+async function accStats(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req);
+    const num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+    if (!b) return json({ error: 'Неверные данные' }, 400);
+    a.stats = { total: num(b.total, 3.2e8), komori: num(b.komori, 3.2e8), launches: num(b.launches, 1e7), at: Date.now() };
+    await accPut(env, a);
+    return json({ ok: true });
+  });
+}
+
+// Базовая аватарка: цвет + знак Komori. Своя — картинка из KV
+const LOGO_PATH = 'M16 14 L39 39.5 L39.5 58 L50 62 L60.5 58 L61 39.5 L84 14 L84 58 L64 72.5 L66.5 76.5 L50 93 L33.5 76.5 L36 72.5 L16 58 Z';
+function defaultAvatarSvg(color) {
+  const c = ACC_COLORS[color] || ACC_COLORS.violet;
+  const n = parseInt(c.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  const fg = l > 0.62 ? '#14161A' : '#FFFFFF';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="${c}"/><g transform="translate(22 20) scale(.76)"><path d="${LOGO_PATH}" fill="${fg}" fill-opacity=".92"/><path d="M16 58 L50 62 L84 58 L64 72.5 L66.5 76.5 L50 93 L33.5 76.5 L36 72.5 Z" fill="${c}" fill-opacity=".25"/></g></svg>`;
+}
+async function accImage(env, id, kind) {
+  if (kind === 'av') {
+    const a = await accGet(env, id);
+    if (!a) return text('not found', 404);
+    if (!a.avatar || a.avatar.t === 'd') return new Response(defaultAvatarSvg(a.avatar && a.avatar.c), { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=86400' } });
+  }
+  return newsImage(env, id, kind === 'av' ? 'kai:' : 'kab:');
+}
+
+// ----- привязка Discord: состояние на 10 минут (из лаунчера или с сайта) -----
+async function accDiscordStart(req, env, url) {
+  return accAuthed(req, env, async a => {
+    const s = randomHex(16);
+    await env.SITE.put('kls:' + s, a.id, { expirationTtl: 600 });
+    return json({ url: url.origin + '/auth/link?s=' + s });
+  });
+}
+async function accDiscordUnlink(req, env) {
+  return accAuthed(req, env, async a => {
+    if (a.discord) await env.SITE.delete('kd:' + a.discord.id);
+    a.discord = null; a.showDiscord = false;
+    await accPut(env, a);
+    return json(accPublic(a, true));
+  });
+}
+
+// ----- забыл пароль: код в личку Discord от бота -----
+async function accRecoverStart(req, env) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const b = await readJson(req);
+  const a = b && LOGIN_RE.test(String(b.login || '')) ? await accByLogin(env, b.login) : null;
+  if (!a) return json({ error: 'Такого аккаунта нет' }, 404);
+  if (!a.discord) return json({ error: 'К аккаунту не привязан Discord. Напиши админу в Discord — он сбросит пароль.' }, 400);
+  if (!await rateHit(env, 'rec:' + a.id, 3, 900)) return json({ error: 'Код уже отправлен. Новый можно запросить через 15 минут' }, 429);
+  const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+  await env.SITE.put('kr:' + a.id, JSON.stringify({ h: await sha256hex(code), tries: 0 }), { expirationTtl: 900 });
+  const ch = await fetch('https://discord.com/api/v10/users/@me/channels', { method: 'POST', headers: { authorization: 'Bot ' + env.DISCORD_BOT_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ recipient_id: a.discord.id }) });
+  const chj = ch.ok ? await ch.json() : null;
+  const msg = chj && await fetch(`https://discord.com/api/v10/channels/${chj.id}/messages`, { method: 'POST', headers: { authorization: 'Bot ' + env.DISCORD_BOT_TOKEN, 'content-type': 'application/json' },
+    body: JSON.stringify({ content: `Код для смены пароля аккаунта Komori **${a.login}**: **${code}**\nДействует 15 минут. Если ты его не запрашивал, просто ничего не делай.` }) });
+  if (!msg || !msg.ok) return json({ error: 'Бот не смог написать тебе в личку. Открой личные сообщения от участников сервера Komori в Discord и попробуй снова.' }, 502);
+  return json({ ok: true, discord: a.discord.name });
+}
+async function accRecoverFinish(req, env) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const b = await readJson(req);
+  const a = b && LOGIN_RE.test(String(b.login || '')) ? await accByLogin(env, b.login) : null;
+  if (!a) return json({ error: 'Такого аккаунта нет' }, 404);
+  const r = await env.SITE.get('kr:' + a.id, { type: 'json' });
+  if (!r) return json({ error: 'Код истёк — запроси новый' }, 400);
+  if (r.tries >= 5) { await env.SITE.delete('kr:' + a.id); return json({ error: 'Слишком много ошибок — запроси новый код' }, 429); }
+  if (await sha256hex(String(b.code || '').trim()) !== r.h) {
+    r.tries++; await env.SITE.put('kr:' + a.id, JSON.stringify(r), { expirationTtl: 900 });
+    return json({ error: 'Неверный код' }, 400);
+  }
+  const pe = pwProblem(b.password, a.login);
+  if (pe) return json({ error: pe }, 400);
+  a.pass = await hashPassword(b.password);
+  await accPut(env, a);
+  await env.SITE.delete('kr:' + a.id);
+  const t = await newSession(env, a.id);
+  return json({ token: t, account: accPublic(a, true) }, 200, { 'set-cookie': accCookie(t) });
+}
+
+// ----- для админов: найти аккаунт, сбросить пароль, убрать картинки -----
+async function accAdmin(req, env, ctx, action, url) {
+  if (!sameOrigin(req)) return json({ error: 'forbidden' }, 403);
+  const u = await currentUser(req, env, ctx);
+  if (!isNewsAdmin(u, env)) return json({ error: 'Нет прав' }, 403);
+  if (action === 'find') {
+    const a = await accByLogin(env, url.searchParams.get('login'));
+    if (!a) return json({ error: 'Аккаунт не найден' }, 404);
+    return json(Object.assign(accPublic(a, true), { discordName: a.discord ? a.discord.name : null }));
+  }
+  const b = await readJson(req);
+  const a = b && await accGet(env, String(b.id || ''));
+  if (!a) return json({ error: 'Аккаунт не найден' }, 404);
+  if (action === 'reset') {
+    const tmp = randomHex(5);
+    a.pass = await hashPassword(tmp);
+    await accPut(env, a);
+    return json({ password: tmp });
+  }
+  if (action === 'clear') {
+    a.avatar = { t: 'd', c: a.avatar && a.avatar.c || 'violet', v: Date.now() }; a.banner = 0; a.status = ''; a.bio = '';
+    await env.SITE.delete('kai:' + a.id); await env.SITE.delete('kab:' + a.id);
+    await accPut(env, a);
+    return json(accPublic(a, true));
+  }
+  return json({ error: 'Неизвестное действие' }, 400);
+}
+
+async function accRoutes(req, env, ctx, url, p, m) {
+  if (p === '/api/acc/register' && m === 'POST') return accRegister(req, env);
+  if (p === '/api/acc/login' && m === 'POST') return accLogin(req, env);
+  if (p === '/api/acc/logout' && m === 'POST') return accLogout(req, env);
+  if (p === '/api/acc/me' && m === 'GET') {
+    const a = await currentAccount(req, env);
+    return a ? json(accPublic(a, true, await linkedDiscordUser(env, ctx, a)), 200, { 'cache-control': 'no-store' }) : json({ error: 'Не выполнен вход' }, 401);
+  }
+  if (p === '/api/acc/me' && m === 'PUT') return accSaveMe(req, env);
+  if (p === '/api/acc/avatar' && m === 'POST') return accAvatar(req, env);
+  if (p === '/api/acc/banner' && m === 'POST') return accBanner(req, env);
+  if (p === '/api/acc/password' && m === 'POST') return accPassword(req, env);
+  if (p === '/api/acc/stats' && m === 'POST') return accStats(req, env);
+  if (p === '/api/acc/discord' && m === 'POST') return accDiscordStart(req, env, url);
+  if (p === '/api/acc/discord' && m === 'DELETE') return accDiscordUnlink(req, env);
+  if (p === '/api/acc/recover' && m === 'POST') return accRecoverStart(req, env);
+  if (p === '/api/acc/recover/finish' && m === 'POST') return accRecoverFinish(req, env);
+  let r = p.match(/^\/api\/acc\/admin\/(find|reset|clear)$/);
+  if (r) return accAdmin(req, env, ctx, r[1], url);
+  r = p.match(/^\/api\/acc\/u\/([A-Za-z0-9_]{3,16})$/);
+  if (r && m === 'GET') {
+    const a = await accByLogin(env, r[1]);
+    return a ? json(accPublic(a, false, await linkedDiscordUser(env, ctx, a))) : json({ error: 'Не найден' }, 404);
+  }
+  r = p.match(/^\/acc-def\/([a-z]{3,10})$/);
+  if (r && m === 'GET' && ACC_COLORS[r[1]]) return new Response(defaultAvatarSvg(r[1]), { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=86400' } });
+  r = p.match(/^\/acc-(av|ban)\/([a-z0-9]{8,24})$/);
+  if (r && m === 'GET') return accImage(env, r[2], r[1]);
+  // Привязка Discord: /auth/link?s=<state> (из лаунчера) или /auth/link с входом на сайте
+  if (p === '/auth/link' && m === 'GET') {
+    let s = url.searchParams.get('s');
+    if (!s || !/^[0-9a-f]{32}$/.test(s) || !await env.SITE.get('kls:' + s)) {
+      const a = await currentAccount(req, env);
+      if (!a) return redirect('/login?next=/profile');
+      s = randomHex(16);
+      await env.SITE.put('kls:' + s, a.id, { expirationTtl: 600 });
+    }
+    return login(url, env, 'L' + s, '/profile');
+  }
+  return null;
+}
+
 function json(o, status = 200, extra = {}) { return new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...extra } }); }
 function text(s, status = 200) { return new Response(s, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } }); }
 function redirect(to, cookies) {

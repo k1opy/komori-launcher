@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вход — Komori</title>
+<meta name="robots" content="noindex">
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.lg{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:56px 20px 96px}
+.lg-card{width:100%;max-width:420px;padding:26px;border-radius:16px;border:1px solid var(--line2);background:var(--card);display:flex;flex-direction:column;gap:16px}
+.lg-card h1{margin:0;font-family:'Montserrat',sans-serif;font-size:24px;color:#fff}
+.lg-sub{margin:-8px 0 0;color:var(--muted);font-size:14px}
+.lg-tabs{display:flex;padding:3px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.lg-tabs button{flex:1;min-height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.lg-tabs button[aria-selected="true"]{background:var(--sel);color:#fff}
+.lg-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.lg-f input{padding:11px 13px;min-height:44px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:#fff;font:inherit;font-size:15px;font-weight:500;outline:none}
+.lg-f input:focus{border-color:var(--accent2)}
+.lg-f small{font-weight:500;color:var(--dim)}
+.lg-err{padding:10px 14px;border-radius:10px;background:#2A1430;color:#FFD6E2;font-size:14px;font-weight:600}
+.lg-ok{padding:10px 14px;border-radius:10px;background:#12301F;color:#C9F2D6;font-size:14px;font-weight:600}
+.lg-btn{min-height:46px;border-radius:10px;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.lg-btn:disabled{opacity:.6;cursor:default}
+.lg-alt{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.lg-ds{display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;border-radius:10px;border:1px solid var(--line2);color:var(--text);text-decoration:none;font-weight:600;font-size:14px}
+.lg-ds:hover{background:var(--sel);color:#fff}
+.lg-link{align-self:center;border:0;background:none;color:var(--accent-text);font:inherit;font-size:14px;cursor:pointer}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-direction: column">
+<!--KOMORI_HEADER-->
+<main class="lg">
+<form class="lg-card" onSubmit="{{submit}}" novalidate>
+<h1>{{title}}</h1>
+<p class="lg-sub">{{sub}}</p>
+<sc-if value="{{showTabs}}">
+<div class="lg-tabs" role="tablist">
+<button type="button" role="tab" aria-selected="{{tabIn}}" onClick="{{goIn}}">Вход</button>
+<button type="button" role="tab" aria-selected="{{tabReg}}" onClick="{{goReg}}">Регистрация</button>
+</div>
+</sc-if>
+
+<sc-if value="{{fLogin}}"><label class="lg-f">Логин<input id="lgLogin" autocomplete="username" maxlength="16" value="{{f.login}}" onInput="{{onLogin}}"><sc-if value="{{tabReg}}"><small>3–16 символов: латиница, цифры и _. Его видят все в профиле.</small></sc-if></label></sc-if>
+<sc-if value="{{fCode}}"><label class="lg-f">Код из Discord<input id="lgCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" value="{{f.code}}" onInput="{{onCode}}"></label></sc-if>
+<sc-if value="{{fPass}}"><label class="lg-f">{{passLabel}}<input id="lgPass" type="password" autocomplete="{{passAuto}}" maxlength="72" value="{{f.pass}}" onInput="{{onPass}}"><sc-if value="{{passHint}}"><small>Минимум 8 символов. Почты нет, поэтому запиши пароль или привяжи Discord — через него его можно восстановить.</small></sc-if></label></sc-if>
+<sc-if value="{{fPass2}}"><label class="lg-f">Повтори пароль<input id="lgPass2" type="password" autocomplete="new-password" maxlength="72" value="{{f.pass2}}" onInput="{{onPass2}}"></label></sc-if>
+<sc-if value="{{fAge}}"><label class="lg-f">Возраст<input id="lgAge" type="number" inputmode="numeric" min="5" max="100" value="{{f.age}}" onInput="{{onAge}}"><small>Его видят только админы.</small></label></sc-if>
+
+<sc-if value="{{err}}"><div class="lg-err" role="alert">{{err}}</div></sc-if>
+<sc-if value="{{ok}}"><div class="lg-ok" role="status">{{ok}}</div></sc-if>
+<button type="submit" class="lg-btn" disabled="{{busy}}">{{btn}}</button>
+
+<div class="lg-alt">
+<sc-if value="{{tabIn}}">
+<a class="lg-ds" href="{{dsUrl}}">Войти через привязанный Discord</a>
+<button type="button" class="lg-link" onClick="{{goRec}}">Забыл пароль</button>
+</sc-if>
+<sc-if value="{{inRec}}"><button type="button" class="lg-link" onClick="{{goIn}}">← Назад ко входу</button></sc-if>
+<sc-if value="{{tabReg}}"><span style="font-size: 13px; color: var(--dim); text-align: center">После регистрации в профиле можно привязать Discord, поставить аватарку и баннер.</span></sc-if>
+</div>
+</form>
+</main>
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { mode: 'in', f: { login: '', pass: '', pass2: '', age: '', code: '' }, err: '', ok: '', busy: false, sent: false };
+}
+mounted() {
+if (location.hash === '#reg') this.setState({ mode: 'reg' });
+}
+renderVals() {
+var self = this, s = this.state, f = s.f;
+var next = (function () { var n = new URLSearchParams(location.search).get('next') || '/profile'; return /^\/(?!\/)[\w\-/]*$/.test(n) ? n : '/profile'; })();
+function set(k) { return function (e) { var n = Object.assign({}, s.f); n[k] = e.target.value; self.setState({ f: n, err: '' }); }; }
+function go(mode) { return function () { self.setState({ mode: mode, err: '', ok: '', sent: false }); }; }
+function post(url, body) {
+return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+.then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); });
+}
+var rec = s.mode === 'rec';
+return {
+title: rec ? 'Восстановление пароля' : s.mode === 'reg' ? 'Аккаунт Komori' : 'Вход в Komori',
+sub: rec ? (s.sent ? 'Бот прислал код в личные сообщения Discord.' : 'Код придёт от бота Komori в Discord, если он привязан к аккаунту.') : 'Один аккаунт для сайта и лаунчера.',
+showTabs: !rec, tabIn: s.mode === 'in' ? 'true' : '', tabReg: s.mode === 'reg' ? 'true' : '', inRec: rec,
+goIn: go('in'), goReg: go('reg'), goRec: go('rec'),
+f: f,
+fLogin: true, fCode: rec && s.sent, fPass: !rec || s.sent, fPass2: s.mode === 'reg' || (rec && s.sent), fAge: s.mode === 'reg',
+passLabel: rec ? 'Новый пароль' : 'Пароль', passAuto: s.mode === 'in' ? 'current-password' : 'new-password', passHint: s.mode === 'reg',
+onLogin: set('login'), onPass: set('pass'), onPass2: set('pass2'), onAge: set('age'), onCode: set('code'),
+err: s.err, ok: s.ok, busy: s.busy,
+btn: s.busy ? 'Подожди…' : rec ? (s.sent ? 'Сменить пароль' : 'Прислать код') : s.mode === 'reg' ? 'Зарегистрироваться' : 'Войти',
+dsUrl: '/auth/login?next=' + encodeURIComponent(next),
+submit: function (e) {
+e.preventDefault();
+if (s.busy) return;
+var login = f.login.trim();
+if (!login) return self.setState({ err: 'Введи логин' });
+if ((s.mode === 'reg' || (rec && s.sent)) && f.pass !== f.pass2) return self.setState({ err: 'Пароли не совпадают' });
+var req;
+if (s.mode === 'in') req = post('/api/acc/login', { login: login, password: f.pass });
+else if (s.mode === 'reg') req = post('/api/acc/register', { login: login, password: f.pass, age: Number(f.age) });
+else if (!s.sent) req = post('/api/acc/recover', { login: login });
+else req = post('/api/acc/recover/finish', { login: login, code: f.code, password: f.pass });
+self.setState({ busy: true, err: '', ok: '' });
+req.then(function (r) {
+if (!r.ok) return self.setState({ busy: false, err: r.d.error || 'Не получилось, попробуй ещё раз' });
+if (rec && !s.sent) return self.setState({ busy: false, sent: true, ok: 'Код отправлен в Discord ' + (r.d.discord || '') + '. Он действует 15 минут.' });
+location.href = next;
+}).catch(function () { self.setState({ busy: false, err: 'Нет связи с сайтом, попробуй ещё раз' }); });
+}
+};
+}
+}
+</script>
+</body>
+</html>

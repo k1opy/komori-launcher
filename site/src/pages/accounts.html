@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Аккаунты — Komori</title>
+<meta name="robots" content="noindex">
+<!--KOMORI_HEAD-->
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.ac{max-width:760px;width:100%;margin:0 auto;padding:32px 20px 90px;display:flex;flex-direction:column;gap:16px;flex:1}
+.ac h1{margin:0;font-family:'Montserrat',sans-serif;color:#fff}
+.ac-card{padding:20px;border-radius:16px;border:1px solid var(--line2);background:var(--card);display:flex;flex-direction:column;gap:12px}
+.ac-row{display:flex;gap:10px;flex-wrap:wrap}
+.ac input{flex:1;min-width:200px;padding:11px 13px;min-height:44px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:#fff;font:inherit;outline:none}
+.ac-b{padding:0 16px;min-height:44px;border-radius:10px;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.ac-b2{padding:0 16px;min-height:42px;border-radius:10px;border:1px solid var(--line2);background:var(--card2);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.ac-b2.del{color:var(--err)}
+.ac-who{display:flex;gap:14px;align-items:center}
+.ac-who img{width:64px;height:64px;border-radius:12px}
+.ac-kv{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:15px}
+.ac-kv span{color:var(--muted)}
+.ac-err{padding:10px 14px;border-radius:10px;background:#2A1430;color:#FFD6E2;font-weight:600}
+.ac-ok{padding:10px 14px;border-radius:10px;background:#12301F;color:#C9F2D6;font-weight:600}
+.ac-pw{font-family:Consolas,monospace;font-size:20px;color:#fff;user-select:all}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-direction: column">
+<!--KOMORI_HEADER-->
+<main class="ac">
+<h1>Аккаунты Komori</h1>
+<sc-if value="{{deny}}"><div class="ac-err">Раздел только для админов. Войди в аккаунт Komori с привязанным Discord админа.</div></sc-if>
+<sc-if value="{{allow}}">
+<form class="ac-card" onSubmit="{{find}}">
+<label for="acLogin" style="font-weight: 600">Логин игрока</label>
+<div class="ac-row"><input id="acLogin" value="{{q}}" onInput="{{onQ}}" maxlength="16" autocomplete="off"><button type="submit" class="ac-b">Найти</button></div>
+</form>
+<sc-if value="{{err}}"><div class="ac-err" role="alert">{{err}}</div></sc-if>
+<sc-if value="{{a}}">
+<section class="ac-card">
+<div class="ac-who"><img src="{{a.avatar}}" alt=""><div><b style="font-size: 20px; color: #fff">{{a.login}}</b><div><a href="{{profileUrl}}" target="_blank" rel="noopener">Открыть профиль</a></div></div></div>
+<div class="ac-kv">
+<span>Возраст</span><b>{{a.age}}</b>
+<span>Зарегистрирован</span><b>{{a.since}}</b>
+<span>Discord</span><b>{{discord}}</b>
+<span>Уровень</span><b>{{a.stats.level}}</b>
+<span>Статус</span><b>{{status}}</b>
+</div>
+<div class="ac-row">
+<button type="button" class="ac-b2" onClick="{{reset}}">{{resetLabel}}</button>
+<button type="button" class="ac-b2 del" onClick="{{clear}}">{{clearLabel}}</button>
+</div>
+<sc-if value="{{pw}}"><div class="ac-ok">Временный пароль: <span class="ac-pw">{{pw}}</span><br>Передай его игроку лично и попроси сразу сменить в профиле.</div></sc-if>
+<sc-if value="{{ok}}"><div class="ac-ok">{{ok}}</div></sc-if>
+</section>
+</sc-if>
+</sc-if>
+</main>
+<!--KOMORI_FOOTER-->
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { q: '', a: null, err: '', pw: '', ok: '', sure: '' }; }
+renderVals() {
+var self = this, s = this.state, k = window.KOMORI || {};
+function call(method, url, body) {
+return fetch(url, { method: method, headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+.then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || 'Ошибка'); return d; }); });
+}
+var fail = function (e) { self.setState({ err: e.message }); };
+return {
+deny: !(k.me && k.me.admin), allow: !!(k.me && k.me.admin),
+q: s.q, onQ: function (e) { self.setState({ q: e.target.value }); },
+find: function (e) { e.preventDefault(); self.setState({ err: '', a: null, pw: '', ok: '', sure: '' }); call('GET', '/api/acc/admin/find?login=' + encodeURIComponent(s.q.trim())).then(function (a) { self.setState({ a: a }); }, fail); },
+err: s.err, a: s.a, pw: s.pw, ok: s.ok,
+profileUrl: s.a ? '/u/' + s.a.login : '',
+discord: s.a ? (s.a.discordName || 'не привязан') : '', status: s.a ? (s.a.status || '—') : '',
+resetLabel: s.sure === 'reset' ? 'Точно сбросить пароль?' : 'Сбросить пароль',
+clearLabel: s.sure === 'clear' ? 'Точно очистить?' : 'Убрать аватарку, баннер и тексты',
+reset: function () { if (s.sure !== 'reset') return self.setState({ sure: 'reset' }); call('POST', '/api/acc/admin/reset', { id: s.a.id }).then(function (d) { self.setState({ pw: d.password, sure: '' }); }, fail); },
+clear: function () { if (s.sure !== 'clear') return self.setState({ sure: 'clear' }); call('POST', '/api/acc/admin/clear', { id: s.a.id }).then(function (a) { self.setState({ a: Object.assign({}, s.a, a), ok: 'Профиль очищен', sure: '' }); }, fail); }
+};
+}
+}
+</script>
+</body>
+</html>

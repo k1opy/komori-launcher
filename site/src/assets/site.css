@@ -26,7 +26,7 @@ x-dc{display:none}
 .k-me img{width:32px;height:32px;border-radius:8px;display:block;background:#2A1E4A}
 .k-out{width:44px;height:44px;border-radius:12px;border:1px solid var(--line2);background:transparent;color:var(--err);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .k-out:hover{background:var(--card)}
-.k-login{display:flex;align-items:center;gap:0;padding:10px 16px;min-height:44px;border-radius:12px;background:#5865F2;color:#fff;text-decoration:none;font-weight:700}
+.k-login{display:flex;align-items:center;gap:0;padding:10px 16px;min-height:44px;border-radius:12px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700}
 .k-login svg{margin-right:8px}
 .k-login:hover{color:#fff;filter:brightness(1.08)}
 .k-flash{max-width:1200px;margin:0 auto;padding:0 20px 12px}

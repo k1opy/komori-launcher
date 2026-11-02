@@ -18,7 +18,7 @@
       loggedIn: !!me, loggedOut: !me, admin: !!(me && me.admin),
       name: me ? me.name : '',
       avatar: me ? me.avatar : '',
-      loginUrl: '/auth/login?next=' + encodeURIComponent(location.pathname),
+      loginUrl: '/login?next=' + encodeURIComponent(location.pathname),
       logout: function () {
         fetch('/auth/logout', { method: 'POST' }).finally(function () { location.href = '/'; });
       },
@@ -27,7 +27,7 @@
         return { label: n.label, href: n.href, current: on ? 'page' : 'false', bg: on ? '#8B3DFF' : 'transparent', color: on ? '#FFFFFF' : '#C7BBE6' };
       }),
       discord: cfg.discord, launcher: cfg.launcher, map: cfg.map, social: cfg.social || [],
-      flash: k.flash || '', flashJoin: k.flash === 'Сначала зайди на наш сервер Discord, потом войди на сайт.'
+      flash: k.flash || '', flashJoin: false
     };
   };
 })();

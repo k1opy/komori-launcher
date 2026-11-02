@@ -19,7 +19,9 @@ const S = {
   manual: null,
   // Новый интерфейс 0.7: новости, время в игре, оформление профиля
   news: { mc: null, mcLoading: false, mcError: null, ko: null, koLoading: false, koError: null, filter: 'all' },
-  stats: null, look: { banner: null, avatarBg: null }, avatar: null, actPeriod: 'w',
+  stats: null, look: { avatarBg: null }, avatar: null, actPeriod: 'w',
+  // Аккаунт Komori: вход при запуске, смена пароля в настройках
+  kacc: { checked: false, account: null }, auth: blankAuth(), kpw: { old: '', n1: '', n2: '' }, kStatus: null, kLinkWait: false,
   mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', hits: [], total: 0, offset: 0,
     loading: false, error: null, needLoader: false, mc: '', loader: '', items: [], updates: null, checking: false, busy: {} }
 };
@@ -98,11 +100,11 @@ function renderSide() {
   const cur = NAV_OF[S.screen] || S.screen;
   $('#nav').innerHTML = NAV.map(([id, label, svg]) =>
     `<button type="button" data-act="nav" data-id="${id}" class="${cur === id ? 'on' : ''}" ${cur === id ? 'aria-current="page"' : ''}>${svg}${label}</button>`).join('');
-  const a = selectedAccount();
+  const a = selectedAccount(), ka = kAcc();
   const lv = S.stats ? levelInfo(S.stats.total).level : null;
-  $('#accChip').innerHTML = a
-    ? `${avatarHtml('avatar')}<span class="meta"><b>${esc(a.name)}</b><span>${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : a.type === 'yggdrasil' ? 'Yggdrasil' : 'Microsoft'}${lv ? ' · ур. ' + lv : ''}</span></span>`
-    : `<span class="avatar letter">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
+  $('#accChip').innerHTML = ka
+    ? `${avatarHtml('avatar')}<span class="meta"><b>${esc(ka.login)}${lv ? ' <span class="lv">ур. ' + lv + '</span>' : ''}</b><span>${a ? 'Minecraft: ' + esc(a.name) : 'Нет аккаунта Minecraft'}</span></span>`
+    : `<span class="avatar letter">?</span><span class="meta"><b>Войти в Komori</b><span class="none">${a ? 'Minecraft: ' + esc(a.name) : 'Аккаунт не выбран'}</span></span>`;
   const crumb = $('#crumb');
   if (crumb) crumb.textContent = SCREEN_NAMES[S.screen] || '';
   const ts = $('#topStatus');
@@ -431,13 +433,15 @@ function yggForm() {
 
 function viewSettings() {
   const st = S.settings || {};
-  const tabList = [['look', 'Внешний вид'], ['general', 'Общие'], ['java', 'Java и память'], ['account', 'Аккаунт']];
+  const tabList = [['look', 'Внешний вид'], ['komori', 'Аккаунт Komori'], ['account', 'Minecraft'], ['general', 'Общие'], ['java', 'Java и память']];
   if (S.info.dev) tabList.push(['server', 'Сервер (админ)']);
   const tabs = tabList.map(([id, l]) =>
     `<button type="button" role="tab" aria-selected="${S.sTab === id}" class="${S.sTab === id ? 'on' : ''}" data-act="sTab" data-id="${id}">${l}</button>`).join('');
   let body = '';
   if (S.sTab === 'look') {
     body = lookTab();
+  } else if (S.sTab === 'komori') {
+    body = komoriTab();
   } else if (S.sTab === 'general') {
     body = `<div class="panel">
       <div class="prow"><span>Сворачивать лаунчер при запуске игры</span>${sw(!!st.minimizeOnLaunch, 'toggleMinimize')}</div>
@@ -922,7 +926,7 @@ const ACTIONS = {
     catch (e) { toast(errText(e)); }
     finally { S.busy = false; S.vInstalling = null; S.prog = null; render(); }
   },
-  sTab: (id) => { S.sTab = id; render(); if (id === 'account') loadSkin(); if (id === 'server' && !S.srv.status) srvLoad(); },
+  sTab: (id) => { S.sTab = id; render(); if (id === 'account') loadSkin(); if (id === 'look') refreshAvatar(); if (id === 'komori') loadKacc(); if (id === 'server' && !S.srv.status) srvLoad(); },
   srvLoad: () => srvLoad(),
   updCheck: async () => { try { S.update = await K.update.check(); } catch (e) { toast(errText(e)); } render(); },
   updInstall: async () => { try { await K.update.install(); } catch (e) { toast(errText(e)); } },
@@ -1025,8 +1029,8 @@ document.addEventListener('click', (ev) => {
   if (fn) fn(el.dataset.id, el);
 });
 $('#accChip').dataset.act = 'goAccount';
-Object.assign(ACTIONS, PAGE_ACTIONS);
-ACTIONS.goAccount = () => { S.screen = 'settings'; S.sTab = 'account'; render(); loadSkin(); };
+Object.assign(ACTIONS, PAGE_ACTIONS, ACC_ACTIONS);
+ACTIONS.goAccount = () => { if (!kAcc()) return ACTIONS.gOpen(); S.screen = 'profile'; render(); loadStats(); };
 
 document.addEventListener('input', (ev) => {
   const t = ev.target;
@@ -1098,6 +1102,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
     S.running = await K.game.running();
   } catch (e) { toast(errText(e)); }
   render();
+  loadKacc();
   loadMcNews();
   loadStats();
   loadLook();
