@@ -1,7 +1,7 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } = require('electron');
 
 const store = require('./store');
 const versions = require('./versions');
@@ -34,6 +34,8 @@ const offlineskin = require('./offlineskin');
 const authlib = require('./authlib');
 const { ping } = require('./ping');
 const crash = require('./crash');
+const playtime = require('./playtime');
+const news = require('./news');
 let lastCrash = null;
 CONFIG.serverManifestUrl = /^https:\/\//.test(String(CONFIG.serverManifestUrl || '')) ? CONFIG.serverManifestUrl : '';
 CONFIG.serverManifestFallback = /^https:\/\//.test(String(CONFIG.serverManifestFallback || '')) ? CONFIG.serverManifestFallback : '';
@@ -76,7 +78,7 @@ function send(channel, data) { if (win && !win.isDestroyed()) win.webContents.se
 function createWindow() {
   win = new BrowserWindow({
     width: 1280, height: 760, minWidth: 1040, minHeight: 640,
-    frame: false, backgroundColor: '#0E0A1A', show: false,
+    frame: false, backgroundColor: '#0D0F12', show: false,
     title: DEV ? 'Komori Launcher DEV' : 'Komori Launcher',
     icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
@@ -98,6 +100,36 @@ app.whenReady().then(() => {
   });
 });
 app.on('window-all-closed', () => app.quit());
+app.on('before-quit', () => playtime.flush());
+
+// ---------- профиль игрока: время в игре, новости, баннер и фон аватарки ----------
+ipcMain.handle('stats:get', () => playtime.get());
+ipcMain.handle('news:mc', (e, force) => news.minecraft(!!force));
+ipcMain.handle('news:komori', (e, force) => news.komori(CONFIG.websiteUrl || 'https://komori.fun', !!force));
+ipcMain.handle('news:open', (e, id) => { const u = news.linkFor(id); if (u) shell.openExternal(u); return !!u; });
+
+// Картинки оформления лежат в папке лаунчера: баннер (2560×1440, как обложка YouTube) и фон аватарки
+const LOOK = { banner: { w: 2560, h: 1440, file: 'look-banner.jpg' }, avatarBg: { w: 512, h: 512, file: 'look-avatar-bg.jpg' } };
+function lookPath(kind) { return path.join(app.getPath('userData'), LOOK[kind].file); }
+function lookData(kind) { try { return 'data:image/jpeg;base64,' + fs.readFileSync(lookPath(kind)).toString('base64'); } catch { return null; } }
+ipcMain.handle('look:get', () => ({ banner: lookData('banner'), avatarBg: lookData('avatarBg') }));
+ipcMain.handle('look:pick', async (e, kind) => {
+  if (!LOOK[kind]) throw new Error('Неизвестная картинка');
+  const r = await dialog.showOpenDialog(win, { title: kind === 'banner' ? 'Баннер профиля (лучше 2560×1440)' : 'Фон аватарки', properties: ['openFile'], filters: [{ name: 'Картинки', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+  if (r.canceled || !r.filePaths[0]) return null;
+  if (fs.statSync(r.filePaths[0]).size > 25 * 1024 * 1024) throw new Error('Картинка больше 25 МБ');
+  let img = nativeImage.createFromPath(r.filePaths[0]);
+  if (img.isEmpty()) throw new Error('Не получилось открыть картинку');
+  // Обрезаем по центру под нужные пропорции и уменьшаем
+  const L = LOOK[kind], sz = img.getSize(), want = L.w / L.h;
+  let cw = sz.width, ch = Math.round(sz.width / want);
+  if (ch > sz.height) { ch = sz.height; cw = Math.round(sz.height * want); }
+  img = img.crop({ x: Math.floor((sz.width - cw) / 2), y: Math.floor((sz.height - ch) / 2), width: cw, height: ch });
+  if (cw > L.w) img = img.resize({ width: L.w, height: L.h, quality: 'best' });
+  fs.writeFileSync(lookPath(kind), img.toJPEG(88));
+  return lookData(kind);
+});
+ipcMain.handle('look:reset', (e, kind) => { if (LOOK[kind]) { try { fs.unlinkSync(lookPath(kind)); } catch {} } return null; });
 
 // ---------- окно ----------
 ipcMain.on('win:minimize', () => win && win.minimize());
@@ -291,6 +323,7 @@ async function launchGame(settings, profileId, join) {
     text => { send('game:log', games.size > 1 ? prefixLines(profile.name, text) : text); },
     (code, err) => {
       games.delete(profile.id);
+      playtime.stop(profile.id);
       sendRunning();
       let crashInfo = null;
       if (err || (code !== 0 && code !== null)) {
@@ -304,6 +337,7 @@ async function launchGame(settings, profileId, join) {
       if (!games.size && win && !win.isDestroyed() && settings.minimizeOnLaunch) win.restore();
     });
   games.set(profile.id, { child, gameDir });
+  playtime.start(profile.id, profile.id === serverpack.SERVER_PROFILE_ID);
   sendRunning();
   store.touchProfile(profile.id);
   if (settings.minimizeOnLaunch && win) setTimeout(() => win && !win.isDestroyed() && win.minimize(), 1500);

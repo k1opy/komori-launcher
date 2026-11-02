@@ -9,7 +9,7 @@ const S = {
   screen: 'home', menuOpen: false,
   busy: false, prog: null, running: [], // running — id профилей, в которых сейчас идёт игра
   vType: 'release', vSearch: '', vInstalling: null,
-  sTab: 'general', renaming: null, msCode: null, devName: '',
+  sTab: 'look', renaming: null, msCode: null, devName: '',
   // Вкладки входа: microsoft | offline | ygg. Пароль Yggdrasil живёт только в памяти до нажатия «Войти».
   loginTab: 'microsoft', ygg: { login: '', pass: '', url: '', error: '', busy: false },
   log: '', form: null, lastLog: null, ping: null, logsOpen: false,
@@ -17,6 +17,9 @@ const S = {
   update: null, crash: null,
   srv: { status: null, loading: false, built: null, warnings: [], profileId: null, busy: false },
   manual: null,
+  // Новый интерфейс 0.7: новости, время в игре, оформление профиля
+  news: { mc: null, mcLoading: false, mcError: null, ko: null, koLoading: false, koError: null, filter: 'all' },
+  stats: null, look: { banner: null, avatarBg: null }, avatar: null, actPeriod: 'w',
   mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', hits: [], total: 0, offset: 0,
     loading: false, error: null, needLoader: false, mc: '', loader: '', items: [], updates: null, checking: false, busy: {} }
 };
@@ -53,11 +56,14 @@ function toast(msg, ok) {
 
 // ---------- иконки меню ----------
 const NAV = [
-  ['home', 'Главная', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V20h-5v-6h-6v6H4z"/></svg>'],
-  ['profiles', 'Сборки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>'],
-  ['versions', 'Версии', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>'],
-  ['mods', 'Каталог', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>']
+  ['home', 'Главная', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V20h-5v-6h-6v6H4z"/></svg>'],
+  ['komori', 'Komori', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>'],
+  ['profiles', 'Сборки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>'],
+  ['profile', 'Профиль', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'],
+  ['settings', 'Настройки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>']
 ];
+const NAV_OF = { versions: 'profiles', mods: 'profiles' };
+const SCREEN_NAMES = { home: 'Главная', komori: 'Komori', profiles: 'Сборки', versions: 'Сборки', mods: 'Сборки', profile: 'Профиль', settings: 'Настройки' };
 const PLAY_SVG = '<svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg>';
 const CHEVRON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>';
 const SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
@@ -71,6 +77,7 @@ function applyTheme() {
   const dark = mode === 'dark' || (mode === 'system' && (!darkMq || darkMq.matches));
   document.body.classList.toggle('theme-dark', dark);
   document.body.classList.toggle('theme-light', !dark);
+  if (typeof applyAccent === 'function') applyAccent();
 }
 if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyTheme);
 const THEME_NAMES = [['light', 'Светлая'], ['dark', 'Тёмная'], ['system', 'Системная']];
@@ -88,12 +95,18 @@ function socialBlock() {
 
 // ---------- отрисовка ----------
 function renderSide() {
+  const cur = NAV_OF[S.screen] || S.screen;
   $('#nav').innerHTML = NAV.map(([id, label, svg]) =>
-    `<button type="button" data-act="nav" data-id="${id}" class="${S.screen === id ? 'on' : ''}" ${S.screen === id ? 'aria-current="page"' : ''}>${svg}${label}</button>`).join('');
+    `<button type="button" data-act="nav" data-id="${id}" class="${cur === id ? 'on' : ''}" ${cur === id ? 'aria-current="page"' : ''}>${svg}${label}</button>`).join('');
   const a = selectedAccount();
+  const lv = S.stats ? levelInfo(S.stats.total).level : null;
   $('#accChip').innerHTML = a
-    ? `<span class="avatar">${esc(a.name.charAt(0).toUpperCase())}</span><span class="meta"><b>${esc(a.name)}</b><span>● ${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : a.type === 'yggdrasil' ? 'Yggdrasil' : 'Microsoft'}</span></span>`
-    : `<span class="avatar">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
+    ? `${avatarHtml('avatar')}<span class="meta"><b>${esc(a.name)}</b><span>${a.type === 'dev' ? 'DEV-вход' : a.type === 'offline' ? 'Офлайн' : a.type === 'yggdrasil' ? 'Yggdrasil' : 'Microsoft'}${lv ? ' · ур. ' + lv : ''}</span></span>`
+    : `<span class="avatar letter">?</span><span class="meta"><b>Нет аккаунта</b><span class="none">Нажми, чтобы войти</span></span>`;
+  const crumb = $('#crumb');
+  if (crumb) crumb.textContent = SCREEN_NAMES[S.screen] || '';
+  const ts = $('#topStatus');
+  if (ts) { const pg = S.ping; ts.innerHTML = `<span class="dot ${!pg ? 'wait' : pg.online ? '' : 'off'}"></span>${esc(S.info.server.host)}${pg && pg.online ? ' · ' + pg.players + ' онлайн' : pg ? ' · офлайн' : ''}<span class="sep">|</span>v${esc(S.info.version)}`; }
   $('#devBadge').classList.toggle('hidden', !S.info.dev);
   $('#gearBtn').classList.toggle('on', S.screen === 'settings');
   const u = S.update || {};
@@ -164,29 +177,6 @@ function floatLogs() {
     <div class="float-head">${live ? '<span class="dot"></span>' : ''}Логи Minecraft<span class="grow"></span><button type="button" data-act="openLog" title="Открыть лог" aria-label="Открыть лог"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg></button></div>
     <div class="logbox" id="logbox">${body || '<span class="empty-log">Здесь появятся последние строки игры после запуска.</span>'}</div>
   </div>`;
-}
-
-function viewHome() {
-  const p = selectedProfile();
-  const ps = playState();
-  const menu = homeMenu(p);
-  return `<section class="home">
-    <div class="home-center">
-      <img class="home-logo" src="assets/logo.svg" alt="">
-      <h1 class="home-word">KOMORI</h1>
-      <p class="home-sub">MINECRAFT LAUNCHER</p>
-      <div class="play-row ${S.menuOpen ? 'open' : ''}">
-        <button type="button" class="play ${ps.cls}" data-act="play" tabindex="${S.menuOpen ? -1 : 0}">${PLAY_SVG}<span class="pl"><span>${ps.label}</span>${p ? `<small>${esc(p.name)}</small>` : ''}</span></button>
-        ${p ? `<div class="picker" style="--h:${menu.height}px">
-          <button type="button" class="psq" data-act="toggleMenu" aria-expanded="${S.menuOpen}" aria-label="Выбрать сборку" title="${esc(p.name + ' · ' + profMeta(p))}">${profIcon(p.icon, 40)}</button>
-          <div class="plist" role="listbox" aria-label="Сборки">${menu.html}</div>
-        </div>` : `<div class="picker"><button type="button" class="psq" data-act="newProfile" aria-label="Создать сборку" title="Создать сборку">+</button></div>`}
-      </div>
-      <button type="button" class="play-srv" data-act="playServer"><span class="dot ${!S.ping ? 'wait' : S.ping.online ? '' : 'off'}"></span>Играть на ${esc(S.info.server.name || 'Komori')}</button>
-      ${progressHtml()}
-    </div>
-    <div class="floats ${S.floatsSeen ? 'still' : ''}">${floatServer()}${floatLogs()}</div>
-  </section>`;
 }
 
 function viewProfiles() {
@@ -441,15 +431,15 @@ function yggForm() {
 
 function viewSettings() {
   const st = S.settings || {};
-  const tabList = [['general', 'Общие'], ['java', 'Java и память'], ['account', 'Аккаунт']];
+  const tabList = [['look', 'Внешний вид'], ['general', 'Общие'], ['java', 'Java и память'], ['account', 'Аккаунт']];
   if (S.info.dev) tabList.push(['server', 'Сервер (админ)']);
   const tabs = tabList.map(([id, l]) =>
     `<button type="button" role="tab" aria-selected="${S.sTab === id}" class="${S.sTab === id ? 'on' : ''}" data-act="sTab" data-id="${id}">${l}</button>`).join('');
   let body = '';
-  if (S.sTab === 'general') {
+  if (S.sTab === 'look') {
+    body = lookTab();
+  } else if (S.sTab === 'general') {
     body = `<div class="panel">
-      <div class="prow"><span>Тема</span><div class="theme-seg" role="radiogroup" aria-label="Тема">${THEME_NAMES.map(([id, l]) =>
-        `<button type="button" role="radio" aria-checked="${(st.theme || 'system') === id}" class="${(st.theme || 'system') === id ? 'on' : ''}" data-act="setTheme" data-id="${id}">${l}</button>`).join('')}</div></div>
       <div class="prow"><span>Сворачивать лаунчер при запуске игры</span>${sw(!!st.minimizeOnLaunch, 'toggleMinimize')}</div>
       <div class="prow"><span>Показывать консоль игры</span>${sw(!!st.showConsole, 'toggleConsole')}</div>
       <div class="prow"><span>Папка игры</span><span style="display:flex;gap:10px;align-items:center"><code>${esc(st.gameDir)}</code><button type="button" class="btn2" data-act="openGameDir">Открыть</button></span></div>
@@ -633,6 +623,7 @@ async function skinAction(run) {
   try { const info = await run(); if (info) { S.skin.info = info; toast('Готово', true); } }
   catch (e) { toast(errText(e)); }
   S.skin.busy = false; render();
+  refreshAvatar();
 }
 
 // ===== Превью скина (п.2): спереди, сзади, сбоку + 2D-развёртка =====
@@ -708,12 +699,14 @@ function skinPreviewHtml(name, hasSkin) {
 
 function render() {
   renderSide();
-  const v = { home: viewHome, profiles: viewProfiles, versions: viewVersions, mods: viewMods, settings: viewSettings }[S.screen] || viewHome;
+  const v = { home: viewHome, komori: viewKomori, profiles: viewProfiles, versions: viewVersions, mods: viewMods, profile: viewProfile, settings: viewSettings }[S.screen] || viewHome;
   const focused = document.activeElement && document.activeElement.id;
   const caret = focused && document.activeElement.selectionStart;
-  $('#view').innerHTML = v();
+  let html = v();
+  if (NAV_OF[S.screen] || S.screen === 'profiles') html = html.replace(/^(\s*<section class="page"[^>]*>)/, '$1' + buildsTabs());
+  $('#view').innerHTML = html;
   // Плашки справа появляются плавно только при входе на главную, а не при каждой перерисовке (иначе мерцают во время запуска)
-  S.floatsSeen = S.screen === 'home';
+
   if (focused) {
     const el = document.getElementById(focused);
     if (el) { el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch {} }
@@ -839,11 +832,15 @@ function setMenu(open) {
 }
 const ACTIONS = {
   // п.3: смена темы — сохраняется в settings.json и применяется сразу
-  setTheme: async (id) => { S.settings = await K.settings.set({ theme: id }); applyTheme(); render(); },
+  setTheme: async (id) => { S.settings = await K.settings.set({ theme: id }); applyTheme(); render(); refreshAvatar(); },
   // п.4–6: открыть ссылку из конфига во внешнем браузере
   openLink: (id) => { K.openLink(id); },
   nav: (id) => {
     S.screen = id; S.menuOpen = false;
+    if (id === 'home') loadMcNews();
+    if (id === 'komori') { loadKomoriNews(); loadLastLog(); }
+    if (id === 'profile') loadStats();
+    if (id === 'settings' && S.sTab === 'account') loadSkin();
     if (id === 'versions' && !S.versions) loadVersions();
     if (id === 'mods') { S.mods.profileId = S.mods.profileId || S.profiles.selected; S.mods.updates = null; modsLoadInstalled(); modsSearch(true); }
     render();
@@ -962,7 +959,7 @@ const ACTIONS = {
   toggleMinimize: async () => { S.settings = await K.settings.set({ minimizeOnLaunch: !S.settings.minimizeOnLaunch }); render(); },
   toggleConsole: async () => { S.settings = await K.settings.set({ showConsole: !S.settings.showConsole }); render(); },
   openGameDir: () => K.settings.openGameDir(),
-  useAccount: async (id) => { S.accounts = await K.accounts.select(id); render(); loadSkin(); },
+  useAccount: async (id) => { S.accounts = await K.accounts.select(id); render(); await loadSkin(); refreshAvatar(); },
   removeAccount: async (id) => { S.accounts = await K.accounts.remove(id); render(); },
   renameStart: (id) => { S.renaming = id; render(); },
   renameCancel: () => { S.renaming = null; render(); },
@@ -1021,13 +1018,14 @@ const ACTIONS = {
 document.addEventListener('click', (ev) => {
   const el = ev.target.closest('[data-act]');
   if (!el) {
-    if (S.menuOpen && !ev.target.closest('.picker')) setMenu(false);
+    if (S.menuOpen && !ev.target.closest('.picker, .qrow')) setMenu(false);
     return;
   }
   const fn = ACTIONS[el.dataset.act];
   if (fn) fn(el.dataset.id, el);
 });
 $('#accChip').dataset.act = 'goAccount';
+Object.assign(ACTIONS, PAGE_ACTIONS);
 ACTIONS.goAccount = () => { S.screen = 'settings'; S.sTab = 'account'; render(); loadSkin(); };
 
 document.addEventListener('input', (ev) => {
@@ -1068,9 +1066,9 @@ $('#wClose').addEventListener('click', () => K.win.close());
 K.game.onProgress((p) => {
   S.prog = p;
   // На главной обновляем только полосу загрузки — без перерисовки всей страницы
-  const bar = S.screen === 'home' && document.querySelector('#view .progress');
+  const bar = (S.screen === 'home' || S.screen === 'komori') && document.querySelector('#view .progress');
   if (bar) { const h = progressHtml(); if (h) { bar.outerHTML = h; return; } }
-  if (S.screen === 'home' || S.screen === 'versions' || (S.screen === 'mods' && S.mods.type === 'modpack')) render();
+  if (S.screen === 'home' || S.screen === 'komori' || S.screen === 'versions' || (S.screen === 'mods' && S.mods.type === 'modpack')) render();
 });
 K.game.onLog((text) => {
   S.log = (S.log + text).slice(-60000);
@@ -1080,10 +1078,10 @@ K.game.onLog((text) => {
   if (lb) lb.innerHTML = logLines();
 });
 if (K.server.onBlocked) K.server.onBlocked((list) => toast('Отключены моды, которых нет в списке разрешённых на сервере: ' + list.join(', ')));
-K.game.onRunning((ids) => { S.running = ids || []; render(); });
+K.game.onRunning((ids) => { S.running = ids || []; render(); loadStats(); });
 K.game.onExit(({ code, error, crash }) => {
   if (crash) S.crash = { code: error ? -1 : code, error: error || '', reason: crash.reason, canReport: crash.canReport, hasCrashReport: crash.hasCrashReport, note: '', sending: false, sent: false };
-  render(); renderCrash(); loadLastLog();
+  render(); renderCrash(); loadLastLog(); loadStats();
 });
 K.update.onState((st) => { S.update = st; renderSide(); if (S.screen === 'settings') render(); });
 K.accounts.onMsDone((accs) => { S.accounts = accs; S.msCode = null; toast('Вход выполнен', true); render(); });
@@ -1100,6 +1098,9 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
     S.running = await K.game.running();
   } catch (e) { toast(errText(e)); }
   render();
+  loadMcNews();
+  loadStats();
+  loadLook();
   loadVersions();
   loadLastLog();
   refreshPing();
@@ -1107,11 +1108,12 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
 })();
 
 async function refreshPing(force) {
-  if (force) { S.ping = null; if (S.screen === 'home') render(); }
+  if (force) { S.ping = null; if (S.screen === 'komori') render(); }
   try { S.ping = await K.server.ping(); } catch { S.ping = { online: false }; }
-  if (S.screen === 'home' && !S.form) render();
+  renderSide();
+  if (S.screen === 'komori' && !S.form) render();
 }
 async function loadLastLog() {
   try { S.lastLog = await K.game.lastLog(); } catch { S.lastLog = null; }
-  if (S.screen === 'home' && !S.running.length) render();
+  if (S.screen === 'komori' && !S.running.length) render();
 }

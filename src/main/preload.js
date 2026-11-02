@@ -87,6 +87,17 @@ contextBridge.exposeInMainWorld('komori', {
     send: (note) => ipcRenderer.invoke('crash:send', note),
     openLog: () => ipcRenderer.invoke('crash:openLog')
   },
+  stats: () => ipcRenderer.invoke('stats:get'),
+  news: {
+    minecraft: (force) => ipcRenderer.invoke('news:mc', force),
+    komori: (force) => ipcRenderer.invoke('news:komori', force),
+    open: (id) => ipcRenderer.invoke('news:open', id)
+  },
+  look: {
+    get: () => ipcRenderer.invoke('look:get'),
+    pick: (kind) => ipcRenderer.invoke('look:pick', kind),
+    reset: (kind) => ipcRenderer.invoke('look:reset', kind)
+  },
   update: {
     state: () => ipcRenderer.invoke('update:state'),
     check: () => ipcRenderer.invoke('update:check'),

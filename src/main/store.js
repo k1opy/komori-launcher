@@ -24,7 +24,11 @@ function writeJson(name, data) {
 
 // ---------- настройки ----------
 // theme (п.3): 'system' | 'dark' | 'light'; skinServerUrl (п.2): свой адрес сервера скинов, пусто = из komori.config.json
-const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '', theme: 'system', skinServerUrl: '' };
+const DEFAULT_SETTINGS = { ram: 4, minimizeOnLaunch: true, showConsole: false, gameDir: '', theme: 'system', skinServerUrl: '',
+  accent: 'violet', avatarPose: 'bust', avatarLight: 'studio', avatarBg: 'glow', avatarColor: 'violet' };
+// Внешний вид: акцент лаунчера и оформление аватарки
+const ACCENTS = ['graphite', 'beige', 'blue', 'violet', 'green', 'red', 'pink', 'yellow', 'orange'];
+const AV_POSES = ['bust', 'head'], AV_LIGHTS = ['studio', 'side', 'soft', 'rim'], AV_BGS = ['solid', 'glow', 'image', 'none'];
 const THEMES = ['system', 'dark', 'light'];
 
 function getSettings() {
@@ -36,6 +40,11 @@ function setSettings(patch) {
   const s = Object.assign(getSettings(), patch || {});
   s.ram = Math.max(1, Math.min(32, Math.round(Number(s.ram) || 4)));
   if (!THEMES.includes(s.theme)) s.theme = 'system';
+  if (!ACCENTS.includes(s.accent)) s.accent = 'violet';
+  if (!ACCENTS.includes(s.avatarColor)) s.avatarColor = s.accent;
+  if (!AV_POSES.includes(s.avatarPose)) s.avatarPose = 'bust';
+  if (!AV_LIGHTS.includes(s.avatarLight)) s.avatarLight = 'studio';
+  if (!AV_BGS.includes(s.avatarBg)) s.avatarBg = 'glow';
   s.skinServerUrl = String(s.skinServerUrl || '').trim().replace(/\/+$/, '').slice(0, 200);
   s.manualDir = typeof s.manualDir === 'string' ? s.manualDir.slice(0, 500) : '';   // своя папка загрузок для ручных файлов
   writeJson('settings.json', s);
