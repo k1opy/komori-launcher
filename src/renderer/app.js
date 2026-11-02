@@ -412,15 +412,15 @@ function closeManual() { clearInterval(manualTimer); S.manual = null; renderManu
 
 function renderManual() {
   const m = $('#manual');
-  if (!S.manual) { m.classList.add('hidden'); m.innerHTML = ''; return; }
+  if (!S.manual) { m.classList.add('hidden'); m.innerHTML = ''; m._html = ''; return; }
   const M = S.manual, all = !M.items.length;
   const rows = M.done.map(t => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(t)}</b><span class="mby">в сборке</span></div><span class="tag ok">✓ Готово</span></div>`).join('') +
     M.items.map((it, i) => `<div class="mrow"><div class="t"><b class="mtitle-static">${esc(it.title)}</b><span class="mby">${esc(it.file || '')}</span></div>${it.url ? `<button type="button" class="btn" data-act="manualOpen" data-id="${i}">Скачать</button>` : ''}</div>`).join('');
-  m.innerHTML = `<div class="dialog" role="dialog" aria-label="Ручная загрузка" style="width:660px">
+  const html = `<div class="dialog" role="dialog" aria-label="Ручная загрузка" style="width:660px">
     <div class="dialog-head"><h2>${esc(all ? 'Все файлы на месте' : M.title)}</h2><button type="button" class="icon-btn" data-act="manualClose" aria-label="Закрыть"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
     <p class="note" style="margin:0">${all ? 'Всё скачано и уже лежит в сборке. Можно играть.' :
       'Авторы этих модов разрешили скачивать их только с сайта CurseForge. Нажми «Скачать» у каждого и скачай файл на странице — в обычную папку «Загрузки». Лаунчер сам найдёт файлы и положит их в сборку, ничего переносить не нужно.'}</p>
-    <div class="list" style="max-height:320px">${rows}</div>
+    <div class="list" style="max-height:calc(100vh - 330px)">${rows}</div>
     <div class="dialog-foot">
       ${all ? '' : `<span class="note" style="margin-right:auto">${M.scanning ? 'Ищу…' : 'Слежу за «Загрузками»…'}</span>
       <button type="button" class="btn2" data-act="manualPick">Файлы в другой папке…</button>
@@ -428,6 +428,12 @@ function renderManual() {
       ${all && M.launchAfter ? `<button type="button" class="btn" data-act="manualPlay">Играть</button>` : `<button type="button" class="btn${all ? '' : '2'}" data-act="manualClose">${all ? 'Готово' : 'Позже'}</button>`}
       ${!all && M.launchAfter ? `<button type="button" class="btn2" data-act="manualPlay">Играть без них</button>` : ''}
     </div></div>`;
+  // Окно обновляется каждые 3 секунды (поиск файлов) — не трогаем его, если ничего не поменялось, и не сбрасываем прокрутку
+  if (html !== m._html) {
+    const old = m.querySelector('.list'), top = old ? old.scrollTop : 0;
+    m.innerHTML = html; m._html = html;
+    const l = m.querySelector('.list'); if (l) l.scrollTop = top;
+  }
   m.classList.remove('hidden');
 }
 
