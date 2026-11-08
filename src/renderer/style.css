@@ -488,3 +488,5 @@ body.theme-light .ico{filter:invert(.85) sepia(.4) hue-rotate(220deg)}
 .ph-status{margin-top:4px;font-size:13px;color:var(--text2)}
 .acc-chip .meta .lv{font-weight:500;font-size:11px;color:var(--accent);margin-left:4px}
 button:disabled{cursor:default}
+.stop-btn{min-height:42px}
+.kh-btns{display:flex;gap:8px}.kh-btns .play{flex:1}

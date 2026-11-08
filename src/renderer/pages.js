@@ -78,9 +78,17 @@ function quickLaunch() {
       ${p ? `<button type="button" class="btn2 psq" data-act="toggleMenu" aria-expanded="${S.menuOpen}">Сменить сборку</button>
       <div class="qmenu plist" role="listbox" aria-label="Сборки">${menu.html}</div>` : ''}
       <button type="button" class="play ${ps.cls}" data-act="${p ? 'play' : 'newProfile'}">${PLAY_SVG}<span>${p ? ps.label : 'Создать'}</span></button>
+      ${stopBtn(p && p.id)}
     </div>
     ${progressHtml()}
   </section>`;
+}
+
+// Кнопка рядом с «Играть»: «Отменить», пока идёт подготовка, и «Закрыть игру», когда игра запущена
+function stopBtn(id) {
+  if (S.busy && (!id || S.busyTarget === id || !S.busyTarget)) return '<button type="button" class="btn-ghost stop-btn" data-act="stopGame">Отменить</button>';
+  if (id && S.running.includes(id)) return `<button type="button" class="btn-ghost stop-btn" data-act="stopGame" data-id="${esc(id)}" title="Игра закроется сразу, несохранённое с последнего автосохранения пропадёт">Закрыть игру</button>`;
+  return '';
 }
 
 // ---------- Главная: новости Minecraft ----------
@@ -132,7 +140,7 @@ function viewKomori() {
       <div class="kh-t"><h1>${esc(S.info.server.name || 'Komori')}</h1>
         <div class="kh-s"><span class="dot ${!pg ? 'wait' : pg.online ? '' : 'off'}"></span>${esc(status)}<span class="sep">·</span><code>${esc(S.info.server.host)}</code></div></div>
       <div class="kh-play">
-        <button type="button" class="play ${srvRunning ? 'ingame' : S.busy ? 'busy' : ''}" data-act="playServer">${PLAY_SVG}<span>${srvRunning ? 'В игре' : S.busy ? 'Запуск…' : 'Играть на Komori'}</span></button>
+        <div class="kh-btns"><button type="button" class="play ${srvRunning ? 'ingame' : S.busy ? 'busy' : ''}" data-act="playServer">${PLAY_SVG}<span>${srvRunning ? 'В игре' : S.busy ? 'Запуск…' : 'Играть на Komori'}</span></button>${stopBtn(S.info.serverProfileId)}</div>
         ${progressHtml()}
       </div>
     </section>

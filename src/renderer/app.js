@@ -187,7 +187,9 @@ function viewProfiles() {
     <div class="t"><b>${esc(p.name)}${p.managed ? ' <span class="tag ok">Сервер</span>' : ''}${S.running.includes(p.id) ? ' <span class="tag warn">Запущен</span>' : ''}</b><span>${esc(profMeta(p))}</span><small>${p.managed ? 'Сборку задают админы, обновляется сама' : 'Последний запуск: ' + esc(ago(p.lastPlayed))}</small></div>
     ${p.managed ? '' : `<button type="button" class="icon-btn" data-act="editProfile" data-id="${esc(p.id)}" aria-label="Изменить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>`}
     <button type="button" class="icon-btn" data-act="openProfileDir" data-id="${esc(p.id)}" aria-label="Открыть папку"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h6l2 2h10v11H3z"/></svg></button>
-    <button type="button" class="icon-btn primary" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg></button>
+    ${S.running.includes(p.id) || S.busyTarget === p.id
+      ? `<button type="button" class="icon-btn" data-act="stopGame" data-id="${esc(p.id)}" aria-label="${S.busyTarget === p.id ? 'Отменить запуск' : 'Закрыть игру'}" title="${S.busyTarget === p.id ? 'Отменить запуск' : 'Закрыть игру'}"><svg width="13" height="13" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>`
+      : `<button type="button" class="icon-btn primary" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg></button>`}
   </div>`).join('');
   return `<section class="page"><div class="page-head"><h1>Сборки</h1><button type="button" class="btn" data-act="newProfile">+ Новая сборка</button></div><div class="grid3">${cards}</div></section>`;
 }
@@ -821,7 +823,7 @@ function renderForm() {
     <div style="display:flex;gap:16px;align-items:center">
       <div class="field" style="flex:1"><label for="fRam" id="fRamLabel">Память сборки: ${f.ram ? f.ram + ' ГБ' : 'как в настройках (' + ((S.settings && S.settings.ram) || 4) + ' ГБ)'}</label>
         <input type="range" id="fRam" min="0" max="16" step="1" value="${f.ram || 0}" aria-label="Память сборки"></div>
-      ${f.id ? `<button type="button" class="btn-ghost" data-act="fDelete">Удалить сборку</button>` : ''}
+      ${f.id ? `<button type="button" class="btn-ghost" data-act="fDelete">${f.confirmDel ? 'Точно удалить? Папка уйдёт в корзину' : 'Удалить сборку'}</button>` : ''}
     </div>
     <div class="dialog-foot"><span style="color:var(--text2)">${esc(LOADER_NAMES[f.loader])}${f.loader !== 'vanilla' ? ' ' + esc(f.loaderVersion || '(авто)') : ''} · ${esc(mcLabel(f.mcVersion))}</span>
       <div style="display:flex;gap:8px"><button type="button" class="btn2" data-act="fClose">Отмена</button><button type="button" class="btn" data-act="fSave">${f.id ? 'Сохранить' : 'Создать'}</button></div></div>
@@ -847,16 +849,16 @@ async function launch(profileId, join, skipManual) {
     const left = await K.manual.pending(target).catch(() => []);
     if (left.length) { openManual(target, 'Перед игрой скачай ' + left.length + ' ' + (left.length === 1 ? 'файл' : left.length < 5 ? 'файла' : 'файлов'), () => launch(profileId, join, true)); return; }
   }
-  S.busy = true; S.prog = { stage: 'Подготовка', done: 0, total: 0 }; S.menuOpen = false; S.log = '';
+  S.busy = true; S.busyTarget = target; S.prog = { stage: 'Подготовка', done: 0, total: 0 }; S.menuOpen = false; S.log = '';
   render();
   try {
     if (profileId) S.profiles = await K.profiles.select(profileId);
     await K.game.launch(profileId || S.profiles.selected, !!join);
     S.profiles = await K.profiles.get();
   } catch (e) {
-    toast(errText(e));
+    if (/Запуск отменён/.test(errText(e))) toast('Запуск отменён', true); else toast(errText(e));
   } finally {
-    S.busy = false; S.prog = null; render();
+    S.busy = false; S.busyTarget = null; S.prog = null; render();
   }
 }
 
@@ -946,6 +948,12 @@ const ACTIONS = {
     // Без ссылки на сборку сервера кнопка запускает выбранный профиль — говорим об этом явно
     if (!S.info.serverManifest) toast('Сборка сервера не задана (serverManifestUrl) — запускаю выбранную сборку');
     launch(null, true);
+  },
+  // «Отменить» во время подготовки и «Закрыть игру», когда она уже идёт
+  stopGame: async (id) => {
+    const target = id || S.busyTarget || S.profiles.selected;
+    const r = await K.game.stop(target).catch(e => { toast(errText(e)); return null; });
+    if (r === 'cancel') { S.prog = { stage: 'Отменяю', done: 0, total: 0 }; render(); }
   },
   playProfile: (id) => { S.screen = 'home'; if (S.info.serverManifest && id === S.info.serverProfileId) launch(null, true); else launch(id, false); },
   newProfile: () => { S.menuOpen = false; openForm(null); },
@@ -1050,7 +1058,9 @@ const ACTIONS = {
   },
   fDelete: async () => {
     if (!S.form || !S.form.id) return;
-    S.profiles = await K.profiles.remove(S.form.id); S.form = null; renderForm(); render();
+    if (!S.form.confirmDel) { S.form.confirmDel = true; return renderForm(); }
+    try { S.profiles = await K.profiles.remove(S.form.id); S.form = null; renderForm(); render(); toast('Сборка удалена, папка в корзине', true); }
+    catch (e) { toast(errText(e)); }
   }
 };
 

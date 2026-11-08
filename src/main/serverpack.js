@@ -87,8 +87,8 @@ async function fetchManifest(url, root, extraHosts, fallback) {
 }
 
 // Синхронизация папки профиля сервера с манифестом. Возвращает { dir, blocked: [названия отключённых модов] }
-async function sync(root, m, progress) {
-  const dir = path.join(root, 'instances', SERVER_PROFILE_ID);
+async function sync(root, m, progress, dirOverride) {
+  const dir = dirOverride || path.join(root, 'instances', SERVER_PROFILE_ID);
   const statePath = path.join(dir, 'komori-server-state.json');
   let state = { managed: [] };
   try { state = JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch {}

@@ -1,6 +1,7 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } = require('electron');
 
 const store = require('./store');
@@ -71,8 +72,11 @@ let win = null;
 // ===== Несколько игр одновременно =====
 // profileId -> { child, gameDir }. Один профиль — одна копия игры (иначе они делят папку, моды и настройки).
 const games = new Map();
-const preparing = new Set(); // профили, которые сейчас готовятся к запуску
+const preparing = new Map(); // профили, которые сейчас готовятся к запуску: id -> { cancelled }
+function cancelledError() { const e = new Error('Запуск отменён'); e.cancelled = true; return e; }
 function sendRunning() { send('game:running', [...games.keys()]); }
+// Сборки, чьи папки сейчас заняты (игра запущена или готовится); except — текущая, её как раз можно переименовать
+function busyIds(except) { const s = new Set([...games.keys(), ...preparing.keys()]); if (except) s.delete(except); return s; }
 let msLogin = null; // { cancelled }
 
 function send(channel, data) { if (win && !win.isDestroyed()) win.webContents.send(channel, data); }
@@ -94,6 +98,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  try { store.syncInstanceDirs(); } catch {}
   createWindow();
   updater.init({
     enabled: app.isPackaged && !DEV,
@@ -189,11 +194,20 @@ ipcMain.handle('settings:set', (e, patch) => store.setSettings(patch));
 ipcMain.handle('settings:openGameDir', () => { const d = store.getSettings().gameDir; fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 
 ipcMain.handle('profiles:get', () => store.getProfiles());
-ipcMain.handle('profiles:save', (e, p) => store.saveProfile(p || {}));
-ipcMain.handle('profiles:delete', (e, id) => store.deleteProfile(id));
+ipcMain.handle('profiles:save', (e, p) => { store.saveProfile(p || {}); return store.syncInstanceDirs(busyIds()); });
+// Удаление сборки: папку отправляем в корзину (её можно вернуть), а не стираем
+ipcMain.handle('profiles:delete', async (e, id) => {
+  if (busyIds().has(id)) throw new Error('Сначала закрой эту сборку');
+  const p = store.getProfiles().list.find(x => x.id === id);
+  const d = p && store.instanceDir(p);
+  if (d && fs.existsSync(d)) { try { await shell.trashItem(d); } catch {} }
+  return store.deleteProfile(id);
+});
 ipcMain.handle('profiles:select', (e, id) => store.selectProfile(id));
 ipcMain.handle('profiles:openDir', (e, id) => {
-  const d = path.join(store.getSettings().gameDir, 'instances', String(id).replace(/[^a-f0-9]/g, ''));
+  const p = store.getProfiles().list.find(x => x.id === id);
+  if (!p) throw new Error('Сборка не найдена');
+  const d = store.instanceDir(p);
   fs.mkdirSync(d, { recursive: true });
   return shell.openPath(d);
 });
@@ -257,9 +271,10 @@ ipcMain.handle('auth:ms:cancel', () => { if (msLogin) msLogin.cancelled = true; 
 ipcMain.handle('shell:openCodePage', (e, url) => { if (/^https:\/\/(www\.)?microsoft\.com\/link|^https:\/\/login\.microsoft/.test(url)) shell.openExternal(url); });
 
 // ---------- установка и запуск ----------
-function makeProgress() {
+function makeProgress(tok) {
   let last = 0;
   return (stage, done, total) => {
+    if (tok && tok.cancelled) throw cancelledError();
     const now = Date.now();
     if (now - last < 80 && done !== total) return;
     last = now;
@@ -283,12 +298,27 @@ ipcMain.handle('game:launch', async (e, { profileId, join }) => {
   const targetId = join && CONFIG.serverManifestUrl ? serverpack.SERVER_PROFILE_ID : (profileId || store.getProfiles().selected);
   if (games.has(targetId)) throw new Error('Этот профиль уже запущен. Для второй игры выбери другой профиль.');
   if (preparing.has(targetId)) throw new Error('Этот профиль уже запускается');
-  preparing.add(targetId);
-  try { return await launchGame(settings, profileId, join); }
+  const tok = { cancelled: false };
+  preparing.set(targetId, tok);
+  try { return await launchGame(settings, profileId, join, tok); }
   finally { preparing.delete(targetId); }
 });
 
-async function launchGame(settings, profileId, join) {
+// Кнопка «Отменить» / «Закрыть игру»: пока идёт подготовка — прерываем её, если игра уже запущена — закрываем процесс
+function killTree(child) {
+  if (process.platform === 'win32') spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true }).on('error', () => {});
+  else { try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch {} } }
+}
+ipcMain.handle('game:stop', (e, profileId) => {
+  const id = profileId || store.getProfiles().selected;
+  const tok = preparing.get(id) || (preparing.size === 1 ? [...preparing.values()][0] : null);
+  if (tok) { tok.cancelled = true; return 'cancel'; }
+  const g = games.get(id) || (games.size === 1 ? [...games.values()][0] : null);
+  if (g) { g.killed = true; killTree(g.child); return 'kill'; }
+  return null;
+});
+
+async function launchGame(settings, profileId, join, tok = { cancelled: false }) {
   const root = settings.gameDir;
 
   const accs = store.getAccounts();
@@ -307,7 +337,8 @@ async function launchGame(settings, profileId, join) {
     if (fresh !== acc) { const sel = store.getAccounts().selected; store.upsertAccount(fresh); store.selectAccount(sel); acc = fresh; }
   }
 
-  const progress = makeProgress();
+  if (tok.cancelled) throw cancelledError();
+  const progress = makeProgress(tok);
   let joinTarget = join ? { host: CONFIG.server.host, port: CONFIG.server.port } : null;
   let profile;
   if (join && CONFIG.serverManifestUrl) {
@@ -318,7 +349,9 @@ async function launchGame(settings, profileId, join) {
       name: m.name, icon: 'bat', loader: m.loader, loaderVersion: m.loaderVersion, mcVersion: m.minecraft, ram: m.ram
     });
     store.selectProfile(profile.id);
-    const synced = await serverpack.sync(root, m, progress);
+    store.syncInstanceDirs(busyIds(profile.id));
+    profile = store.getProfiles().list.find(x => x.id === profile.id) || profile;
+    const synced = await serverpack.sync(root, m, progress, store.instanceDir(profile));
     if (synced.blocked.length) send('server:blocked', synced.blocked);
     if (m.server) joinTarget = m.server;
   } else {
@@ -328,7 +361,9 @@ async function launchGame(settings, profileId, join) {
   }
 
   const mc = await versions.resolveId(root, profile.mcVersion);
-  const gameDir = path.join(root, 'instances', profile.id);
+  store.syncInstanceDirs(busyIds(profile.id));
+  profile = store.getProfiles().list.find(x => x.id === profile.id) || profile;
+  const gameDir = store.instanceDir(profile);
   const id = await loaders.ensureLoader(root, profile.loader, mc, profile.loaderVersion, progress,
     text => { send('game:log', text); });
   const install = await versions.installVersion(root, id, gameDir, progress);
@@ -362,17 +397,19 @@ async function launchGame(settings, profileId, join) {
     join: joinTarget, extraJvm
   });
 
+  if (tok.cancelled) throw cancelledError();
   send('game:progress', { stage: 'Запуск', done: 1, total: 1 });
   const launchTime = Date.now();
   const child = launch(java.javaw, args, gameDir,
     text => { send('game:log', games.size > 1 ? prefixLines(profile.name, text) : text); },
     (code, err) => {
+      const killed = !!(games.get(profile.id) || {}).killed;
       games.delete(profile.id);
       playtime.stop(profile.id);
       kacc.syncStats(playtime.get());
       sendRunning();
       let crashInfo = null;
-      if (err || (code !== 0 && code !== null)) {
+      if (!killed && (err || (code !== 0 && code !== null))) {
         // Вылет: запоминаем всё для отчёта админам.
         lastCrash = { gameDir, launchTime, code: err ? -1 : code, profile, version: id, launcherVersion: app.getVersion(), playerName: acc.name, javaPath: java.javaw };
         const rep = crash.collect(lastCrash);
@@ -428,7 +465,7 @@ async function profileCtx(profileId) {
   const p = profiles.list.find(x => x.id === (profileId || profiles.selected));
   if (!p) throw new Error('Профиль не найден');
   const mc = await versions.resolveId(root, p.mcVersion);
-  return { profile: p, dir: path.join(root, 'instances', p.id), loader: p.loader, mc };
+  return { profile: p, dir: store.instanceDir(p), loader: p.loader, mc };
 }
 
 function source(name) { return name === 'curseforge' ? curseforge : modrinth; }
@@ -491,9 +528,9 @@ ipcMain.handle('mods:update', async (e, { profileId, key, versionId, source: src
 async function installPackFile(file, extra) {
   const root = store.getSettings().gameDir;
   const progress = makeProgress();
-  const r = await modpacks.installFromFile(file, Object.assign({ root, saveProfile: store.saveProfile, progress }, extra || {}));
+  const r = await modpacks.installFromFile(file, Object.assign({ root, saveProfile: p => { store.saveProfile(p); return store.syncInstanceDirs(busyIds()); }, dirOf: store.instanceDir, progress }, extra || {}));
   send('game:progress', { stage: 'Готово', done: 1, total: 1 });
-  if (r.manual && r.manual.length) manual.add(path.join(root, 'instances', r.profile.id), r.manual);
+  if (r.manual && r.manual.length) manual.add(store.instanceDir(r.profile), r.manual);
   return { profiles: store.getProfiles(), profileId: r.profile.id, name: r.profile.name, manual: r.manual };
 }
 
@@ -609,7 +646,7 @@ ipcMain.handle('server:ping', () => ping(CONFIG.server.host, CONFIG.server.port)
 // Плашка «Логи Minecraft»: хвост последнего лога выбранной сборки, когда игра не запущена
 ipcMain.handle('game:lastLog', () => {
   const profiles = store.getProfiles();
-  const d = path.join(store.getSettings().gameDir, 'instances', profiles.selected || '');
+  const d = store.instanceDir(profiles.list.find(x => x.id === profiles.selected));
   for (const f of [path.join(d, 'logs', 'latest.log'), path.join(d, 'komori-launch.log')]) {
     try {
       const st = fs.statSync(f);
@@ -624,7 +661,7 @@ ipcMain.handle('game:lastLog', () => {
 
 ipcMain.handle('game:openLog', () => {
   const profiles = store.getProfiles();
-  const d = path.join(store.getSettings().gameDir, 'instances', profiles.selected || '');
+  const d = store.instanceDir(profiles.list.find(x => x.id === profiles.selected));
   const f = path.join(d, 'komori-launch.log');
   return fs.existsSync(f) ? shell.openPath(f) : shell.openPath(d);
 });

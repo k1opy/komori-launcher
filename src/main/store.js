@@ -102,6 +102,37 @@ function upsertManagedProfile(id, p) {
   return existing;
 }
 
+// ----- папки сборок: называются как сборка (а не случайным id) -----
+function safeDirName(name) {
+  let n = String(name || '').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').replace(/[. ]+$/, '').trim().slice(0, 48);
+  if (!n || /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(n) || /^[._]/.test(n)) n = 'Сборка';
+  return n;
+}
+function instanceDir(p) { return path.join(getSettings().gameDir, 'instances', (p && (p.dir || p.id)) || '_none'); }
+// Переименовывает папки под названия сборок. busy — сборки, которые сейчас запущены (их папки трогать нельзя).
+function syncInstanceDirs(busy) {
+  const root = path.join(getSettings().gameDir, 'instances');
+  const data = getProfiles();
+  let changed = false;
+  const used = new Set(data.list.map(p => (p.dir || p.id).toLowerCase()));
+  for (const p of data.list) {
+    if (busy && busy.has(p.id)) continue;
+    const cur = p.dir || p.id, base = safeDirName(p.name);
+    if (cur.toLowerCase() === base.toLowerCase()) continue;
+    if (cur.toLowerCase().startsWith(base.toLowerCase() + ' (') && p.dir) continue; // уже «Название (2)»
+    let want = base, i = 2;
+    while (used.has(want.toLowerCase()) || fs.existsSync(path.join(root, want))) want = `${base} (${i++})`;
+    const from = path.join(root, cur), to = path.join(root, want);
+    try {
+      if (fs.existsSync(from)) fs.renameSync(from, to);
+      used.delete(cur.toLowerCase()); used.add(want.toLowerCase());
+      p.dir = want; changed = true;
+    } catch {} // папка занята (открыта в проводнике или игре) — попробуем в следующий раз
+  }
+  if (changed) writeJson('profiles.json', data);
+  return data;
+}
+
 function deleteProfile(id) {
   const data = getProfiles();
   data.list = data.list.filter(x => x.id !== id);
@@ -180,7 +211,7 @@ function selectAccount(id) {
   return getAccounts();
 }
 
-module.exports = {
+module.exports = { instanceDir, syncInstanceDirs, safeDirName,
   getSettings, setSettings,
   getProfiles, saveProfile, deleteProfile, selectProfile, touchProfile, upsertManagedProfile, ICONS, LOADERS,
   getAccounts, getAccountSecret, upsertAccount, removeAccount, selectAccount, enc, dec, DATA_DIR

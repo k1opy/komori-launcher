@@ -72,7 +72,7 @@ async function installFromFile(zipPath, deps) {
 function createProfile(deps, name, loader, loaderVersion, mc) {
   const data = deps.saveProfile({ name: String(name || 'Сборка').slice(0, 32), icon: deps.icon || 'chest', loader, loaderVersion, mcVersion: mc });
   const profile = data.list.find(p => p.id === data.selected);
-  const dir = path.join(deps.root, 'instances', profile.id);
+  const dir = deps.dirOf ? deps.dirOf(profile) : path.join(deps.root, 'instances', profile.id);
   fs.mkdirSync(dir, { recursive: true });
   return { profile, dir };
 }

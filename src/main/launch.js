@@ -93,7 +93,8 @@ function buildArgs(ctx) {
 
 function launch(javaw, args, gameDir, onLog, onExit) {
   fs.mkdirSync(gameDir, { recursive: true });
-  const child = spawn(javaw, [...args.jvm, args.mainClass, ...args.game], { cwd: gameDir, windowsHide: false, detached: false });
+  // detached: игра живёт отдельно и не закрывается вместе с лаунчером
+  const child = spawn(javaw, [...args.jvm, args.mainClass, ...args.game], { cwd: gameDir, windowsHide: false, detached: true });
   const logStream = fs.createWriteStream(path.join(gameDir, 'komori-launch.log'), { flags: 'w' });
   const handle = buf => { const s = buf.toString(); logStream.write(s); onLog && onLog(s); };
   child.stdout.on('data', handle);
