@@ -82,10 +82,13 @@ function buildArgs(ctx) {
   if (v.logging && v.logging.client && ctx.logConfigPath) jvm.push(substitute(v.logging.client.argument, { path: ctx.logConfigPath }));
   // Доп. аргументы JVM от лаунчера (например, -javaagent authlib-injector для скинов офлайн-аккаунтов)
   if (Array.isArray(ctx.extraJvm)) jvm.push(...ctx.extraJvm);
+  // Аргументы Java из патчей сборки (Prism/MultiMC)
+  if (Array.isArray(v._extraJvm)) jvm.push(...v._extraJvm.map(x => substitute(x, vars)));
 
   // Игра
   let game = gameList ? collect(gameList, features) : String(v.minecraftArguments || '').split(' ').filter(Boolean);
   game = game.map(a => substitute(a, vars));
+  if (Array.isArray(v._tweakers)) for (const t of v._tweakers) game.push('--tweakClass', t);
   if (ctx.join && !joinViaQuickPlay) game.push('--server', ctx.join.host, '--port', String(ctx.join.port));
 
   return { jvm, mainClass: v.mainClass, game };

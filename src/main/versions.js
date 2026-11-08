@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 const { fetchJson, downloadAll } = require('./net');
+const mmcpatches = require('./mmcpatches');
 
 const MANIFEST_URL = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
 const LIBRARIES_URL = 'https://libraries.minecraft.net/';
@@ -158,6 +159,8 @@ function collectLibraries(v, root) {
   const seenCp = new Set();
   for (const lib of v.libraries || []) {
     if (!rulesAllow(lib.rules)) continue;
+    // Локальная библиотека сборки (патчи Prism): уже лежит в папке сборки
+    if (lib.localPath) { if (!seenCp.has(lib.localPath)) { seenCp.add(lib.localPath); classpath.push(lib.localPath); } continue; }
     const dl = lib.downloads || {};
     const isNativeArtifact = /:natives-windows/.test(lib.name || '');
 
@@ -256,6 +259,9 @@ function linkOwnJar(root, id, baseJar) {
 async function installVersion(root, id, gameDir, progress) {
   progress('Версия', 0, 1);
   const v = await resolveFull(root, id);
+  // Патчи сборки в формате Prism/MultiMC (например, GT New Horizons на Java 17+)
+  const patches = gameDir ? mmcpatches.read(gameDir) : [];
+  if (patches.length) mmcpatches.apply(v, gameDir, patches, rulesAllow);
 
   const tasks = [];
   const baseJar = path.join(versionDir(root, v.jarId), v.jarId + '.jar');
