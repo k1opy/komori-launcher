@@ -17,7 +17,11 @@ function read(gameDir) {
   });
   const out = [];
   for (const n of names) {
-    try { out.push(Object.assign({ _file: n }, JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')))); } catch {}
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8'));
+      // Берём только настоящие патчи Prism, а не случайные json какого-нибудь мода в папке patches
+      if (j && typeof j === 'object' && ['+libraries', '-libraries', '+jvmArgs', '+tweakers', 'mainClass'].some(k => k in j)) out.push(Object.assign({ _file: n }, j));
+    } catch {}
   }
   return out;
 }
