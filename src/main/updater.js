@@ -39,8 +39,9 @@ function check() {
 
 function install() {
   if (!autoUpdater || state.state !== 'ready') throw new Error('Обновление ещё не скачано');
-  if (init.isGameRunning && init.isGameRunning()) throw new Error('Сначала закрой игру — лаунчер перезапустится для установки');
-  setImmediate(() => autoUpdater.quitAndInstall(false, true));
+  // Игра запущена отдельно от лаунчера и переживёт его перезапуск, поэтому её закрывать не нужно.
+  // Тихая установка (без окна установщика) и сразу запуск новой версии.
+  setImmediate(() => autoUpdater.quitAndInstall(true, true));
   return true;
 }
 
