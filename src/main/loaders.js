@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const AdmZip = require('adm-zip');
 const { fetchJson, downloadAll, UA } = require('./net');
 const versions = require('./versions');
 const { ensureJava, componentFor } = require('./java');
@@ -112,6 +113,53 @@ function runInstaller(java, jar, root, onLog) {
   });
 }
 
+// Полное имя версии Forge в Maven. У старых версий в конце есть ветка: 1.7.10-10.13.4.1614-1.7.10.
+// Сборки (CurseForge, Modrinth) пишут короткое «10.13.4.1614» — ищем полное в списке Forge.
+async function forgeFullVersion(mc, lv) {
+  const want = `${mc}-${lv}`;
+  try {
+    const all = parseMavenVersions(await fetchText(`${FORGE_MAVEN}/maven-metadata.xml`));
+    if (all.includes(want)) return want;
+    const alt = all.find(v => v.startsWith(want + '-'));
+    if (alt) return alt;
+  } catch {}
+  return want;
+}
+
+// Forge до 1.13 (1.7.10, ранние 1.12.2): у старого установщика нет тихой установки клиента.
+// Ставим как он сам: профиль версии из install_profile.json, universal-jar — в libraries,
+// остальные библиотеки — с зеркал (старый адрес files.minecraftforge.net больше не работает).
+const LEGACY_MIRRORS = ['https://maven.minecraftforge.net/', 'https://libraries.minecraft.net/', 'https://repo1.maven.org/maven2/'];
+async function urlExists(url) {
+  try { const r = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': UA }, redirect: 'follow' }); return r.ok; } catch { return false; }
+}
+async function installLegacyForge(root, jar) {
+  const zip = new AdmZip(jar);
+  let ip;
+  try { ip = JSON.parse(zip.readAsText('install_profile.json')); } catch { return null; }
+  if (!ip || !ip.versionInfo || !ip.install) return null;
+  const vi = ip.versionInfo, inst = ip.install;
+  const forgeRel = versions.mavenPath(inst.path);
+  const uni = zip.getEntry(inst.filePath);
+  if (!uni) throw new Error('В установщике Forge нет файла ' + inst.filePath);
+  const forgeDest = path.join(root, 'libraries', forgeRel);
+  fs.mkdirSync(path.dirname(forgeDest), { recursive: true });
+  fs.writeFileSync(forgeDest, uni.getData());
+
+  vi.libraries = await Promise.all((vi.libraries || []).filter(l => l && l.name && l.clientreq !== false).map(async lib => {
+    const rel = versions.mavenPath(lib.name);
+    if (lib.name === inst.path) return { name: lib.name, downloads: { artifact: { path: rel, url: '' } } };
+    const own = lib.url ? String(lib.url).replace(/^http:\/\/files\.minecraftforge\.net\/maven\/?/, 'https://maven.minecraftforge.net/').replace(/^http:/, 'https:').replace(/\/?$/, '/') : null;
+    const bases = [...new Set([own, ...LEGACY_MIRRORS].filter(Boolean))];
+    for (const b of bases) if (await urlExists(b + rel)) return { name: lib.name, downloads: { artifact: { path: rel, url: b + rel } } };
+    throw new Error('Не нашёл библиотеку Forge ' + lib.name + ' ни на одном зеркале');
+  }));
+  const dir = path.join(root, 'versions', vi.id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, vi.id + '.json'), JSON.stringify(vi, null, 2));
+  return vi.id;
+}
+
 // Возвращает id версии для запуска (для vanilla — сама версия Minecraft).
 async function ensureLoader(root, loader, mc, loaderVersion, progress, onLog) {
   if (!loader || loader === 'vanilla') return mc;
@@ -140,7 +188,7 @@ async function ensureLoader(root, loader, mc, loaderVersion, progress, onLog) {
   const cache = readCache(root);
   if (hasVersion(root, cache[key])) return cache[key];
 
-  const full = loader === 'forge' ? `${mc}-${lv}` : lv;
+  const full = loader === 'forge' ? await forgeFullVersion(mc, lv) : lv;
   const url = loader === 'forge'
     ? `${FORGE_MAVEN}/${full}/forge-${full}-installer.jar`
     : `${NEO_MAVEN}/${full}/neoforge-${full}-installer.jar`;
@@ -155,6 +203,12 @@ async function ensureLoader(root, loader, mc, loaderVersion, progress, onLog) {
   progress(loader === 'forge' ? 'Скачиваю Forge' : 'Скачиваю NeoForge', 0, 1);
   await downloadAll([{ url, dest: jar }]);
 
+  if (loader === 'forge') {
+    progress('Устанавливаю Forge', 0, 0);
+    const legacyId = await installLegacyForge(root, jar);
+    if (legacyId) { cache[key] = legacyId; writeCache(root, cache); return legacyId; }
+  }
+
   const before = new Set(fs.readdirSync(path.join(root, 'versions')));
   progress(loader === 'forge' ? 'Устанавливаю Forge (до пары минут)' : 'Устанавливаю NeoForge (до пары минут)', 0, 0);
   await runInstaller(java.java, jar, root, onLog);
@@ -168,4 +222,4 @@ async function ensureLoader(root, loader, mc, loaderVersion, progress, onLog) {
   return id;
 }
 
-module.exports = { listLoaderVersions, ensureLoader, neoPrefix, cmpNum, pickDefault };
+module.exports = { listLoaderVersions, ensureLoader, neoPrefix, cmpNum, pickDefault, installLegacyForge, forgeFullVersion };
