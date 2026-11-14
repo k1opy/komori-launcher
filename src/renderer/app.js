@@ -21,6 +21,7 @@ const S = {
   news: { mc: null, mcLoading: false, mcError: null, ko: null, koLoading: false, koError: null, filter: 'all' },
   stats: null, look: { avatarBg: null }, avatar: null, actPeriod: 'w',
   // Аккаунт Komori: вход при запуске, смена пароля в настройках
+  friends: { data: null, loading: false, error: null, add: '', busy: false, msg: '', msgErr: false },
   kacc: { checked: false, account: null }, auth: blankAuth(), kpw: { old: '', n1: '', n2: '' }, kStatus: null, kLinkWait: false,
   mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', cats: [], tagQ: '', packMc: '', packLoader: '', hits: [], total: 0, offset: 0,
     loading: false, error: null, needLoader: false, mc: '', loader: '', items: [], updates: null, checking: false, busy: {} }
@@ -1185,6 +1186,7 @@ ACTIONS.goAccount = () => { if (!kAcc()) return ACTIONS.gOpen(); S.screen = 'pro
 document.addEventListener('input', (ev) => {
   const t = ev.target;
   if (t.id === 'vSearch') { S.vSearch = t.value; render(); }
+  else if (t.id === 'frAdd') { S.friends.add = t.value; const b = document.querySelector('[data-act=frAdd]'); if (b) b.disabled = S.friends.busy || !t.value.trim(); }
   else if (t.id === 'tagQ') { S.mods.tagQ = t.value; render(); }
   else if (t.id === 'modsQuery') { S.mods.query = t.value; clearTimeout(modsSearchTimer); modsSearchTimer = setTimeout(() => modsSearch(true), 400); }
   else if (t.id === 'devName') { S.devName = t.value; }
@@ -1211,6 +1213,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && S.form) { S.form = null; renderForm(); }
   else if (ev.key === 'Escape' && S.menuOpen) setMenu(false);
   if (ev.key === 'Enter' && ev.target.id === 'devName') ACTIONS.devLogin();
+  if (ev.key === 'Enter' && ev.target.id === 'frAdd') ACTIONS.frAdd();
   if (ev.key === 'Enter' && ['yggLogin', 'yggPass', 'yggUrl'].includes(ev.target.id)) ACTIONS.yggLogin();
   if (ev.key === 'Enter' && ev.target.id === 'newNick' && S.renaming) ACTIONS.renameSave(S.renaming);
 });

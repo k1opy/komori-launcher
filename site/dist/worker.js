@@ -995,6 +995,78 @@ async function accAdmin(req, env, ctx, action, url) {
   return json({ error: 'Неизвестное действие' }, 400);
 }
 
+// ===== Друзья и «в сети» =====
+// KV: kf:<id> → { f: [id], i: [id входящих заявок], o: [id исходящих] }; kp:<id> → { at, game } (где сейчас игрок, видят только друзья)
+const FR_MAX = 200, FR_PENDING = 50, PRESENCE_ONLINE_MS = 4 * 60 * 1000;
+async function frGet(env, id) { const d = await env.SITE.get('kf:' + id, { type: 'json' }); return { f: (d && d.f) || [], i: (d && d.i) || [], o: (d && d.o) || [] }; }
+async function frPut(env, id, d) { await env.SITE.put('kf:' + id, JSON.stringify(d)); }
+const frWithout = (arr, id) => arr.filter(x => x !== id);
+function frCard(a) { return { login: a.login, avatar: accAvatarUrl(a), level: accLevel((a.stats || {}).total), status: a.status || '' }; }
+async function frList(env, a) {
+  const d = await frGet(env, a.id);
+  const load = ids => Promise.all(ids.slice(0, FR_MAX).map(id => accGet(env, id)));
+  const [fa, ia, oa] = await Promise.all([load(d.f), load(d.i), load(d.o)]);
+  const pres = await Promise.all(d.f.slice(0, FR_MAX).map(id => env.SITE.get('kp:' + id, { type: 'json' })));
+  const now = Date.now();
+  const friends = fa.map((x, n) => {
+    if (!x) return null;
+    const pr = pres[n] || null, online = !!(pr && !pr.off && now - pr.at < PRESENCE_ONLINE_MS);
+    return Object.assign(frCard(x), { online, game: online && pr.game ? pr.game : null, seen: pr ? pr.at : null });
+  }).filter(Boolean).sort((x, y) => (y.online - x.online) || (!!y.game - !!x.game) || ((y.seen || 0) - (x.seen || 0)) || x.login.localeCompare(y.login));
+  return { friends, incoming: ia.filter(Boolean).map(frCard), outgoing: oa.filter(Boolean).map(frCard) };
+}
+async function accFriends(req, env, action) {
+  return accAuthed(req, env, async a => {
+    if (action === 'list') return json(await frList(env, a));
+    const b = await readJson(req);
+    const login = String((b && b.login) || '').trim();
+    if (!LOGIN_RE.test(login)) return json({ error: 'Неверный логин' }, 400);
+    const t = await accByLogin(env, login);
+    if (!t) return json({ error: 'Игрока с логином «' + login + '» нет' }, 404);
+    if (t.id === a.id) return json({ error: 'Себя добавить нельзя' }, 400);
+    const [me, them] = await Promise.all([frGet(env, a.id), frGet(env, t.id)]);
+    if (action === 'add') {
+      if (!await rateHit(env, 'fr:' + a.id, 30, 3600)) return json({ error: 'Слишком много заявок, подожди час' }, 429);
+      if (me.f.includes(t.id)) return json({ error: t.login + ' уже у тебя в друзьях' }, 400);
+      if (me.i.includes(t.id)) action = 'accept';   // он уже звал — просто дружим
+      else {
+        if (me.o.includes(t.id)) return json({ error: 'Заявка уже отправлена' }, 400);
+        if (me.f.length >= FR_MAX || me.o.length >= FR_PENDING) return json({ error: 'Слишком много друзей и заявок' }, 400);
+        if (them.i.length >= FR_PENDING) return json({ error: 'У игрока слишком много заявок, попробуй позже' }, 400);
+        me.o.push(t.id); them.i.push(a.id);
+        await Promise.all([frPut(env, a.id, me), frPut(env, t.id, them)]);
+        return json(Object.assign({ ok: 'Заявка отправлена ' + t.login }, await frList(env, a)));
+      }
+    }
+    if (action === 'accept') {
+      if (!me.i.includes(t.id)) return json({ error: 'Заявки от ' + t.login + ' нет' }, 400);
+      if (me.f.length >= FR_MAX || them.f.length >= FR_MAX) return json({ error: 'Слишком много друзей' }, 400);
+      me.i = frWithout(me.i, t.id); me.o = frWithout(me.o, t.id); them.o = frWithout(them.o, a.id); them.i = frWithout(them.i, a.id);
+      if (!me.f.includes(t.id)) me.f.push(t.id);
+      if (!them.f.includes(a.id)) them.f.push(a.id);
+      await Promise.all([frPut(env, a.id, me), frPut(env, t.id, them)]);
+      return json(Object.assign({ ok: t.login + ' теперь в друзьях' }, await frList(env, a)));
+    }
+    if (action === 'remove') {   // убрать из друзей, отклонить или отменить заявку
+      me.f = frWithout(me.f, t.id); me.i = frWithout(me.i, t.id); me.o = frWithout(me.o, t.id);
+      them.f = frWithout(them.f, a.id); them.i = frWithout(them.i, a.id); them.o = frWithout(them.o, a.id);
+      await Promise.all([frPut(env, a.id, me), frPut(env, t.id, them)]);
+      return json(await frList(env, a));
+    }
+    return json({ error: 'Неизвестное действие' }, 400);
+  });
+}
+// Лаунчер раз в пару минут сообщает, что игрок в сети и во что играет
+async function accPresence(req, env) {
+  return accAuthed(req, env, async a => {
+    const b = await readJson(req) || {};
+    const game = typeof b.game === 'string' ? b.game.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40) : '';
+    // offline — лаунчер закрылся: время запоминаем как «был в сети», но уже не в сети
+    await env.SITE.put('kp:' + a.id, JSON.stringify(b.offline ? { at: Date.now(), off: 1 } : { at: Date.now(), game }), { expirationTtl: 60 * 86400 });
+    return json({ ok: true });
+  });
+}
+
 async function accRoutes(req, env, ctx, url, p, m) {
   if (p === '/api/acc/register' && m === 'POST') return accRegister(req, env);
   if (p === '/api/acc/login' && m === 'POST') return accLogin(req, env);
@@ -1012,7 +1084,11 @@ async function accRoutes(req, env, ctx, url, p, m) {
   if (p === '/api/acc/discord' && m === 'DELETE') return accDiscordUnlink(req, env);
   if (p === '/api/acc/recover' && m === 'POST') return accRecoverStart(req, env);
   if (p === '/api/acc/recover/finish' && m === 'POST') return accRecoverFinish(req, env);
-  let r = p.match(/^\/api\/acc\/admin\/(find|reset|clear)$/);
+  if (p === '/api/acc/friends' && m === 'GET') return accFriends(req, env, 'list');
+  if (p === '/api/acc/presence' && m === 'POST') return accPresence(req, env);
+  let r = p.match(/^\/api\/acc\/friends\/(add|accept|remove)$/);
+  if (r && m === 'POST') return accFriends(req, env, r[1]);
+  r = p.match(/^\/api\/acc\/admin\/(find|reset|clear)$/);
   if (r) return accAdmin(req, env, ctx, r[1], url);
   r = p.match(/^\/api\/acc\/u\/([A-Za-z0-9_]{3,16})$/);
   if (r && m === 'GET') {

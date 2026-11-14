@@ -107,7 +107,26 @@ app.whenReady().then(() => {
   });
 });
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => playtime.flush());
+// «В сети» для друзей: раз в 2 минуты и сразу при запуске и закрытии игры
+function presenceGame() {
+  for (const id of games.keys()) {
+    if (id === serverpack.SERVER_PROFILE_ID) return 'Komori';
+    const p = store.getProfiles().list.find(x => x.id === id);
+    if (p) return p.name;
+  }
+  return '';
+}
+function presenceNow() { kacc.presence(presenceGame()); }
+setInterval(presenceNow, 120000);
+let quitPresence = false;
+app.on('before-quit', (e) => {
+  playtime.flush();
+  // Друзья сразу видят, что лаунчер закрыт (ждём ответа не дольше 1,5 с). Если игра ещё идёт — статус не трогаем
+  if (!quitPresence && !games.size) {
+    quitPresence = true; e.preventDefault();
+    Promise.race([kacc.presence('', true), new Promise(r => setTimeout(r, 1500))]).finally(() => app.quit());
+  }
+});
 
 // ---------- профиль игрока: время в игре, новости, баннер и фон аватарки ----------
 ipcMain.handle('stats:get', () => playtime.get());
@@ -146,7 +165,9 @@ ipcMain.handle('look:pick', async (e, kind) => {
 
 // ---------- аккаунт Komori ----------
 const kaWrap = fn => async (e, a) => fn(a || {});
-ipcMain.handle('kacc:me', async () => { const r = await kacc.me(); if (r.account && !r.offline) kacc.syncStats(playtime.get()); return r; });
+ipcMain.handle('kacc:me', async () => { const r = await kacc.me(); if (r.account && !r.offline) { kacc.syncStats(playtime.get()); presenceNow(); } return r; });
+ipcMain.handle('kacc:friends', kaWrap(() => kacc.friends()));
+ipcMain.handle('kacc:friend', kaWrap(a => kacc.friendAct(['add', 'accept', 'remove'].includes(a.action) ? a.action : 'add', String(a.login || '').trim().slice(0, 16))));
 ipcMain.handle('kacc:login', kaWrap(async a => { const r = await kacc.login(String(a.login || ''), String(a.password || '')); kacc.syncStats(playtime.get()); return r; }));
 ipcMain.handle('kacc:register', kaWrap(async a => { const r = await kacc.register(String(a.login || ''), String(a.password || ''), Number(a.age)); kacc.syncStats(playtime.get()); return r; }));
 ipcMain.handle('kacc:logout', () => kacc.logout());
@@ -408,6 +429,7 @@ async function launchGame(settings, profileId, join, tok = { cancelled: false })
       playtime.stop(profile.id);
       kacc.syncStats(playtime.get());
       sendRunning();
+      presenceNow();
       let crashInfo = null;
       if (!killed && (err || (code !== 0 && code !== null))) {
         // Вылет: запоминаем всё для отчёта админам.
@@ -422,6 +444,7 @@ async function launchGame(settings, profileId, join, tok = { cancelled: false })
   games.set(profile.id, { child, gameDir });
   playtime.start(profile.id, profile.id === serverpack.SERVER_PROFILE_ID);
   sendRunning();
+  presenceNow();
   store.touchProfile(profile.id);
   if (settings.minimizeOnLaunch && win) setTimeout(() => win && !win.isDestroyed() && win.minimize(), 1500);
   return { ok: true, version: id, profileId: profile.id };

@@ -8,6 +8,7 @@ async function loadKacc() {
   try { const r = await K.kacc.me(); S.kacc = { checked: true, account: r.account, offline: !!r.offline, error: r.error || '' }; }
   catch (e) { S.kacc = { checked: true, account: null, offline: true, error: errText(e) }; }
   renderGate(); render();
+  if (kAcc()) loadFriends();
 }
 
 // ---------- экран входа ----------
@@ -59,7 +60,7 @@ async function gateSubmit() {
       S.kacc = { checked: true, account: acc, offline: false };
       S.auth = blankAuth();
       toast(A.mode === 'reg' ? 'Аккаунт создан. Аватарку и баннер можно поменять в Настройках' : 'Вход выполнен', true);
-      render(); loadStats();
+      render(); loadStats(); loadFriends();
     }
   } catch (e) { A.err = errText(e); }
   A.busy = false; renderGate();
@@ -104,7 +105,7 @@ const ACC_ACTIONS = {
   gMode: (id) => { const keep = S.auth.login; S.auth = blankAuth(); S.auth.mode = id; S.auth.login = keep; renderGate(); },
   gSkip: () => { S.kacc.skip = true; renderGate(); },
   gOpen: () => { S.kacc.skip = false; S.auth = blankAuth(); renderGate(); },
-  kLogout: async () => { await K.kacc.logout(); S.kacc = { checked: true, account: null, offline: false }; S.auth = blankAuth(); S.screen = 'home'; render(); renderGate(); },
+  kLogout: async () => { await K.kacc.logout(); S.kacc = { checked: true, account: null, offline: false }; S.friends.data = null; S.friends.msg = ''; S.auth = blankAuth(); S.screen = 'home'; render(); renderGate(); },
   openSiteProfile: () => K.kacc.openProfile(),
   kSaveStatus: () => { const el = $('#kStatus'); kaccDo(() => K.kacc.update({ status: el ? el.value : '' }), 'Статус сохранён').then(() => { S.kStatus = null; }); },
   kShowDiscord: () => { const a = kAcc(); kaccDo(() => K.kacc.update({ showDiscord: !(a && a.showDiscord) })); },

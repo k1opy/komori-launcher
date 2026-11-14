@@ -87,12 +87,12 @@ function stopBtn(id) {
 function viewHome() {
   return `<section class="page2">
     ${quickLaunch()}
-    <div class="home-row">${homeServer()}${homeWeek()}${homeNews()}</div>
+    <div class="home-row">${homeServer()}${homeWeek()}${homeFriends()}</div>
     ${homeRecent()}
     ${homeDaily()}
   </section>`;
 }
-function homeLoad() { loadKomoriNews(); loadStats(); loadDaily(); }
+function homeLoad() { loadStats(); loadDaily(); loadFriends(); }
 
 function homeServer() {
   const pg = S.ping, srvRunning = S.running.includes(S.info.serverProfileId);
@@ -122,16 +122,61 @@ function homeWeek() {
   </div>`;
 }
 
-function homeNews() {
-  const N = S.news, n = (N.ko || [])[0];
-  let body;
-  if (!n && N.koLoading) body = '<span class="skl w80"></span><span class="skl w40"></span>';
-  else if (!n) body = `<span class="note">${N.koError ? 'Новости не загрузились' : 'Новостей пока нет'}</span>`;
-  else body = `<button type="button" class="hn" data-act="newsOpen" data-id="${esc(n.id)}">
-      ${n.image ? `<img src="${esc(n.image)}" alt="" loading="lazy">` : ''}
-      <span class="nmeta"><span class="ntag">${esc(n.tag)}</span><span>${esc(fmtDate(n.date))}</span></span><b>${esc(n.title)}</b></button>`;
-  return `<div class="card hcard"><div class="hc-h"><h2>Новости Komori</h2><button type="button" class="link-btn" data-act="nav" data-id="komori">Все</button></div>${body}</div>`;
+// Друзья: добавить по логину, входящие заявки, кто в сети и во что играет
+function agoShort(ts) {
+  if (!ts) return 'не в сети';
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 60) return 'был ' + Math.max(1, m) + ' мин назад';
+  const h = Math.floor(m / 60);
+  if (h < 24) return 'был ' + h + ' ч назад';
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'был вчера' : 'был ' + d + ' дн. назад';
 }
+function frAvatar(f) { return `<span class="fr-av">${f.avatar ? `<img src="${esc(f.avatar)}" alt="" loading="lazy">` : esc(f.login.charAt(0).toUpperCase())}</span>`; }
+const X_SVG = '<svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8"/></svg>';
+const OK_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+function homeFriends() {
+  const F = S.friends;
+  if (!kAcc()) return `<div class="card hcard"><div class="hc-h"><h2>Друзья</h2></div><span class="note">Войди в аккаунт Komori — тогда можно добавлять друзей и видеть, кто во что играет.</span><div class="hc-foot"><button type="button" class="btn" data-act="gOpen">Войти</button></div></div>`;
+  const d = F.data;
+  const online = d ? d.friends.filter(f => f.online).length : 0;
+  const add = `<div class="fr-add"><input id="frAdd" class="input" placeholder="Логин друга" maxlength="16" value="${esc(F.add)}" aria-label="Логин друга"><button type="button" class="btn2" data-act="frAdd" ${F.busy || !F.add.trim() ? 'disabled' : ''}>Добавить</button></div>`;
+  let body = '';
+  if (!d) body = F.error ? `<span class="note">${esc(F.error)}</span>` : '<span class="skl w80"></span><span class="skl w40"></span>';
+  else {
+    const inc = d.incoming.map(f => `<div class="fr fr-inc">${frAvatar(f)}<div class="t"><b>${esc(f.login)}</b><span>хочет дружить</span></div>
+      <button type="button" class="fr-btn ok" data-act="frAccept" data-id="${esc(f.login)}" aria-label="Принять" title="Принять" ${F.busy ? 'disabled' : ''}>${OK_SVG}</button>
+      <button type="button" class="fr-btn" data-act="frRemove" data-id="${esc(f.login)}" aria-label="Отклонить" title="Отклонить" ${F.busy ? 'disabled' : ''}>${X_SVG}</button></div>`).join('');
+    const list = d.friends.map(f => `<div class="fr ${f.online ? 'on' : ''}">${frAvatar(f)}<div class="t"><b>${esc(f.login)} <span class="fr-lv">ур. ${f.level}</span></b>
+      <span class="${f.game ? 'fr-game' : ''}">${f.game ? 'играет в ' + esc(f.game) : f.online ? 'в лаунчере' : esc(agoShort(f.seen))}</span></div>
+      <button type="button" class="fr-btn fr-del" data-act="frRemove" data-id="${esc(f.login)}" aria-label="Убрать ${esc(f.login)} из друзей" title="Убрать из друзей" ${F.busy ? 'disabled' : ''}>${X_SVG}</button></div>`).join('');
+    const out = d.outgoing.length ? `<div class="fr-out">Ждут ответа: ${d.outgoing.map(f => `<button type="button" class="fr-chip" data-act="frRemove" data-id="${esc(f.login)}" title="Отменить заявку">${esc(f.login)} ${X_SVG}</button>`).join('')}</div>` : '';
+    body = (inc || list ? `<div class="fr-list">${inc}${list}</div>` : '<span class="note">Пока никого. Добавь друга по логину Komori.</span>') + out;
+  }
+  return `<div class="card hcard hfr"><div class="hc-h"><h2>Друзья</h2>${d && d.friends.length ? `<span class="fr-n">${online ? '<span class="dot"></span>' + online + ' в сети' : 'никого в сети'}</span>` : ''}</div>
+    ${add}${F.msg ? `<span class="fr-msg ${F.msgErr ? 'err' : ''}">${esc(F.msg)}</span>` : ''}${body}</div>`;
+}
+async function loadFriends(quiet) {
+  const F = S.friends;
+  if (!kAcc() || F.loading) return;
+  F.loading = true;
+  try { F.data = await K.kacc.friends(); F.error = null; } catch (e) { if (!F.data) F.error = errText(e); }
+  F.loading = false;
+  if (S.screen === 'home' && !(quiet && document.activeElement && document.activeElement.id === 'frAdd')) render();
+}
+async function friendAct(action, login) {
+  const F = S.friends;
+  if (F.busy) return;
+  F.busy = true; F.msg = ''; render();
+  try {
+    const r = await K.kacc.friend(action, login);
+    F.data = r; F.msg = r.ok || ''; F.msgErr = false;
+    if (action === 'add') F.add = '';
+  } catch (e) { F.msg = errText(e); F.msgErr = true; }
+  F.busy = false; render();
+}
+// Пока открыта главная, список друзей обновляется раз в минуту
+setInterval(() => { if (S.screen === 'home' && !document.hidden) loadFriends(true); }, 60000);
 
 function homeRecent() {
   const list = S.profiles.list.filter(p => p.lastPlayed).sort((x, y) => y.lastPlayed - x.lastPlayed).slice(0, 4);
@@ -315,6 +360,9 @@ const REFRESH_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
 // Действия новых разделов (подмешиваются в ACTIONS из app.js)
 const PAGE_ACTIONS = {
   dailyReload: () => loadDaily(true),
+  frAdd: () => { const l = S.friends.add.trim(); if (l) friendAct('add', l); },
+  frAccept: (login) => friendAct('accept', login),
+  frRemove: (login) => friendAct('remove', login),
   dailyOpen: (slug) => K.mods.open('modrinth', slug, 'modpack', ''),
   dailyAll: () => { S.mods.type = 'modpack'; S.mods.source = 'modrinth'; S.mods.cats = []; ACTIONS.nav('mods'); },
   dailyInstall: (id, el) => installPack(() => K.mods.installPack('modrinth', id, el.dataset.title), id),

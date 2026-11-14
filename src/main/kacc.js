@@ -61,4 +61,14 @@ async function discordUnlink() { const a = withAbs(await api('DELETE', '/api/acc
 function profileUrl() { const a = cached(); return a ? BASE + '/u/' + encodeURIComponent(a.login) : BASE + '/profile'; }
 async function syncStats(st) { if (!token()) return; try { await api('POST', '/api/acc/stats', { total: st.total, komori: st.komori, launches: st.launches }, true); } catch {} }
 
-module.exports = { setBase, me, login, register, logout, recover, recoverFinish, update, avatar, banner, password, discordStart, discordUnlink, syncStats, profileUrl };
+// Друзья: список, заявки, «в сети» и во что играют
+function absFriends(d) {
+  const abs = u => u && u.startsWith('/') ? BASE + u : u;
+  const fix = l => (l || []).map(x => Object.assign({}, x, { avatar: abs(x.avatar) }));
+  return { friends: fix(d.friends), incoming: fix(d.incoming), outgoing: fix(d.outgoing), ok: d.ok || '' };
+}
+async function friends() { return absFriends(await api('GET', '/api/acc/friends', undefined, true)); }
+async function friendAct(action, login) { return absFriends(await api('POST', '/api/acc/friends/' + action, { login }, true)); }
+async function presence(game, offline) { if (!token()) return; try { await api('POST', '/api/acc/presence', offline ? { offline: true } : { game: game || '' }, true); } catch {} }
+
+module.exports = { friends, friendAct, presence, setBase, me, login, register, logout, recover, recoverFinish, update, avatar, banner, password, discordStart, discordUnlink, syncStats, profileUrl };

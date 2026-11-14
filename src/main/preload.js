@@ -109,7 +109,9 @@ contextBridge.exposeInMainWorld('komori', {
     bannerReset: () => ipcRenderer.invoke('kacc:bannerReset'),
     discordLink: () => ipcRenderer.invoke('kacc:discordLink'),
     discordUnlink: () => ipcRenderer.invoke('kacc:discordUnlink'),
-    openProfile: () => ipcRenderer.invoke('kacc:openProfile')
+    openProfile: () => ipcRenderer.invoke('kacc:openProfile'),
+    friends: () => ipcRenderer.invoke('kacc:friends'),
+    friend: (action, login) => ipcRenderer.invoke('kacc:friend', { action, login })
   },
   look: {
     get: () => ipcRenderer.invoke('look:get'),
