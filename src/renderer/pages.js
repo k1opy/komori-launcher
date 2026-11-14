@@ -199,7 +199,7 @@ function homeDaily() {
     return `<div class="dcard"><div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0))}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}</div>
       <div class="pc-body"><div class="pc-head">${modIcon(h.icon, h.title)}<div class="t"><button type="button" class="mtitle" data-act="dailyOpen" data-id="${esc(h.slug)}">${esc(h.title)}</button><span class="mby">${fmtNum(h.downloads)} загрузок</span></div></div>
       <span class="pc-desc">${esc(h.description)}</span>
-      <button type="button" class="btn2" data-act="dailyInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button></div></div>`;
+      <button type="button" class="btn" data-act="dailyInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button></div></div>`;
   }).join('') + '</div>';
   return `<div class="sec-head"><h2>Сборки дня <span class="h-sub">новая подборка каждый день</span></h2><button type="button" class="link-btn" data-act="dailyAll">Все сборки</button></div>${S.busy && S.mods.busy && D && D.hits && D.hits.some(h => S.mods.busy[h.id]) ? progressHtml() : ''}${body}`;
 }
@@ -351,8 +351,9 @@ function lookTab() {
 
 // ---------- вкладки раздела «Сборки» ----------
 function buildsTabs() {
-  const t = [['profiles', 'Мои сборки'], ['mods', 'Каталог модов'], ['versions', 'Версии Minecraft']];
-  return `<div class="tabs sub" role="tablist">${t.map(([id, l]) => `<button type="button" role="tab" aria-selected="${S.screen === id}" class="${S.screen === id ? 'on' : ''}" data-act="nav" data-id="${id}">${l}</button>`).join('')}</div>`;
+  const packs = S.screen === 'mods' && S.mods.type === 'modpack';
+  const t = [['profiles', 'Мои сборки', S.screen === 'profiles'], ['packs', 'Найти сборку', packs], ['mods', 'Моды и ресурспаки', S.screen === 'mods' && !packs]];
+  return `<div class="tabs sub" role="tablist">${t.map(([id, l, on]) => `<button type="button" role="tab" aria-selected="${on}" class="${on ? 'on' : ''}" data-act="nav" data-id="${id}">${l}</button>`).join('')}</div>`;
 }
 
 const REFRESH_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>';
@@ -364,7 +365,7 @@ const PAGE_ACTIONS = {
   frAccept: (login) => friendAct('accept', login),
   frRemove: (login) => friendAct('remove', login),
   dailyOpen: (slug) => K.mods.open('modrinth', slug, 'modpack', ''),
-  dailyAll: () => { S.mods.type = 'modpack'; S.mods.source = 'modrinth'; S.mods.cats = []; ACTIONS.nav('mods'); },
+  dailyAll: () => { S.mods.source = 'modrinth'; ACTIONS.nav('packs'); },
   dailyInstall: (id, el) => installPack(() => K.mods.installPack('modrinth', id, el.dataset.title), id),
   playProfile: async (id) => {
     if (S.busy) return;

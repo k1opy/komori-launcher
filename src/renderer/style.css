@@ -653,3 +653,37 @@ button.tg:hover{border-color:var(--accent);color:var(--title)}
 .fr-out{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;color:var(--dim)}
 .fr-chip{display:inline-flex;align-items:center;gap:5px;padding:1px 6px;border:1px solid var(--line3);border-radius:2px;background:transparent;color:var(--text2);font-size:12px}
 .fr-chip:hover{color:var(--err);border-color:var(--err)}
+
+/* ===== 0.10: стиль Minecraft — прямые углы, толстые рамки, пиксельные иконки, кнопки-блоки ===== */
+*,*::before,*::after{border-radius:0 !important}
+.nav svg{width:20px;height:20px;flex:0 0 20px}
+.nav button{gap:12px;min-height:40px}
+.nav button.on::before{width:4px;top:0;bottom:0}
+.card,.list,.fpanel,.packc,.dcard,.hr,.pcard,.panel,.dialog,.search,.input,.seg,.seg2,.btn2,.btn-ghost,.chip,.fradio button,.tg,.achip,.fsearch,.empty-box{border-width:2px}
+.list.list-cards{border-width:0}
+.pcard.on{box-shadow:none}
+.btn,.btn-inst,.play,.seg button.on{box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.18)}
+.btn2{box-shadow:inset 0 -3px 0 var(--line3),inset 0 2px 0 rgba(255,255,255,.04)}
+.btn:active:not(:disabled),.btn2:active:not(:disabled),.play:active{box-shadow:inset 0 3px 0 rgba(0,0,0,.35);transform:translateY(1px)}
+.btn,.btn2,.btn-inst,.btn-ghost{min-height:38px;padding-bottom:3px}
+.dot{box-shadow:none}
+.switch{height:24px}
+.switch::after{top:3px;width:18px;height:18px}
+.switch.on::after{left:25px}
+.seg-b,.tabs button,.crumb,.hs-st,.fr-n,.pc-meta,.q-t .lbl,.fcount,.ntag,.tag{font-family:var(--pix);font-weight:400;font-synthesis:none;letter-spacing:0}
+.seg-b{font-size:16px;height:30px}
+.crumb{font-size:16px;color:var(--title)}
+.hs-st,.fr-n,.pc-meta,.q-t .lbl,.ntag,.tag{font-size:16px}
+.q-t .lbl{text-transform:none;color:var(--muted)}
+.fcount{font-size:16px;height:22px}
+.hr-play{background:var(--tile);color:var(--accent);border:2px solid var(--line3);box-shadow:inset 0 -3px 0 var(--line3)}
+.hr-play:hover{filter:none;border-color:var(--accent)}
+.hrecent{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.for-build{display:flex;align-items:center;gap:10px;min-width:0}
+.for-build span{color:var(--muted);font-size:13px;white-space:nowrap}
+.for-build select{max-width:380px}
+.pc-img{image-rendering:auto}
+.micon,.fr-av img,.avatar img{image-rendering:auto}
+.pc-meta{font-family:'Inter',sans-serif;font-size:12px;font-weight:600}
+.hw-bars{flex:1;min-height:40px;max-height:110px}
+.hw-xp{margin-top:0}

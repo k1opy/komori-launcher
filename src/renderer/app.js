@@ -58,12 +58,18 @@ function toast(msg, ok) {
 }
 
 // ---------- иконки меню ----------
+// Иконки меню — пиксельные, как в Minecraft: рисуются квадратами по сетке 10×10
+function pixIcon(rows) {
+  let d = '';
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') d += `M${x} ${y}h1v1h-1z`; });
+  return `<svg viewBox="0 0 10 10" shape-rendering="crispEdges"><path fill="currentColor" d="${d}"/></svg>`;
+}
 const NAV = [
-  ['home', 'Главная', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V20h-5v-6h-6v6H4z"/></svg>'],
-  ['komori', 'Komori', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>'],
-  ['profiles', 'Сборки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>'],
-  ['profile', 'Профиль', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>'],
-  ['settings', 'Настройки', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>']
+  ['home', 'Главная', pixIcon(["....##....", "...####...", "..######..", ".########.", "##########", ".########.", ".########.", ".###..###.", ".###..###.", ".###..###."])],
+  ['komori', 'Komori', pixIcon(["##########", "##########", "#.##..#.##", "#........#", "#.##.....#", "#.##..##.#", "#.....##.#", "#........#", "#........#", "##########"])],
+  ['profiles', 'Сборки', pixIcon(["####.#####", "####.#####", "####.#####", "####.#####", "..........", "####.#####", "####.#####", "####.#####", "####.#####", "####.#####"])],
+  ['profile', 'Профиль', pixIcon(["...####...", "..######..", "..######..", "..######..", "...####...", "..........", ".########.", "##########", "##########", "##########"])],
+  ['settings', 'Настройки', pixIcon(["...####...", ".#.####.#.", ".########.", "..##..##..", "###....###", "###....###", "..##..##..", ".########.", ".#.####.#.", "...####..."])]
 ];
 const NAV_OF = { versions: 'profiles', mods: 'profiles' };
 const SCREEN_NAMES = { home: 'Главная', komori: 'Komori', profiles: 'Сборки', versions: 'Сборки', mods: 'Сборки', profile: 'Профиль', settings: 'Настройки' };
@@ -213,7 +219,7 @@ function viewVersions() {
         <span class="t"><b>${esc(v.id)}</b><span style="color:${TYPE_COLORS[v.type]}">${TYPE_NAMES[v.type]}${i === 0 && !S.vSearch ? ' · последняя' : ''} · ${esc((v.releaseTime || '').slice(0, 10))}</span></span>
         <span class="st">${v.installed ? 'Установлена' : ''}</span>
         <button type="button" class="btn2" data-act="installVersion" data-id="${esc(v.id)}" ${S.busy ? 'disabled' : ''}>${installing ? 'Скачиваю…' : v.installed ? 'Проверить' : 'Скачать'}</button>
-        <button type="button" class="btn" data-act="profileFromVersion" data-id="${esc(v.id)}" data-type="${esc(v.type)}">Профиль</button></div>`;
+        <button type="button" class="btn" data-act="profileFromVersion" data-id="${esc(v.id)}" data-type="${esc(v.type)}">Создать сборку</button></div>`;
     }).join('') : `<div class="empty">Ничего не найдено</div>`;
   }
   const counts = t => (S.versions ? S.versions.versions.filter(v => v.type === t).length : '');
@@ -356,15 +362,15 @@ function viewMods() {
     <button type="button" role="tab" aria-selected="${M.tab === 'catalog'}" class="${M.tab === 'catalog' ? 'on' : ''}" data-act="mTab" data-id="catalog">Каталог</button>
     <button type="button" role="tab" aria-selected="${M.tab === 'installed'}" class="${M.tab === 'installed' ? 'on' : ''}" data-act="mTab" data-id="installed">Установленные (${M.items.length})</button></div>`;
   let body;
-  if (M.tab === 'catalog') {
-    const typeSeg = `<div class="seg">${Object.keys(MTYPES).map(t => `<button type="button" class="${M.type === t ? 'on' : ''}" data-act="mType" data-id="${t}">${MTYPES[t]}</button>`).join('')}</div>`;
+  if (M.tab === 'catalog' || M.type === 'modpack') {
+    const typeSeg = M.type === 'modpack' ? '' : `<div class="seg">${Object.keys(MTYPES).filter(t => t !== 'modpack').map(t => `<button type="button" class="${M.type === t ? 'on' : ''}" data-act="mType" data-id="${t}">${MTYPES[t]}</button>`).join('')}</div>`;
     const srcSeg = `<div class="seg">${['modrinth', 'curseforge'].map(s => `<button type="button" class="${M.source === s ? 'on' : ''}" data-act="mSource" data-id="${s}">${SOURCE_NAMES[s]}</button>`).join('')}</div>`;
     const isPack = M.type === 'modpack';
     let list;
     if (M.needKey) {
       list = `<div class="empty">Каталог CurseForge ещё не настроен.<br>Получи бесплатный ключ API на console.curseforge.com и впиши его в komori.config.json → curseforgeApiKey.</div>`;
     } else if (M.needLoader && !isPack) {
-      list = `<div class="empty">У сборки «${esc(p.name)}» нет ядра, а моды работают только с ним.<br>Создай сборку с Fabric, Forge, NeoForge или Quilt.<br><br><button type="button" class="btn" data-act="newProfile">+ Новый профиль</button></div>`;
+      list = `<div class="empty">У сборки «${esc(p.name)}» нет ядра, а моды работают только с ним.<br>Создай сборку с Fabric, Forge, NeoForge или Quilt.<br><br><button type="button" class="btn" data-act="newProfile">+ Новая сборка</button></div>`;
     } else if (M.error) {
       list = `<div class="empty">${esc(M.error)}<br><br><button type="button" class="btn2" data-act="mRetry">Повторить</button></div>`;
     } else if (!M.hits.length) {
@@ -420,8 +426,11 @@ function viewMods() {
         <button type="button" class="btn2" data-act="mFolder" data-id="shader">Шейдеры</button></div>
       <div class="list">${rows}</div>`;
   }
+  // «Найти сборку» — отдельная вкладка: без выбора своей сборки и без «Установленных»
+  if (M.type === 'modpack') return `<section class="page" style="overflow:hidden">
+    <div class="page-head"><h1>Найти сборку</h1><span class="note">Сборка ставится отдельно, со своей версией и ядром</span></div>${body}</section>`;
   return `<section class="page" style="overflow:hidden">
-    <div class="page-head"><h1>Каталог</h1><select id="modsProfile" class="input" aria-label="Профиль" style="max-width:420px">${options}</select></div>
+    <div class="page-head"><h1>Моды и ресурспаки</h1><label class="for-build"><span>Для сборки</span><select id="modsProfile" class="input" aria-label="Сборка">${options}</select></label></div>
     ${tabs}${body}</section>`;
 }
 
@@ -468,7 +477,7 @@ async function installPack(run, busyId) {
     if (r) {
       S.profiles = r.profiles;
       S.mods.profileId = r.profileId;
-      toast('Сборка «' + r.name + '» установлена — новый профиль выбран', true);
+      toast('Сборка «' + r.name + '» установлена и выбрана', true);
       if (r.manual && r.manual.length) openManual(r.profileId, 'Скачай ещё ' + r.manual.length + ' ' + (r.manual.length === 1 ? 'файл' : r.manual.length < 5 ? 'файла' : 'файлов'));
       modsLoadInstalled();
     }
@@ -574,7 +583,6 @@ function viewSettings() {
       <div class="prow"><span>Сворачивать лаунчер при запуске игры</span>${sw(!!st.minimizeOnLaunch, 'toggleMinimize')}</div>
       <div class="prow"><span>Показывать консоль игры</span>${sw(!!st.showConsole, 'toggleConsole')}</div>
       <div class="prow"><span>Папка игры</span><span style="display:flex;gap:10px;align-items:center"><code>${esc(st.gameDir)}</code><button type="button" class="btn2" data-act="openGameDir">Открыть</button></span></div>
-      <div class="prow"><span>URL сервера скинов<br><span class="note">Пусто — сервер Komori${S.info.skinServerDefault ? '' : ' (пока не задан)'}</span></span><span style="display:flex;gap:10px;align-items:center"><input id="skinSrv" class="input" style="width:300px" placeholder="${esc(S.info.skinServerDefault || 'https://…workers.dev')}" value="${esc(st.skinServerUrl || '')}" aria-label="URL сервера скинов"><button type="button" class="btn2" data-act="saveSkinServer">Сохранить</button></span></div>
       <div class="prow"><span>Версия лаунчера</span><span>${esc(S.info.version)}${S.info.dev ? ' · DEV' : ''}</span></div>
       <div class="prow"><span>Обновления</span><span style="display:flex;gap:10px;align-items:center"><span class="note">${esc(updText())}</span>${S.update && S.update.state !== 'off' ? `<button type="button" class="btn2" data-act="updCheck">Проверить</button>` : ''}${S.update && S.update.state === 'ready' ? `<button type="button" class="btn" data-act="updInstall">Установить</button>` : ''}</span></div>
     </div>
@@ -645,7 +653,7 @@ function renderCrash() {
     <div class="panel" style="padding:14px;gap:6px"><span class="note">Код выхода: ${esc(c.code)}</span><b style="color:var(--title);user-select:text">${esc(c.error || c.reason || 'Причина не определена — подробности в логе')}</b></div>
     ${c.sent ? `<div class="codebox" style="border-color:#2E7D4F"><b style="color:var(--ok)">Отчёт отправлен админам</b><span class="note">Спасибо! Админы посмотрят лог в Discord.</span></div>`
       : c.canReport ? `<div class="field"><label for="crashNote">Что ты делал перед вылетом? (необязательно)</label><textarea id="crashNote" class="input" rows="3" maxlength="1000" placeholder="Например: зашёл в Незер, открыл сундук…">${esc(c.note)}</textarea></div>
-        <span class="note">Админам уйдут: ник, профиль, версия, ядро, список модов и логи игры. Пароли и токены не отправляются.</span>`
+        <span class="note">Админам уйдут: ник, сборка, версия, ядро, список модов и логи игры. Пароли и токены не отправляются.</span>`
       : `<span class="note">Отправка отчётов не настроена. Открой лог и отправь его админам в Discord вручную.</span>`}
     <div class="dialog-foot"><button type="button" class="btn2" data-act="crashLog">Открыть лог</button>
       <div style="display:flex;gap:8px"><button type="button" class="btn2" data-act="crashClose">Закрыть</button>
@@ -676,9 +684,9 @@ function viewServerAdmin() {
   return `<div style="display:flex;flex-direction:column;gap:14px">
     <div class="panel" style="padding:16px;gap:6px"><b style="color:var(--title)">Сборка сервера сейчас</b>${status}
       <button type="button" class="btn2" data-act="srvLoad" style="align-self:flex-start;margin-top:6px">Обновить</button></div>
-    <div class="panel" style="padding:16px;gap:10px"><b style="color:var(--title)">Собрать новую из профиля</b>
-      <span class="note">Настрой обычный профиль: версия, ядро, моды и ресурспаки из каталога. Выключенные моды в сборку не попадут.</span>
-      <div style="display:flex;gap:10px;align-items:center"><select id="srvProfile" class="input" aria-label="Профиль" style="flex:1">${own.map(p => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>${esc(p.name)} — ${esc(profMeta(p))}</option>`).join('')}</select>
+    <div class="panel" style="padding:16px;gap:10px"><b style="color:var(--title)">Собрать новую из своей сборки</b>
+      <span class="note">Настрой обычную сборку: версия, ядро, моды и ресурспаки из каталога. Выключенные моды в сборку не попадут.</span>
+      <div style="display:flex;gap:10px;align-items:center"><select id="srvProfile" class="input" aria-label="Сборка" style="flex:1">${own.map(p => `<option value="${esc(p.id)}" ${p.id === pid ? 'selected' : ''}>${esc(p.name)} — ${esc(profMeta(p))}</option>`).join('')}</select>
       <button type="button" class="btn" data-act="srvBuild" data-id="${esc(pid || '')}" ${V.busy || !pid ? 'disabled' : ''}>${V.busy ? 'Собираю…' : 'Собрать'}</button></div></div>
     ${built}</div>`;
 }
@@ -825,7 +833,6 @@ function skinPreviewHtml(name, hasSkin) {
     <figure><canvas id="skinFront" width="96" height="192" aria-label="Скин ${esc(name)} спереди"></canvas><figcaption>Спереди</figcaption></figure>
     <figure><canvas id="skinBack" width="96" height="192" aria-label="Скин ${esc(name)} сзади"></canvas><figcaption>Сзади</figcaption></figure>
     <figure><canvas id="skinSide" width="48" height="192" aria-label="Скин ${esc(name)} сбоку"></canvas><figcaption>Сбоку</figcaption></figure>
-    <figure><img class="skin-flat" src="${S.skin.info.skinData}" alt="Развёртка скина ${esc(name)}"><figcaption>Развёртка</figcaption></figure>
   </div>`;
 }
 
@@ -976,6 +983,9 @@ const ACTIONS = {
   // п.4–6: открыть ссылку из конфига во внешнем браузере
   openLink: (id) => { K.openLink(id); },
   nav: (id) => {
+    // «Найти сборку» и «Моды и ресурспаки» — один экран каталога в разных режимах
+    if (id === 'packs') { id = 'mods'; if (S.mods.type !== 'modpack') { S.mods.type = 'modpack'; S.mods.cats = []; S.mods.query = ''; } if (!S.versions) loadVersions(); }
+    else if (id === 'mods' && S.mods.type === 'modpack') { S.mods.type = 'mod'; S.mods.cats = []; S.mods.query = ''; }
     S.screen = id; S.menuOpen = false;
     if (id === 'home') homeLoad();
     if (id === 'komori') { loadKomoriNews(); loadLastLog(); }
