@@ -60,12 +60,22 @@ async function identify(prints) {
 }
 const post = (p, body) => api(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
+const CF_LOADER_NAME = { 1: 'forge', 4: 'fabric', 5: 'quilt', 6: 'neoforge' };
+const PACK_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 };   // для сборок Quilt — отдельное ядро
 function mapMod(m) {
+  const files = m.latestFilesIndexes || [];
+  const key = v => String(v).split('.').map(n => n.padStart(4, '0')).join('.');
+  const mcs = [...new Set(files.map(f => f.gameVersion).filter(v => /^\d+\.\d+(\.\d+)?$/.test(v || '')))].sort((a, b) => key(b).localeCompare(key(a)));
   return {
     id: String(m.id), slug: m.slug, title: m.name, description: m.summary || '',
     icon: (m.logo && (m.logo.thumbnailUrl || m.logo.url)) || '', author: (m.authors && m.authors[0] && m.authors[0].name) || '',
     downloads: m.downloadCount || 0, type: CLASS_TO_TYPE[m.classId] || (m.classId === CLASS.modpack ? 'modpack' : 'mod'),
-    website: (m.links && m.links.websiteUrl) || ''
+    website: (m.links && m.links.websiteUrl) || '',
+    // Теги: у модов — наши ключи (как в фильтре), у остального — названия категорий CurseForge
+    tags: (m.categories || []).map(c => (m.classId === CLASS.mod ? CF_KEY_BY_ID[c.id] || CF_KEY_BY_NAME[norm(c.name)] : c.name)).filter(Boolean),
+    loaders: [...new Set(files.map(f => CF_LOADER_NAME[f.modLoader]).filter(Boolean))],
+    mcv: mcs[0] || '', image: (m.screenshots && m.screenshots[0] && (m.screenshots[0].thumbnailUrl || m.screenshots[0].url)) || '',
+    updated: m.dateModified || ''
   };
 }
 
@@ -73,18 +83,21 @@ function mapMod(m) {
 const CF_CATS = { optimization: ['Performance', 6814], technology: ['Technology', 412], magic: ['Magic', 419], adventure: ['Adventure and RPG', 422],
   worldgen: ['World Gen', 406], equipment: ['Armor, Tools, and Weapons', 434], mobs: ['Mobs', 411], food: ['Food', 436], storage: ['Storage', 420],
   decoration: ['Cosmetic', 424], utility: ['Utility & QoL', 5191], transportation: ['Player Transport', 414], management: ['Server Utility', 435], library: ['API and Library', 421] };
+const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+const CF_KEY_BY_ID = {}, CF_KEY_BY_NAME = {};
+for (const [k, [name, id]] of Object.entries(CF_CATS)) { CF_KEY_BY_ID[id] = k; CF_KEY_BY_NAME[norm(name)] = k; }
 const cfCats = {};
 // Моды — наш ключ из CF_CATS; ресурспаки и шейдеры — название категории CurseForge
 async function categoryId(type, key) {
   const c = type === 'mod' ? CF_CATS[key] : [key, null];
   if (!c) return null;
-  if (!cfCats[type]) { try { const r = await api('/categories?gameId=' + GAME_ID + '&classId=' + CLASS[type]); cfCats[type] = r.data || []; } catch { cfCats[type] = []; } }
-  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const f = cfCats[type].find(x => norm(x.name) === norm(c[0]));
+  // Список категорий запрашиваем один раз (несколько тегов ждут один и тот же запрос)
+  if (!cfCats[type]) cfCats[type] = api('/categories?gameId=' + GAME_ID + '&classId=' + CLASS[type]).then(r => r.data || []).catch(() => { cfCats[type] = null; return []; });
+  const f = (await cfCats[type]).find(x => norm(x.name) === norm(c[0]));
   return f ? f.id : c[1];
 }
 
-async function search({ query, type, sort, offset, category }, ctx) {
+async function search({ query, type, sort, offset, categories, mc, loader }, ctx) {
   const p = new URLSearchParams({
     gameId: String(GAME_ID), classId: String(CLASS[type] || CLASS.mod), searchFilter: query || '',
     sortField: String(SORT[sort] || SORT.relevance), sortOrder: 'desc',
@@ -92,7 +105,15 @@ async function search({ query, type, sort, offset, category }, ctx) {
   });
   if (type === 'mod' || type === 'resourcepack') p.set('gameVersion', ctx.mc);
   if (type === 'mod' && LOADER_TYPE[ctx.loader]) p.set('modLoaderType', String(LOADER_TYPE[ctx.loader]));
-  if (category && CLASS[type]) { const id = await categoryId(type, category); if (id) p.set('categoryId', String(id)); }
+  if (type === 'modpack') {
+    if (mc) p.set('gameVersion', mc);
+    if (PACK_LOADER[loader]) p.set('modLoaderType', String(PACK_LOADER[loader]));
+  }
+  if ((categories || []).length && CLASS[type]) {
+    const ids = (await Promise.all(categories.map(c => categoryId(type, c)))).filter(Boolean);
+    if (ids.length === 1) p.set('categoryId', String(ids[0]));
+    else if (ids.length > 1) p.set('categoryIds', JSON.stringify(ids.slice(0, 10)));   // сборка должна подходить под все теги
+  }
   const r = await api('/mods/search?' + p);
   return { total: Math.min(r.pagination ? r.pagination.totalCount : 0, 10000), hits: r.data.map(mapMod) };
 }
@@ -189,13 +210,24 @@ async function update(dir, key, fileId) {
 }
 
 // ---------- для сборок ----------
-async function modpackFile(modId, fileId) {
+// pref = { mc, loader } — версия и ядро, выбранные в фильтре каталога
+async function modpackFile(modId, fileId, pref) {
   let file;
   if (fileId) file = (await api(`/mods/${encodeURIComponent(modId)}/files/${encodeURIComponent(fileId)}`)).data;
   else {
-    const mod = await getMod(modId);
-    const latest = (mod.latestFiles || []).sort((a, b) => new Date(b.fileDate) - new Date(a.fileDate));
-    file = latest.find(f => f.releaseType === 1) || latest[0];
+    if (pref && (pref.mc || pref.loader)) {
+      const p = new URLSearchParams({ pageSize: '50' });
+      if (pref.mc) p.set('gameVersion', pref.mc);
+      if (PACK_LOADER[pref.loader]) p.set('modLoaderType', String(PACK_LOADER[pref.loader]));
+      const r = await api(`/mods/${encodeURIComponent(modId)}/files?${p}`).catch(() => ({ data: [] }));
+      const fs2 = (r.data || []).sort((a, b) => (a.releaseType - b.releaseType) || (new Date(b.fileDate) - new Date(a.fileDate)));
+      file = fs2[0];
+    }
+    if (!file) {
+      const mod = await getMod(modId);
+      const latest = (mod.latestFiles || []).sort((a, b) => new Date(b.fileDate) - new Date(a.fileDate));
+      file = latest.find(f => f.releaseType === 1) || latest[0];
+    }
   }
   if (!file) throw new Error('У сборки нет файлов');
   if (!file.downloadUrl || !CDN.test(file.downloadUrl)) throw new Error('Автор запретил скачивание сборки в сторонних лаунчерах. Скачай zip на сайте CurseForge и нажми «Импорт из файла».');

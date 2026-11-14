@@ -60,7 +60,7 @@ contextBridge.exposeInMainWorld('komori', {
     search: (q) => ipcRenderer.invoke('catalog:search', q),
     install: (source, profileId, projectId, type) => ipcRenderer.invoke('catalog:install', { source, profileId, projectId, type }),
     open: (source, slug, type, url) => ipcRenderer.invoke('catalog:open', { source, slug, type, url }),
-    installPack: (source, projectId, title) => ipcRenderer.invoke('modpack:install', { source, projectId, title }),
+    installPack: (source, projectId, title, pref) => ipcRenderer.invoke('modpack:install', Object.assign({ source, projectId, title }, pref || {})),
     importPack: () => ipcRenderer.invoke('modpack:import'),
     list: (profileId) => ipcRenderer.invoke('mods:list', profileId),
     toggle: (profileId, key) => ipcRenderer.invoke('mods:toggle', { profileId, key }),

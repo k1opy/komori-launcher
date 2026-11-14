@@ -1,7 +1,6 @@
 'use strict';
-/* Komori Launcher — разделы Главная (новости Minecraft), Komori, Профиль и «Внешний вид» в настройках. */
+/* Komori Launcher — разделы Главная, Komori, Профиль и «Внешний вид» в настройках. */
 
-const NEWS_FILTERS = [['all', 'Все'], ['java', 'Java'], ['snap', 'Снапшоты'], ['other', 'Другое']];
 function fmtDate(d) {
   const t = new Date(d);
   if (isNaN(t)) return '';
@@ -9,23 +8,16 @@ function fmtDate(d) {
 }
 
 // ---------- загрузка данных ----------
-async function loadMcNews(force) {
-  const N = S.news;
-  if (N.mcLoading || (N.mc && !force)) return;
-  N.mcLoading = true; N.mcError = null; if (S.screen === 'home') render();
-  try { N.mc = await K.news.minecraft(!!force); } catch (e) { N.mcError = errText(e); }
-  N.mcLoading = false; if (S.screen === 'home') render();
-}
 async function loadKomoriNews(force) {
   const N = S.news;
   if (N.koLoading || (N.ko && !force)) return;
   N.koLoading = true; N.koError = null; if (S.screen === 'komori') render();
   try { N.ko = await K.news.komori(!!force); } catch (e) { N.koError = errText(e); }
-  N.koLoading = false; if (S.screen === 'komori') render();
+  N.koLoading = false; if (S.screen === 'komori' || S.screen === 'home') render();
 }
 async function loadStats() {
   try { S.stats = await K.stats(); } catch { S.stats = S.stats || { total: 0, komori: 0, launches: 0, days: {}, hours: {}, profiles: {} }; }
-  if (S.screen === 'profile') render();
+  if (S.screen === 'profile' || S.screen === 'home') render();
 }
 async function loadLook() {
   try { S.look = await K.look.get(); } catch { S.look = { avatarBg: null }; }
@@ -91,29 +83,95 @@ function stopBtn(id) {
   return '';
 }
 
-// ---------- Главная: новости Minecraft ----------
+// ---------- Главная: сервер, твоя неделя, недавние сборки, сборки дня ----------
 function viewHome() {
-  const N = S.news;
-  const list = (N.mc || []).filter(n => N.filter === 'all' || n.kind === N.filter || (N.filter === 'other' && n.kind === 'bedrock'));
-  const chips = NEWS_FILTERS.map(([id, l]) => `<button type="button" class="seg-b ${N.filter === id ? 'on' : ''}" aria-pressed="${N.filter === id}" data-act="newsFilter" data-id="${id}">${l}</button>`).join('');
-  let grid;
-  if (N.mcLoading && !N.mc) grid = '<div class="news-grid">' + Array.from({ length: 5 }, (_, i) => `<div class="ncard sk ${i === 0 ? 'big' : ''}"><div class="nimg"></div><div class="nbody"><span class="skl w40"></span><span class="skl w80"></span></div></div>`).join('') + '</div>';
-  else if (N.mcError && !N.mc) grid = `<div class="empty-box"><b>Не получилось загрузить новости Minecraft</b><span class="note">${esc(N.mcError)}</span><button type="button" class="btn2" data-act="newsReload">Повторить</button></div>`;
-  else if (!list.length) grid = `<div class="empty-box"><span class="note">В этой рубрике новостей нет.</span></div>`;
-  else {
-    const card = (n, i) => `<button type="button" class="ncard ${i === 0 ? 'big' : ''}" data-act="newsOpen" data-id="${esc(n.id)}">
-      <div class="nimg">${n.image ? `<img src="${esc(n.image)}" alt="" loading="lazy">` : ''}</div>
-      <div class="nbody"><div class="nmeta"><span class="ntag">${esc(n.tag)}</span><span>${esc(fmtDate(n.date))}</span></div><b>${esc(n.title)}</b>${i === 0 && n.text ? `<p>${esc(n.text)}</p>` : ''}</div>
-    </button>`;
-    grid = '<div class="news-grid">' + list.slice(0, 5).map(card).join('') + '</div>' +
-      (list.length > 5 ? '<div class="news-more">' + list.slice(5, 11).map((n, i) => card(n, i + 5)).join('') + '</div>' : '');
-  }
   return `<section class="page2">
     ${quickLaunch()}
-    <div class="sec-head"><h1>Новости Minecraft</h1><div class="seg2" role="group" aria-label="Рубрика">${chips}</div>
-      <button type="button" class="icon-btn ghost" data-act="newsReload" aria-label="Обновить новости" title="Обновить">${REFRESH_SVG}</button></div>
-    ${grid}
+    <div class="home-row">${homeServer()}${homeWeek()}${homeNews()}</div>
+    ${homeRecent()}
+    ${homeDaily()}
   </section>`;
+}
+function homeLoad() { loadKomoriNews(); loadStats(); loadDaily(); }
+
+function homeServer() {
+  const pg = S.ping, srvRunning = S.running.includes(S.info.serverProfileId);
+  const status = !pg ? 'Проверяю…' : pg.online ? 'Онлайн' : 'Офлайн';
+  return `<div class="card hcard hsrv">
+    <div class="hc-h"><h2>Сервер Komori</h2><span class="hs-st ${!pg ? 'wait' : pg.online ? 'on' : 'off'}"><span class="dot ${!pg ? 'wait' : pg.online ? '' : 'off'}"></span>${status}</span></div>
+    <div class="hs-big">${pg && pg.online ? `<b>${pg.players}</b><span>из ${pg.max} игроков</span>` : `<span class="note">${pg ? 'Сервер сейчас недоступен' : 'Смотрю, кто в сети…'}</span>`}</div>
+    <code class="hs-host">${esc(S.info.server.host)}</code>
+    <div class="hc-foot"><button type="button" class="btn" data-act="playServer" ${S.busy || srvRunning ? 'disabled' : ''}>${srvRunning ? 'В игре' : 'Играть'}</button>
+      <button type="button" class="btn2" data-act="nav" data-id="komori">Подробнее</button></div>
+  </div>`;
+}
+
+function homeWeek() {
+  const st = S.stats;
+  if (!st) return `<div class="card hcard"><div class="hc-h"><h2>Твоя неделя</h2></div><span class="skl w80"></span><span class="skl w40"></span></div>`;
+  const lv = levelInfo(st.total), days = st.days || {};
+  let week = 0; for (let i = 0; i < 7; i++) week += days[dayKeyR(Date.now() - i * 864e5)] || 0;
+  const sk = streaks(days);
+  const bars = Array.from({ length: 7 }, (_, i) => days[dayKeyR(Date.now() - (6 - i) * 864e5)] || 0);
+  const mx = Math.max(3600, ...bars);
+  return `<div class="card hcard">
+    <div class="hc-h"><h2>Твоя неделя</h2><span class="hw-lv">ур. ${lv.level}</span></div>
+    <div class="hw-nums"><div><b>${esc(fmtHours(week))}</b><span>в игре за 7 дней</span></div><div><b>${sk.cur}</b><span>${sk.cur === 1 ? 'день' : sk.cur > 1 && sk.cur < 5 ? 'дня' : 'дней'} подряд</span></div></div>
+    <div class="hw-bars" aria-hidden="true">${bars.map((v, i) => `<span class="${i === 6 ? 'today' : ''}" style="height:${Math.max(6, Math.round(v / mx * 100))}%"></span>`).join('')}</div>
+    <div class="hw-xp"><div class="bar"><div style="width:${lv.pct}%"></div></div><span>${lv.xp} / ${lv.need} XP до ур. ${lv.level + 1}</span></div>
+  </div>`;
+}
+
+function homeNews() {
+  const N = S.news, n = (N.ko || [])[0];
+  let body;
+  if (!n && N.koLoading) body = '<span class="skl w80"></span><span class="skl w40"></span>';
+  else if (!n) body = `<span class="note">${N.koError ? 'Новости не загрузились' : 'Новостей пока нет'}</span>`;
+  else body = `<button type="button" class="hn" data-act="newsOpen" data-id="${esc(n.id)}">
+      ${n.image ? `<img src="${esc(n.image)}" alt="" loading="lazy">` : ''}
+      <span class="nmeta"><span class="ntag">${esc(n.tag)}</span><span>${esc(fmtDate(n.date))}</span></span><b>${esc(n.title)}</b></button>`;
+  return `<div class="card hcard"><div class="hc-h"><h2>Новости Komori</h2><button type="button" class="link-btn" data-act="nav" data-id="komori">Все</button></div>${body}</div>`;
+}
+
+function homeRecent() {
+  const list = S.profiles.list.filter(p => p.lastPlayed).sort((x, y) => y.lastPlayed - x.lastPlayed).slice(0, 4);
+  if (!list.length) return '';
+  const st = S.stats || {};
+  return `<div class="sec-head"><h2>Недавние сборки</h2><button type="button" class="link-btn" data-act="nav" data-id="profiles">Все сборки</button></div>
+    <div class="hrecent">${list.map(p => `<div class="hr">${profIcon(p.icon, 40)}<div class="t"><b>${esc(p.name)}</b><span>${esc(profMeta(p))}</span><small>${esc(ago(p.lastPlayed))}${st.profiles && st.profiles[p.id] ? ' · ' + esc(fmtHours(st.profiles[p.id])) : ''}</small></div>
+      <button type="button" class="icon-btn hr-play" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть в ${esc(p.name)}" title="Играть" ${S.busy || S.running.includes(p.id) ? 'disabled' : ''}>${PLAY_SVG}</button></div>`).join('')}</div>`;
+}
+
+// Сборки дня: каждый день — свои 4 из популярных на Modrinth (как подборка в магазине)
+function homeDaily() {
+  const D = S.daily;
+  let body;
+  if (!D || D.loading) body = '<div class="dgrid">' + Array.from({ length: 4 }, () => '<div class="dcard sk"><div class="pc-img"></div><div class="pc-body"><span class="skl w80"></span><span class="skl w40"></span></div></div>').join('') + '</div>';
+  else if (D.error) body = `<div class="empty-box"><span class="note">Подборка не загрузилась: ${esc(D.error)}</span><button type="button" class="btn2" data-act="dailyReload">Повторить</button></div>`;
+  else body = '<div class="dgrid">' + D.hits.map(h => {
+    const busy = S.mods.busy[h.id];
+    const meta = [h.mcv, (h.loaders || []).filter(l => LOADER_NAMES[l]).map(loaderLabel).join(' / ')].filter(Boolean).join(' · ');
+    return `<div class="dcard"><div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0))}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}</div>
+      <div class="pc-body"><div class="pc-head">${modIcon(h.icon, h.title)}<div class="t"><button type="button" class="mtitle" data-act="dailyOpen" data-id="${esc(h.slug)}">${esc(h.title)}</button><span class="mby">${fmtNum(h.downloads)} загрузок</span></div></div>
+      <span class="pc-desc">${esc(h.description)}</span>
+      <button type="button" class="btn2" data-act="dailyInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button></div></div>`;
+  }).join('') + '</div>';
+  return `<div class="sec-head"><h2>Сборки дня <span class="h-sub">новая подборка каждый день</span></h2><button type="button" class="link-btn" data-act="dailyAll">Все сборки</button></div>${S.busy && S.mods.busy && D && D.hits && D.hits.some(h => S.mods.busy[h.id]) ? progressHtml() : ''}${body}`;
+}
+async function loadDaily(force) {
+  const day = dayKeyR(Date.now());
+  if (!force && S.daily && (S.daily.loading || (S.daily.day === day && !S.daily.error))) return;
+  S.daily = { loading: true, day, hits: [] }; if (S.screen === 'home') render();
+  try {
+    // День года выбирает страницу топа и 4 сборки из неё — у всех игроков подборка одна и та же
+    const n = Math.floor(Date.now() / 864e5);
+    const r = await K.mods.search({ source: 'modrinth', type: 'modpack', sort: 'follows', query: '', offset: (n % 8) * 20 });
+    const hits = r.hits.slice(), out = [];
+    let seed = n;
+    while (out.length < 4 && hits.length) { seed = (seed * 9301 + 49297) % 233280; out.push(hits.splice(seed % hits.length, 1)[0]); }
+    S.daily = { day, hits: out };
+  } catch (e) { S.daily = { day, hits: [], error: errText(e) }; }
+  if (S.screen === 'home') render();
 }
 
 // ---------- Komori: сервер, новости проекта, логи ----------
@@ -228,7 +286,7 @@ function lookTab() {
       </div>
     </div>
     <div class="panel av-panel">
-      <div class="av-prev">${avatar3dHtml('av-big')}<button type="button" class="btn" data-act="kAvSkin" ${ka && hasSkin && S.avatar && S.avatar.url ? '' : 'disabled'}>${curAv === 's' ? 'Обновить 3D-аватарку' : 'Поставить как аватарку'}</button></div>
+      <div class="av-prev">${avatar3dHtml('av-big')}<button type="button" class="btn" data-act="kAvSkin" ${ka && hasSkin && S.avatar && S.avatar.url ? '' : 'disabled'}>${curAv === 's' ? 'Обновить' : 'Поставить'}</button></div>
       <div class="av-opts">
         <div class="prow"><b style="font-weight:500">3D-аватарка из скина</b>${curAv === 's' ? '<span class="tag ok">Стоит сейчас</span>' : ''}</div>
         <div class="prow"><span>Поза</span>${seg(AV_POSES, st.avatarPose || 'bust', 'setAvPose')}</div>
@@ -256,8 +314,15 @@ const REFRESH_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"
 
 // Действия новых разделов (подмешиваются в ACTIONS из app.js)
 const PAGE_ACTIONS = {
-  newsFilter: (id) => { S.news.filter = id; render(); },
-  newsReload: () => loadMcNews(true),
+  dailyReload: () => loadDaily(true),
+  dailyOpen: (slug) => K.mods.open('modrinth', slug, 'modpack', ''),
+  dailyAll: () => { S.mods.type = 'modpack'; S.mods.source = 'modrinth'; S.mods.cats = []; ACTIONS.nav('mods'); },
+  dailyInstall: (id, el) => installPack(() => K.mods.installPack('modrinth', id, el.dataset.title), id),
+  playProfile: async (id) => {
+    if (S.busy) return;
+    if (S.profiles.selected !== id) S.profiles = await K.profiles.select(id);
+    ACTIONS.play();
+  },
   koReload: () => loadKomoriNews(true),
   newsOpen: (id) => K.news.open(id),
   actPeriod: (id) => { S.actPeriod = id; render(); },

@@ -476,8 +476,11 @@ ipcMain.handle('catalog:search', async (e, q) => {
   if (src === 'curseforge' && !curseforge.hasKey()) return { total: 0, hits: [], needKey: true };
   const ctx = type === 'modpack' ? { mc: '', loader: '' } : await profileCtx(q.profileId);
   if (type === 'mod' && ctx.loader === 'vanilla') return { total: 0, hits: [], needLoader: true, mc: ctx.mc };
-  const category = type !== 'modpack' && /^[A-Za-z0-9+ &,-]{2,30}$/.test(String(q.category || '')) ? String(q.category) : '';
-  const r = await source(src).search({ query: String(q.query || '').slice(0, 100), type, sort: q.sort, offset: q.offset, category }, ctx);
+  // Теги (до 10), а для сборок ещё версия Minecraft и ядро
+  const categories = [].concat(q.categories || []).map(String).filter(c => /^[A-Za-z0-9+ &,/-]{2,30}$/.test(c)).slice(0, 10);
+  const mc = type === 'modpack' && /^\d+\.\d+(\.\d+)?$/.test(String(q.mc || '')) ? String(q.mc) : '';
+  const loader = type === 'modpack' && ['fabric', 'forge', 'neoforge', 'quilt'].includes(q.loader) ? q.loader : '';
+  const r = await source(src).search({ query: String(q.query || '').slice(0, 100), type, sort: q.sort, offset: q.offset, categories, mc, loader }, ctx);
   return Object.assign(r, { mc: ctx.mc, loader: ctx.loader });
 });
 
@@ -534,12 +537,13 @@ async function installPackFile(file, extra) {
   return { profiles: store.getProfiles(), profileId: r.profile.id, name: r.profile.name, manual: r.manual };
 }
 
-ipcMain.handle('modpack:install', async (e, { source: src, projectId, title }) => {
+ipcMain.handle('modpack:install', async (e, { source: src, projectId, title, mc, loader }) => {
   if (!/^[A-Za-z0-9]+$/.test(String(projectId))) throw new Error('Неверная сборка');
   const root = store.getSettings().gameDir;
   const progress = makeProgress();
   progress('Скачиваю сборку', 0, 1);
-  const f = src === 'curseforge' ? await curseforge.modpackFile(projectId) : await modrinth.modpackFile(projectId);
+  const pref = { mc: /^\d+\.\d+(\.\d+)?$/.test(String(mc || '')) ? String(mc) : '', loader: ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader) ? loader : '' };
+  const f = src === 'curseforge' ? await curseforge.modpackFile(projectId, null, pref) : await modrinth.modpackFile(projectId, null, pref);
   const dest = path.join(root, 'cache', 'modpacks', f.filename);
   await downloadAll([{ url: f.url, dest, sha1: f.sha1, size: f.size, verify: true }]);
   return installPackFile(dest, { nameHint: title ? String(title).slice(0, 32) : '' });

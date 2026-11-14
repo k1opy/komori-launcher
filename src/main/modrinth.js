@@ -23,11 +23,26 @@ function loadersFor(loader) {
   return [loader];
 }
 
-// ctx: { loader, mc }
-async function search({ query, type, sort, offset, category }, ctx) {
+// Теги Modrinth, которые на самом деле ядра (у модов, сборок и шейдеров) — показываем их отдельно от тегов
+const LOADER_TAGS = new Set(['fabric', 'forge', 'neoforge', 'quilt', 'liteloader', 'modloader', 'rift', 'babric', 'bta-babric', 'legacy-fabric', 'nilloader',
+  'ornithe', 'java-agent', 'iris', 'optifine', 'canvas', 'vanilla', 'minecraft', 'datapack', 'bukkit', 'paper', 'spigot', 'folia', 'purpur', 'sponge', 'velocity', 'waterfall', 'bungeecord']);
+// Самая свежая версия Minecraft из списка (только релизы вида 1.20.1)
+function latestMc(list) {
+  const key = v => v.split('.').map(n => String(n).padStart(4, '0')).join('.');
+  const rel = (list || []).filter(v => /^\d+\.\d+(\.\d+)?$/.test(v)).sort((a, b) => key(b).localeCompare(key(a)));
+  return rel[0] || '';
+}
+
+// ctx: { loader, mc }. categories — несколько тегов сразу (сборка должна подходить под все);
+// mc и loader — фильтр сборок (у модов версия и ядро берутся из профиля)
+async function search({ query, type, sort, offset, categories, mc, loader }, ctx) {
   const facets = [[`project_type:${type}`]];
-  if (category) facets.push([`categories:${category}`]);
+  for (const c of categories || []) facets.push([`categories:${c}`]);
   if (type !== 'modpack') facets.push([`versions:${ctx.mc}`]);
+  else {
+    if (mc) facets.push([`versions:${mc}`]);
+    if (loader) facets.push([`categories:${loader}`]);
+  }
   if (type === 'mod') facets.push(loadersFor(ctx.loader).map(l => `categories:${l}`));
   const params = new URLSearchParams({
     query: query || '', facets: JSON.stringify(facets),
@@ -37,10 +52,15 @@ async function search({ query, type, sort, offset, category }, ctx) {
   const r = await api(`${API}/search?${params}`);
   return {
     total: r.total_hits,
-    hits: r.hits.map(h => ({
-      id: h.project_id, slug: h.slug, title: h.title, description: h.description,
-      icon: h.icon_url || '', author: h.author, downloads: h.downloads, type: h.project_type
-    }))
+    hits: r.hits.map(h => {
+      const cats = h.display_categories || h.categories || [];
+      return {
+        id: h.project_id, slug: h.slug, title: h.title, description: h.description,
+        icon: h.icon_url || '', author: h.author, downloads: h.downloads, type: h.project_type,
+        tags: cats.filter(c => !LOADER_TAGS.has(c)), loaders: (h.categories || cats).filter(c => LOADER_TAGS.has(c) && c !== 'minecraft'),
+        mcv: latestMc(h.versions), image: h.featured_gallery || (h.gallery || [])[0] || '', updated: h.date_modified || ''
+      };
+    })
   };
 }
 
@@ -192,10 +212,19 @@ async function update(dir, key, versionId) {
 }
 
 // Сборка: файл .mrpack последней (или указанной) версии проекта.
-async function modpackFile(projectId, versionId) {
-  const version = versionId
-    ? await api(`${API}/version/${encodeURIComponent(versionId)}`)
-    : (await api(`${API}/project/${encodeURIComponent(projectId)}/version`))[0];
+// Файл сборки. pref = { mc, loader } — если в каталоге выбраны версия или ядро, берём подходящую версию сборки
+async function modpackFile(projectId, versionId, pref) {
+  let version = null;
+  if (versionId) version = await api(`${API}/version/${encodeURIComponent(versionId)}`);
+  else {
+    if (pref && (pref.mc || pref.loader)) {
+      const p = new URLSearchParams();
+      if (pref.mc) p.set('game_versions', JSON.stringify([pref.mc]));
+      if (pref.loader) p.set('loaders', JSON.stringify([pref.loader]));
+      version = (await api(`${API}/project/${encodeURIComponent(projectId)}/version?${p}`).catch(() => []))[0] || null;
+    }
+    if (!version) version = (await api(`${API}/project/${encodeURIComponent(projectId)}/version`))[0];
+  }
   if (!version) throw new Error('У сборки нет версий');
   const f = (version.files || []).find(x => /\.mrpack$/i.test(x.filename)) || primaryFile(version);
   if (!f || !/^https:\/\/cdn\.modrinth\.com\//.test(f.url)) throw new Error('У сборки нет файла .mrpack');

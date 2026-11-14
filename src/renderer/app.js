@@ -22,7 +22,7 @@ const S = {
   stats: null, look: { avatarBg: null }, avatar: null, actPeriod: 'w',
   // Аккаунт Komori: вход при запуске, смена пароля в настройках
   kacc: { checked: false, account: null }, auth: blankAuth(), kpw: { old: '', n1: '', n2: '' }, kStatus: null, kLinkWait: false,
-  mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', category: '', hits: [], total: 0, offset: 0,
+  mods: { profileId: null, source: 'modrinth', tab: 'catalog', type: 'mod', query: '', sort: 'relevance', cats: [], tagQ: '', packMc: '', packLoader: '', hits: [], total: 0, offset: 0,
     loading: false, error: null, needLoader: false, mc: '', loader: '', items: [], updates: null, checking: false, busy: {} }
 };
 
@@ -242,9 +242,97 @@ const CATS = {
     mod: MOD_CATS.filter(c => c[0] !== 'game-mechanics'),
     resourcepack: [['16x', '16x'], ['32x', '32x'], ['64x', '64x'], ['128x', '128x'], ['256x', '256x'], ['512x and Higher', '512x и больше'], ['Photo Realistic', 'Фотореализм'],
       ['Traditional', 'Традиционные'], ['Medieval', 'Средневековые'], ['Modern', 'Современные'], ['Steampunk', 'Стимпанк'], ['Animated', 'Анимированные'],
-      ['Mod Support', 'Для модов'], ['Font Packs', 'Шрифты'], ['Miscellaneous', 'Разное']]
+      ['Mod Support', 'Для модов'], ['Font Packs', 'Шрифты'], ['Miscellaneous', 'Разное']],
+    modpack: [['Tech', 'Технологии'], ['Magic', 'Магия'], ['Adventure and RPG', 'Приключения и RPG'], ['Exploration', 'Исследование'], ['Quests', 'Квесты'],
+      ['Hardcore', 'Хардкор'], ['Expert', 'Экспертные'], ['Sci-Fi', 'Фантастика'], ['Horror', 'Хоррор'], ['Combat / PvP', 'Бои и PvP'], ['Multiplayer', 'Мультиплеер'],
+      ['Small / Light', 'Лёгкие'], ['Extra Large', 'Огромные'], ['Vanilla+', 'Ванилла+'], ['Skyblock', 'Скайблок'], ['Map Based', 'На карте'], ['Mini Game', 'Мини-игры'],
+      ['FTB Official Pack', 'От FTB']]
   }
 };
+CATS.modrinth.modpack = [['technology', 'Технологии'], ['magic', 'Магия'], ['adventure', 'Приключения'], ['quests', 'Квесты'], ['challenging', 'Хардкор'],
+  ['combat', 'Бои'], ['multiplayer', 'Мультиплеер'], ['lightweight', 'Лёгкие'], ['kitchen-sink', 'Всё и сразу'], ['optimization', 'Оптимизация']];
+const LOADER_LABELS = { fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge', quilt: 'Quilt', iris: 'Iris', optifine: 'OptiFine', canvas: 'Canvas', vanilla: 'Ванильные', datapack: 'Датапак' };
+function loaderLabel(l) { return LOADER_LABELS[l] || l; }
+function fmtCount(n) { return Number(n || 0).toLocaleString('ru-RU') + (n >= 10000 && S.mods.source === 'curseforge' ? '+' : ''); }
+function hasFilters() { const M = S.mods; return !!(M.cats.length || M.query || (M.type === 'modpack' && (M.packMc || M.packLoader))); }
+function tagLabel(k) { const c = (catList() || []).find(x => x[0] === k); return c ? c[1] : ''; }
+
+// Теги под карточкой: известные — нажимаются и добавляют фильтр; выбранные подсвечены
+function tagPills(h, max) {
+  const M = S.mods;
+  const known = [...new Set(h.tags || [])].filter(tagLabel);
+  if (!known.length) return '';
+  known.sort((a, b) => (M.cats.includes(b) ? 1 : 0) - (M.cats.includes(a) ? 1 : 0));
+  const n = max || 4, shown = known.slice(0, n);
+  return `<span class="tags">${shown.map(k => `<button type="button" class="tg ${M.cats.includes(k) ? 'on' : ''}" data-act="mTagAdd" data-id="${esc(k)}" title="Показать только «${esc(tagLabel(k))}»">${esc(tagLabel(k))}</button>`).join('')}${known.length > n ? `<span class="tg more">+${known.length - n}</span>` : ''}</span>`;
+}
+
+// Карточка сборки: картинка из галереи, иконка, версия и ядро, теги
+function packCard(h) {
+  const M = S.mods, busy = M.busy[h.id];
+  const meta = [h.mcv, (h.loaders || []).filter(l => LOADER_NAMES[l]).map(loaderLabel).join(' / ')].filter(Boolean).join(' · ');
+  return `<div class="packc">
+    <div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0).toUpperCase())}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}</div>
+    <div class="pc-body">
+      <div class="pc-head">${modIcon(h.icon, h.title)}<div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="modpack" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
+        <span class="mby">${esc(h.author)} · ${fmtNum(h.downloads)} загрузок</span></div></div>
+      <span class="pc-desc">${esc(h.description)}</span>
+      ${tagPills(h, 3)}
+      <button type="button" class="btn" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить сборку'}</button>
+    </div></div>`;
+}
+
+// Панель фильтров слева: теги с поиском по ним, для сборок — версия Minecraft и ядро
+function filterPanel(p, forWhat) {
+  const M = S.mods, cats = catList(), isPack = M.type === 'modpack';
+  const q = M.tagQ.trim().toLowerCase();
+  let tags = '';
+  if (cats) {
+    const shown = cats.filter(([k, l]) => !q || l.toLowerCase().includes(q) || M.cats.includes(k));
+    tags = `<div class="fsec"><div class="fsec-h"><b>Теги</b>${M.cats.length ? `<span class="fcount">${M.cats.length}</span>` : ''}</div>
+      ${cats.length > 8 ? `<div class="fsearch">${SEARCH}<input type="search" id="tagQ" placeholder="Найти тег…" value="${esc(M.tagQ)}" aria-label="Найти тег"></div>` : ''}
+      <div class="fchecks">${shown.map(([k, l]) => { const on = M.cats.includes(k);
+        return `<button type="button" role="checkbox" aria-checked="${on}" class="fcheck ${on ? 'on' : ''}" data-act="mCat" data-id="${esc(k)}"><span class="box"></span>${esc(l)}</button>`; }).join('') || '<span class="note">Такого тега нет</span>'}</div>
+      ${M.cats.length > 1 ? '<span class="note">Показаны те, где есть все выбранные теги</span>' : ''}</div>`;
+  }
+  let pack = '';
+  if (isPack) {
+    const rel = S.versions && S.versions.versions ? S.versions.versions.filter(v => v.type === 'release').map(v => v.id) : [];
+    if (M.packMc && !rel.includes(M.packMc)) rel.unshift(M.packMc);
+    pack = `<div class="fsec"><div class="fsec-h"><b>Версия Minecraft</b></div>
+      <select id="packMc" class="input" aria-label="Версия Minecraft"><option value="">Любая</option>${rel.map(v => `<option value="${esc(v)}" ${M.packMc === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+      <div class="fsec"><div class="fsec-h"><b>Ядро</b></div><div class="fradio">${[['any', 'Любое'], ['fabric', 'Fabric'], ['forge', 'Forge'], ['neoforge', 'NeoForge'], ['quilt', 'Quilt']].map(([k, l]) => {
+        const on = (M.packLoader || 'any') === k;
+        return `<button type="button" role="radio" aria-checked="${on}" class="${on ? 'on' : ''}" data-act="mLoader" data-id="${k}">${l}</button>`; }).join('')}</div></div>`;
+  } else if (M.mc && !M.serverList) {
+    pack = `<div class="fsec"><div class="fsec-h"><b>Под сборку</b></div><span class="fpin">${esc(forWhat)}</span><span class="note">${M.type === 'mod' ? 'Другие версии не подойдут этой сборке. Зависимости ставятся сами.' : 'Показано то, что подходит этой версии.'}</span></div>`;
+  }
+  return `<aside class="fpanel" aria-label="Фильтры">${pack}${tags}${hasFilters() ? '<button type="button" class="btn-ghost fclear" data-act="mClear">Сбросить фильтры</button>' : ''}</aside>`;
+}
+
+// Выбранные фильтры над результатами, у каждого крестик
+function activeChips() {
+  const M = S.mods, out = [];
+  if (M.query) out.push(['q', '«' + M.query + '»']);
+  if (M.type === 'modpack' && M.packMc) out.push(['mc', 'Minecraft ' + M.packMc]);
+  if (M.type === 'modpack' && M.packLoader) out.push(['loader', loaderLabel(M.packLoader)]);
+  M.cats.forEach(c => out.push([c, tagLabel(c) || c]));
+  if (!out.length) return '';
+  const x = '<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8"/></svg>';
+  return `<div class="achips">${out.map(([k, l]) => `<button type="button" class="achip" data-act="mUnset" data-id="${esc(k)}" aria-label="Убрать фильтр ${esc(l)}">${esc(l)}${x}</button>`).join('')}
+    ${out.length > 1 ? '<button type="button" class="achip-clear" data-act="mClear">Сбросить всё</button>' : ''}</div>`;
+}
+
+// Шейдерам нужен мод: Iris (Fabric, Quilt, NeoForge) или Oculus (Forge). Подсказываем, если его нет в сборке
+function shaderHint(p) {
+  const M = S.mods;
+  if (M.type !== 'shader' || M.serverList || !p) return '';
+  if (p.loader === 'vanilla') return `<div class="hintbar">Шейдерам нужен мод Iris, а для него — ядро Fabric или NeoForge. Создай такую сборку или поставь OptiFine вручную.</div>`;
+  const has = M.items.some(i => /\b(iris|oculus|optifine)/i.test((i.title || '') + ' ' + (i.file || '')));
+  if (has) return '';
+  const mod = p.loader === 'forge' ? 'Oculus' : 'Iris';
+  return `<div class="hintbar">Для шейдеров в этой сборке нужен мод ${mod} — без него шейдеры не включатся.<button type="button" class="btn2" data-act="mShaderMod" data-id="${mod}">Найти ${mod}</button></div>`;
+}
 function catList() { const M = S.mods; return M.serverList ? null : (CATS[M.source] || {})[M.type] || null; }
 const MTYPES = { mod: 'Моды', resourcepack: 'Ресурспаки', shader: 'Шейдеры', modpack: 'Сборки' };
 const SOURCE_NAMES = { modrinth: 'Modrinth', curseforge: 'CurseForge', manual: 'вручную' };
@@ -268,8 +356,8 @@ function viewMods() {
     <button type="button" role="tab" aria-selected="${M.tab === 'installed'}" class="${M.tab === 'installed' ? 'on' : ''}" data-act="mTab" data-id="installed">Установленные (${M.items.length})</button></div>`;
   let body;
   if (M.tab === 'catalog') {
-    const chips = Object.keys(MTYPES).map(t => `<button type="button" class="chip ${M.type === t ? 'on' : ''}" data-act="mType" data-id="${t}">${MTYPES[t]}</button>`).join('');
-    const srcSeg = `<div class="src-seg">${['modrinth', 'curseforge'].map(s => `<button type="button" class="${M.source === s ? 'on' : ''}" data-act="mSource" data-id="${s}">${SOURCE_NAMES[s]}</button>`).join('')}</div>`;
+    const typeSeg = `<div class="seg">${Object.keys(MTYPES).map(t => `<button type="button" class="${M.type === t ? 'on' : ''}" data-act="mType" data-id="${t}">${MTYPES[t]}</button>`).join('')}</div>`;
+    const srcSeg = `<div class="seg">${['modrinth', 'curseforge'].map(s => `<button type="button" class="${M.source === s ? 'on' : ''}" data-act="mSource" data-id="${s}">${SOURCE_NAMES[s]}</button>`).join('')}</div>`;
     const isPack = M.type === 'modpack';
     let list;
     if (M.needKey) {
@@ -279,31 +367,37 @@ function viewMods() {
     } else if (M.error) {
       list = `<div class="empty">${esc(M.error)}<br><br><button type="button" class="btn2" data-act="mRetry">Повторить</button></div>`;
     } else if (!M.hits.length) {
-      list = `<div class="empty">${M.loading ? 'Ищу на Modrinth…' : M.serverList ? 'Для сборки сервера админы пока ничего такого не разрешили.<br>Свои моды здесь можно ставить только из их списка.' : 'Ничего не найдено'}</div>`;
+      list = `<div class="empty">${M.loading ? 'Ищу на ' + SOURCE_NAMES[M.source] + '…' : M.serverList ? 'Для сборки сервера админы пока ничего такого не разрешили.<br>Свои моды здесь можно ставить только из их списка.'
+        : 'Ничего не найдено' + (hasFilters() ? '<br><br><button type="button" class="btn2" data-act="mClear">Сбросить фильтры</button>' : '')}</div>`;
     } else {
-      list = M.hits.map(h => {
-        const inst = !isPack && installedKeys.has(h.id);
+      const more = M.hits.length < M.total ? `<div class="more-row"><button type="button" class="btn2" data-act="mMore" ${M.loading ? 'disabled' : ''}>${M.loading ? 'Загружаю…' : 'Показать ещё'}</button></div>` : '';
+      list = isPack ? `<div class="pgrid">${M.hits.map(h => packCard(h)).join('')}</div>${more}` : M.hits.map(h => {
+        const inst = installedKeys.has(h.id);
         const busy = M.busy[h.id];
-        const label = inst ? 'Установлен' : busy ? esc(busy) : isPack ? 'Установить сборку' : 'Установить';
+        const label = inst ? 'Установлен' : busy ? esc(busy) : 'Установить';
         return `<div class="mrow">${modIcon(h.icon, h.title)}
           <div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="${esc(h.type)}" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
-          <span class="mby">${h.note ? esc(h.note) : `${esc(h.author)} · ${fmtNum(h.downloads)} загрузок`}</span>
-          <span class="mdesc">${esc(h.description)}</span></div>
-          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-src="${esc(h.src || '')}" data-title="${esc(h.title)}" ${inst || busy || (isPack && S.busy) ? 'disabled' : ''}>${label}</button></div>`;
-      }).join('') + (M.hits.length < M.total ? `<div style="padding:14px;text-align:center"><button type="button" class="btn2" data-act="mMore" ${M.loading ? 'disabled' : ''}>${M.loading ? 'Загружаю…' : 'Показать ещё'}</button></div>` : '');
+          <span class="mby">${h.note ? esc(h.note) : `${esc(h.author)} · ${fmtNum(h.downloads)} загрузок${h.loaders && h.loaders.length && M.type === 'shader' ? ' · ' + h.loaders.map(loaderLabel).join(', ') : ''}`}</span>
+          <span class="mdesc">${esc(h.description)}</span>${tagPills(h)}</div>
+          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-src="${esc(h.src || '')}" data-title="${esc(h.title)}" ${inst || busy ? 'disabled' : ''}>${label}</button></div>`;
+      }).join('') + more;
     }
     const forWhat = M.type === 'mod' ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
-    const hint = M.serverList ? `<span class="note">Это сборка сервера: моды — только те, что разрешили админы, остальные лаунчер отключит перед входом. Шейдеры и ресурспаки — любые.</span>` : isPack
-      ? `<span class="note">Сборка ставится в новый профиль со своим ядром и версией.</span>`
-      : (M.mc ? `<span class="note">Показаны только подходящие для ${esc(forWhat)}. Зависимости ставятся сами.</span>` : '');
-    body = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${srcSeg}<div class="chips">${chips}</div><span class="grow"></span>
-        ${isPack ? `<button type="button" class="btn2" data-act="mImport" ${S.busy ? 'disabled' : ''}>Импорт из файла</button>` : ''}</div>
+    const hint = M.serverList ? `<span class="note">Это сборка сервера: моды — только те, что разрешили админы, остальные лаунчер отключит перед входом. Шейдеры и ресурспаки — любые.</span>` : '';
+    const found = !M.error && !M.needKey && M.hits.length ? `<span class="found">${M.serverList ? 'Разрешено' : 'Найдено'}: ${fmtCount(M.total)}</span>` : '';
+    body = `<div class="cat-bar">${typeSeg}<span class="grow"></span>
+        ${isPack ? `<button type="button" class="btn2" data-act="mImport" ${S.busy ? 'disabled' : ''}>Импорт из файла</button>` : ''}${srcSeg}</div>
       ${isPack && S.busy ? progressHtml() : ''}
-      <div style="display:flex;gap:10px"><div class="search" style="flex:1">${SEARCH}<input type="search" id="modsQuery" placeholder="Поиск на ${M.source === 'curseforge' ? 'CurseForge' : 'Modrinth'}…" value="${esc(M.query)}" aria-label="Поиск модов"></div>
-      ${catList() ? `<select id="modsCat" class="input" aria-label="Категория"><option value="">Все категории</option>${catList().map(([v, l]) => `<option value="${esc(v)}" ${M.category === v ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
-      <select id="modsSort" class="input" aria-label="Сортировка">${[['relevance', 'По совпадению'], ['downloads', 'Популярные'], ['follows', 'Избранные'], ['newest', 'Новые'], ['updated', 'Обновлённые']].map(([v, l]) => `<option value="${v}" ${M.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-      ${hint}
-      <div class="list">${list}</div>`;
+      <div class="cat">
+        ${filterPanel(p, forWhat)}
+        <div class="cat-main">
+          <div class="cat-search"><div class="search" style="flex:1">${SEARCH}<input type="search" id="modsQuery" placeholder="Найти ${isPack ? 'сборку' : M.type === 'mod' ? 'мод' : M.type === 'shader' ? 'шейдер' : 'ресурспак'} на ${SOURCE_NAMES[M.source]}…" value="${esc(M.query)}" aria-label="Поиск"></div>
+          <select id="modsSort" class="input" aria-label="Сортировка">${[['relevance', 'По совпадению'], ['downloads', 'Популярные'], ['follows', 'Избранные'], ['newest', 'Новые'], ['updated', 'Обновлённые']].map(([v, l]) => `<option value="${v}" ${M.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+          ${activeChips()}${found || hint ? `<div class="cat-info">${found}${hint}</div>` : ''}
+          ${shaderHint(p)}
+          <div class="list ${isPack ? 'list-cards' : ''}">${list}</div>
+        </div>
+      </div>`;
   } else {
     const upd = M.updates || [];
     const updMap = {}; upd.forEach(u => { updMap[u.key] = u; });
@@ -354,7 +448,8 @@ async function modsSearch(reset) {
   }
   M.serverList = false;
   try {
-    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, category: catList() ? M.category : '' });
+    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, categories: catList() ? M.cats : [],
+      mc: M.type === 'modpack' ? M.packMc : '', loader: M.type === 'modpack' ? M.packLoader : '' });
     M.needLoader = !!r.needLoader; M.needKey = !!r.needKey; M.mc = r.mc || M.mc; M.total = r.total;
     M.hits = reset ? r.hits : M.hits.concat(r.hits);
   } catch (e) { M.error = errText(e); }
@@ -741,11 +836,14 @@ function render() {
   // Прокрутку списков сохраняем между перерисовками того же экрана (например, после установки мода)
   const keepScroll = S._rendered === S.screen && !S._resetScroll;
   const scrolls = keepScroll ? Array.from($('#view').querySelectorAll('.list,.page,.page2')).map(e => e.scrollTop) : null;
+  // Панель фильтров каталога не прыгает наверх, даже когда список результатов начинается заново
+  const fp = S._rendered === S.screen && $('#view .fpanel'), fpTop = fp ? fp.scrollTop : 0;
   S._rendered = S.screen; S._resetScroll = false;
   let html = v();
   if (NAV_OF[S.screen] || S.screen === 'profiles') html = html.replace(/^(\s*<section class="page"[^>]*>)/, '$1' + buildsTabs());
   $('#view').innerHTML = html;
   if (scrolls) Array.from($('#view').querySelectorAll('.list,.page,.page2')).forEach((e, i) => { if (scrolls[i]) e.scrollTop = scrolls[i]; });
+  if (fpTop) { const f = $('#view .fpanel'); if (f) f.scrollTop = fpTop; }
   // Плашки справа появляются плавно только при входе на главную, а не при каждой перерисовке (иначе мерцают во время запуска)
 
   if (focused) {
@@ -878,7 +976,7 @@ const ACTIONS = {
   openLink: (id) => { K.openLink(id); },
   nav: (id) => {
     S.screen = id; S.menuOpen = false;
-    if (id === 'home') loadMcNews();
+    if (id === 'home') homeLoad();
     if (id === 'komori') { loadKomoriNews(); loadLastLog(); }
     if (id === 'profile') loadStats();
     if (id === 'settings' && S.sTab === 'account') loadSkin();
@@ -887,14 +985,21 @@ const ACTIONS = {
     render();
   },
   mTab: (id) => { S.mods.tab = id; if (id === 'installed') modsLoadInstalled(); render(); },
-  mType: (id) => { S.mods.type = id; S.mods.category = ''; modsSearch(true); },
+  mType: (id) => { S.mods.type = id; S.mods.cats = []; S.mods.tagQ = ''; if (id === 'modpack' && !S.versions) loadVersions(); modsSearch(true); },
+  // Фильтры каталога: несколько тегов сразу, версия и ядро для сборок
+  mCat: (id) => { const M = S.mods; M.cats = M.cats.includes(id) ? M.cats.filter(c => c !== id) : M.cats.concat(id).slice(0, 10); modsSearch(true); },
+  mTagAdd: (id) => { const M = S.mods; if (!M.cats.includes(id)) { M.cats = M.cats.concat(id).slice(0, 10); modsSearch(true); } },
+  mLoader: (id) => { S.mods.packLoader = id === 'any' ? '' : id; modsSearch(true); },
+  mUnset: (id) => { const M = S.mods; if (id === 'q') M.query = ''; else if (id === 'mc') M.packMc = ''; else if (id === 'loader') M.packLoader = ''; else M.cats = M.cats.filter(c => c !== id); modsSearch(true); },
+  mClear: () => { const M = S.mods; M.cats = []; M.query = ''; M.packMc = ''; M.packLoader = ''; M.tagQ = ''; modsSearch(true); },
+  mShaderMod: (id) => { const M = S.mods; M.type = 'mod'; M.cats = []; M.query = id; modsSearch(true); },
   mRetry: () => modsSearch(true),
   mMore: () => { S.mods.offset = S.mods.hits.length; modsSearch(false); },
-  mSource: (id) => { S.mods.source = id; S.mods.category = ''; modsSearch(true); },
+  mSource: (id) => { S.mods.source = id; S.mods.cats = []; S.mods.tagQ = ''; modsSearch(true); },
   mOpen: (slug, el) => K.mods.open(S.mods.source, slug, el.dataset.type, el.dataset.url),
   mInstall: async (projectId, el) => {
     const M = S.mods;
-    if (M.type === 'modpack') return installPack(() => K.mods.installPack(M.source, projectId, el.dataset.title), projectId);
+    if (M.type === 'modpack') return installPack(() => K.mods.installPack(M.source, projectId, el.dataset.title, { mc: M.packMc, loader: M.packLoader }), projectId);
     M.busy[projectId] = 'Скачиваю…'; render();
     try {
       const r = await K.mods.install((el && el.dataset.src) || M.source, M.profileId, projectId, M.type);
@@ -1080,6 +1185,7 @@ ACTIONS.goAccount = () => { if (!kAcc()) return ACTIONS.gOpen(); S.screen = 'pro
 document.addEventListener('input', (ev) => {
   const t = ev.target;
   if (t.id === 'vSearch') { S.vSearch = t.value; render(); }
+  else if (t.id === 'tagQ') { S.mods.tagQ = t.value; render(); }
   else if (t.id === 'modsQuery') { S.mods.query = t.value; clearTimeout(modsSearchTimer); modsSearchTimer = setTimeout(() => modsSearch(true), 400); }
   else if (t.id === 'devName') { S.devName = t.value; }
   else if (t.id === 'yggLogin') { S.ygg.login = t.value; }
@@ -1097,7 +1203,7 @@ document.addEventListener('change', async (ev) => {
   if (ev.target.id === 'ram') { S.settings = await K.settings.set({ ram: Number(ev.target.value) }); }
   if (ev.target.id === 'modsProfile') { S.mods.profileId = ev.target.value; S.mods.updates = null; modsLoadInstalled(); modsSearch(true); }
   if (ev.target.id === 'modsSort') { S.mods.sort = ev.target.value; modsSearch(true); }
-  if (ev.target.id === 'modsCat') { S.mods.category = ev.target.value; modsSearch(true); }
+  if (ev.target.id === 'packMc') { S.mods.packMc = ev.target.value; modsSearch(true); }
   if (ev.target.id === 'srvProfile') { S.srv.profileId = ev.target.value; S.srv.built = null; render(); }
   if (ev.target.id === 'capeSel') { const a = selectedAccount(); const v = ev.target.value; if (a) skinAction(() => K.accounts.capeSet(a.id, v)); }
 });
@@ -1150,8 +1256,7 @@ K.accounts.onMsError((msg) => { S.msCode = null; toast(msg); render(); });
   } catch (e) { toast(errText(e)); }
   render();
   loadKacc();
-  loadMcNews();
-  loadStats();
+  homeLoad();
   loadLook();
   loadVersions();
   loadLastLog();
