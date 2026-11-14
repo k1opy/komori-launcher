@@ -1,7 +1,7 @@
 {
   "name": "komori-launcher",
   "productName": "Komori Launcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Komori Launcher — лаунчер Minecraft сервера Komori",
   "main": "src/main/main.js",
   "author": "Komori",

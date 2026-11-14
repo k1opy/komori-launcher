@@ -711,3 +711,4 @@ button.tg:hover{border-color:var(--accent);color:var(--title)}
 .fd-stats b{font-family:var(--pix);font-weight:400;font-size:16px;color:var(--title)}
 .fd-stats span{font-size:12px;color:var(--muted)}
 .fd-stats b{white-space:nowrap}
+.page2>*{flex-shrink:0}
