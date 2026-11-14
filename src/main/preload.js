@@ -111,6 +111,8 @@ contextBridge.exposeInMainWorld('komori', {
     discordUnlink: () => ipcRenderer.invoke('kacc:discordUnlink'),
     openProfile: () => ipcRenderer.invoke('kacc:openProfile'),
     friends: () => ipcRenderer.invoke('kacc:friends'),
+    user: (login) => ipcRenderer.invoke('kacc:user', { login }),
+    openUser: (login) => ipcRenderer.invoke('kacc:openUser', { login }),
     friend: (action, login) => ipcRenderer.invoke('kacc:friend', { action, login })
   },
   look: {

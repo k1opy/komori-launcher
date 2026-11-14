@@ -105,8 +105,9 @@ function socialBlock() {
 // ---------- отрисовка ----------
 function renderSide() {
   const cur = NAV_OF[S.screen] || S.screen;
+  const frInc = kAcc() && S.friends.data ? S.friends.data.incoming.length : 0;
   $('#nav').innerHTML = NAV.map(([id, label, svg]) =>
-    `<button type="button" data-act="nav" data-id="${id}" class="${cur === id ? 'on' : ''}" ${cur === id ? 'aria-current="page"' : ''}>${svg}${label}</button>`).join('');
+    `<button type="button" data-act="nav" data-id="${id}" class="${cur === id ? 'on' : ''}" ${cur === id ? 'aria-current="page"' : ''}>${svg}${label}${id === 'home' && frInc ? `<span class="nbadge" title="Заявки в друзья">${frInc}</span>` : ''}</button>`).join('');
   const a = selectedAccount(), ka = kAcc();
   const lv = S.stats ? levelInfo(S.stats.total).level : null;
   $('#accChip').innerHTML = ka
@@ -1196,6 +1197,7 @@ ACTIONS.goAccount = () => { if (!kAcc()) return ACTIONS.gOpen(); S.screen = 'pro
 document.addEventListener('input', (ev) => {
   const t = ev.target;
   if (t.id === 'vSearch') { S.vSearch = t.value; render(); }
+  else if (t.id === 'obNick') { S.obNick = t.value; }
   else if (t.id === 'frAdd') { S.friends.add = t.value; const b = document.querySelector('[data-act=frAdd]'); if (b) b.disabled = S.friends.busy || !t.value.trim(); }
   else if (t.id === 'tagQ') { S.mods.tagQ = t.value; render(); }
   else if (t.id === 'modsQuery') { S.mods.query = t.value; clearTimeout(modsSearchTimer); modsSearchTimer = setTimeout(() => modsSearch(true), 400); }
@@ -1224,6 +1226,8 @@ document.addEventListener('keydown', (ev) => {
   else if (ev.key === 'Escape' && S.menuOpen) setMenu(false);
   if (ev.key === 'Enter' && ev.target.id === 'devName') ACTIONS.devLogin();
   if (ev.key === 'Enter' && ev.target.id === 'frAdd') ACTIONS.frAdd();
+  if (ev.key === 'Enter' && ev.target.id === 'obNick') ACTIONS.obGo();
+  if (ev.key === 'Escape' && S.fdlg) ACTIONS.frClose();
   if (ev.key === 'Enter' && ['yggLogin', 'yggPass', 'yggUrl'].includes(ev.target.id)) ACTIONS.yggLogin();
   if (ev.key === 'Enter' && ev.target.id === 'newNick' && S.renaming) ACTIONS.renameSave(S.renaming);
 });

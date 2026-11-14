@@ -166,6 +166,9 @@ ipcMain.handle('look:pick', async (e, kind) => {
 // ---------- аккаунт Komori ----------
 const kaWrap = fn => async (e, a) => fn(a || {});
 ipcMain.handle('kacc:me', async () => { const r = await kacc.me(); if (r.account && !r.offline) { kacc.syncStats(playtime.get()); presenceNow(); } return r; });
+const okLogin = l => /^[A-Za-z0-9_]{3,16}$/.test(String(l || ''));
+ipcMain.handle('kacc:user', kaWrap(a => { if (!okLogin(a.login)) throw new Error('Неверный логин'); return kacc.user(a.login); }));
+ipcMain.handle('kacc:openUser', kaWrap(a => { if (okLogin(a.login)) shell.openExternal(kacc.userUrl(a.login)); return true; }));
 ipcMain.handle('kacc:friends', kaWrap(() => kacc.friends()));
 ipcMain.handle('kacc:friend', kaWrap(a => kacc.friendAct(['add', 'accept', 'remove'].includes(a.action) ? a.action : 'add', String(a.login || '').trim().slice(0, 16))));
 ipcMain.handle('kacc:login', kaWrap(async a => { const r = await kacc.login(String(a.login || ''), String(a.password || '')); kacc.syncStats(playtime.get()); return r; }));

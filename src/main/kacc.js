@@ -71,4 +71,8 @@ async function friends() { return absFriends(await api('GET', '/api/acc/friends'
 async function friendAct(action, login) { return absFriends(await api('POST', '/api/acc/friends/' + action, { login }, true)); }
 async function presence(game, offline) { if (!token()) return; try { await api('POST', '/api/acc/presence', offline ? { offline: true } : { game: game || '' }, true); } catch {} }
 
-module.exports = { friends, friendAct, presence, setBase, me, login, register, logout, recover, recoverFinish, update, avatar, banner, password, discordStart, discordUnlink, syncStats, profileUrl };
+// Публичный профиль игрока (для окна друга)
+async function user(login) { return withAbs(await api('GET', '/api/acc/u/' + encodeURIComponent(login))); }
+function userUrl(login) { return BASE + '/u/' + encodeURIComponent(login); }
+
+module.exports = { user, userUrl, friends, friendAct, presence, setBase, me, login, register, logout, recover, recoverFinish, update, avatar, banner, password, discordStart, discordUnlink, syncStats, profileUrl };

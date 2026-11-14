@@ -86,10 +86,22 @@ function stopBtn(id) {
 // ---------- Главная: сервер, твоя неделя, недавние сборки, сборки дня ----------
 function viewHome() {
   return `<section class="page2">
-    ${quickLaunch()}
+    ${S.accounts.list.length ? quickLaunch() : firstStep()}
     <div class="home-row">${homeServer()}${homeWeek()}${homeFriends()}</div>
     ${homeRecent()}
     ${homeDaily()}
+  </section>`;
+}
+// Первый запуск: аккаунт Komori уже есть, осталось выбрать ник для игры
+function firstStep() {
+  const off = !!S.info.allowOffline;
+  if (S.obNick == null && kAcc()) S.obNick = kAcc().login;   // по умолчанию — логин Komori
+  return `<section class="quick card first" aria-label="Первый шаг">
+    <div class="q-t"><span class="lbl">Остался один шаг</span><b>${off ? 'Выбери ник для игры' : 'Войди в аккаунт Minecraft'}</b>
+      <span>${off ? 'Под этим ником тебя увидят на сервере. Поменять его можно в Настройках → Minecraft.' : 'Нужен аккаунт Microsoft с купленной игрой.'}</span></div>
+    <div class="first-row">${off ? `<input id="obNick" class="input" maxlength="16" placeholder="Ник, 3–16 символов" value="${esc(S.obNick || '')}" aria-label="Ник">
+      <button type="button" class="btn" data-act="obGo">Готово</button>` : ''}
+      <button type="button" class="${off ? 'btn2' : 'btn'}" data-act="obMs">${off ? 'У меня лицензия' : 'Войти через Microsoft'}</button></div>
   </section>`;
 }
 function homeLoad() { loadStats(); loadDaily(); loadFriends(); }
@@ -147,7 +159,7 @@ function homeFriends() {
     const inc = d.incoming.map(f => `<div class="fr fr-inc">${frAvatar(f)}<div class="t"><b>${esc(f.login)}</b><span>хочет дружить</span></div>
       <button type="button" class="fr-btn ok" data-act="frAccept" data-id="${esc(f.login)}" aria-label="Принять" title="Принять" ${F.busy ? 'disabled' : ''}>${OK_SVG}</button>
       <button type="button" class="fr-btn" data-act="frRemove" data-id="${esc(f.login)}" aria-label="Отклонить" title="Отклонить" ${F.busy ? 'disabled' : ''}>${X_SVG}</button></div>`).join('');
-    const list = d.friends.map(f => `<div class="fr ${f.online ? 'on' : ''}">${frAvatar(f)}<div class="t"><b>${esc(f.login)} <span class="fr-lv">ур. ${f.level}</span></b>
+    const list = d.friends.map(f => `<div class="fr ${f.online ? 'on' : ''}"><button type="button" class="fr-open" data-act="frOpen" data-id="${esc(f.login)}" aria-label="Профиль ${esc(f.login)}">${frAvatar(f)}</button><div class="t"><b><button type="button" class="fr-name" data-act="frOpen" data-id="${esc(f.login)}">${esc(f.login)}</button> <span class="fr-lv">ур. ${f.level}</span></b>
       <span class="${f.game ? 'fr-game' : ''}">${f.game ? 'играет в ' + esc(f.game) : f.online ? 'в лаунчере' : esc(agoShort(f.seen))}</span></div>
       <button type="button" class="fr-btn fr-del" data-act="frRemove" data-id="${esc(f.login)}" aria-label="Убрать ${esc(f.login)} из друзей" title="Убрать из друзей" ${F.busy ? 'disabled' : ''}>${X_SVG}</button></div>`).join('');
     const out = d.outgoing.length ? `<div class="fr-out">Ждут ответа: ${d.outgoing.map(f => `<button type="button" class="fr-chip" data-act="frRemove" data-id="${esc(f.login)}" title="Отменить заявку">${esc(f.login)} ${X_SVG}</button>`).join('')}</div>` : '';
@@ -162,7 +174,36 @@ async function loadFriends(quiet) {
   F.loading = true;
   try { F.data = await K.kacc.friends(); F.error = null; } catch (e) { if (!F.data) F.error = errText(e); }
   F.loading = false;
-  if (S.screen === 'home' && !(quiet && document.activeElement && document.activeElement.id === 'frAdd')) render();
+  if (S.screen === 'home' && !(quiet && document.activeElement && ['frAdd', 'obNick'].includes(document.activeElement.id))) render();
+  else renderSide();   // счётчик заявок в меню
+}
+// Окно друга: публичный профиль с сайта + что он делает сейчас
+async function openFriend(login) {
+  const f = S.friends.data && S.friends.data.friends.find(x => x.login === login);
+  S.fdlg = { login, f: f || null, p: null, error: null };
+  renderFriend();
+  try { S.fdlg.p = await K.kacc.user(login); } catch (e) { if (S.fdlg) S.fdlg.error = errText(e); }
+  if (S.fdlg && S.fdlg.login === login) renderFriend();
+}
+function renderFriend() {
+  const m = $('#fdlg'), D = S.fdlg;
+  if (!D) { m.classList.add('hidden'); m.innerHTML = ''; return; }
+  const p = D.p, f = D.f;
+  const now = f ? (f.game ? 'Играет в ' + f.game : f.online ? 'В лаунчере' : agoShort(f.seen).replace(/^б/, 'Б').replace(/^н/, 'Н')) : '';
+  const st = p ? p.stats : null;
+  const body = D.error ? `<div class="empty">${esc(D.error)}</div>` : !p ? '<div class="empty">Загружаю профиль…</div>' : `
+    <div class="fd-ban" ${p.banner ? `style="background-image:url('${esc(p.banner)}')"` : ''}></div>
+    <div class="fd-head"><span class="fd-av">${p.avatar ? `<img src="${esc(p.avatar)}" alt="">` : esc(p.login.charAt(0).toUpperCase())}</span>
+      <div class="t"><b>${esc(p.login)} <span class="fr-lv">ур. ${st.level}</span></b>${now ? `<span class="${f && f.online ? 'fd-on' : ''}">${esc(now)}</span>` : ''}</div></div>
+    ${p.status ? `<p class="fd-status">${esc(p.status)}</p>` : ''}${p.bio ? `<p class="note" style="margin:0">${esc(p.bio)}</p>` : ''}
+    <div class="fd-stats"><div><b>${esc(fmtHours(st.total))}</b><span>всего в игре</span></div><div><b>${esc(fmtHours(st.komori))}</b><span>на Komori</span></div><div><b>${st.launches}</b><span>запусков</span></div></div>
+    <span class="note">В Komori с ${esc(p.since)}${p.discord ? ' · Discord: ' + esc(p.discord.name) : ''}</span>`;
+  m.innerHTML = `<div class="dialog fd" role="dialog" aria-label="Профиль ${esc(D.login)}" style="width:520px">
+    <div class="dialog-head"><h2>${esc(D.login)}</h2><button type="button" class="icon-btn" data-act="frClose" aria-label="Закрыть">${X_SVG}</button></div>
+    ${body}
+    <div class="dialog-foot">${f ? `<button type="button" class="btn-ghost" data-act="frRemove" data-id="${esc(D.login)}" style="margin-right:auto">Убрать из друзей</button>` : ''}
+      <button type="button" class="btn2" data-act="frSite" data-id="${esc(D.login)}">Профиль на сайте</button></div></div>`;
+  m.classList.remove('hidden');
 }
 async function friendAct(action, login) {
   const F = S.friends;
@@ -176,7 +217,9 @@ async function friendAct(action, login) {
   F.busy = false; render();
 }
 // Пока открыта главная, список друзей обновляется раз в минуту
-setInterval(() => { if (S.screen === 'home' && !document.hidden) loadFriends(true); }, 60000);
+// Друзья обновляются раз в минуту на главной и раз в 3 минуты в других разделах (ради счётчика заявок)
+let frTick = 0;
+setInterval(() => { frTick++; if (!document.hidden && (S.screen === 'home' || frTick % 3 === 0)) loadFriends(true); }, 60000);
 
 function homeRecent() {
   const list = S.profiles.list.filter(p => p.lastPlayed).sort((x, y) => y.lastPlayed - x.lastPlayed).slice(0, 4);
@@ -363,7 +406,17 @@ const PAGE_ACTIONS = {
   dailyReload: () => loadDaily(true),
   frAdd: () => { const l = S.friends.add.trim(); if (l) friendAct('add', l); },
   frAccept: (login) => friendAct('accept', login),
-  frRemove: (login) => friendAct('remove', login),
+  frRemove: (login) => { if (S.fdlg) { S.fdlg = null; renderFriend(); } friendAct('remove', login); },
+  frOpen: (login) => openFriend(login),
+  frClose: () => { S.fdlg = null; renderFriend(); },
+  frSite: (login) => K.kacc.openUser(login),
+  obGo: async () => {
+    const el = $('#obNick'), name = (el ? el.value : S.obNick || '').trim();
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) return toast('Ник — от 3 до 16 символов: латинские буквы, цифры и _');
+    try { S.accounts = await K.accounts.dev(name); toast('Ник ' + name + ' выбран. Можно играть', true); } catch (e) { toast(errText(e)); }
+    render();
+  },
+  obMs: () => { S.screen = 'settings'; S.sTab = 'account'; S.loginTab = 'microsoft'; render(); ACTIONS.msLogin(); },
   dailyOpen: (slug) => K.mods.open('modrinth', slug, 'modpack', ''),
   dailyAll: () => { S.mods.source = 'modrinth'; ACTIONS.nav('packs'); },
   dailyInstall: (id, el) => installPack(() => K.mods.installPack('modrinth', id, el.dataset.title), id),
