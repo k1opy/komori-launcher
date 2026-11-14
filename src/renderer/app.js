@@ -286,7 +286,7 @@ function packCard(h) {
         <span class="mby">${esc(h.author)} · ${fmtNum(h.downloads)} загрузок</span></div></div>
       <span class="pc-desc">${esc(h.description)}</span>
       ${tagPills(h, 3)}
-      <button type="button" class="btn" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить сборку'}</button>
+      <button type="button" class="btn" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button>
     </div></div>`;
 }
 
