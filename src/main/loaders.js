@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
-const { fetchJson, downloadAll, UA } = require('./net');
+const { fetchJson, fetchSmart, downloadAll, UA } = require('./net');
 const versions = require('./versions');
 const { ensureJava, componentFor } = require('./java');
 
@@ -15,7 +15,7 @@ const FORGE_PROMOS = 'https://files.minecraftforge.net/net/minecraftforge/forge/
 const NEO_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge';
 
 async function fetchText(url) {
-  const r = await fetch(url, { headers: { 'User-Agent': UA } });
+  const r = await fetchSmart(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`HTTP ${r.status} при запросе ${url}`);
   return r.text();
 }
@@ -113,6 +113,24 @@ function runInstaller(java, jar, root, onLog) {
   });
 }
 
+// Библиотеки из установщика (install_profile.json и version.json), у которых есть адрес и SHA-1
+function installerLibraries(jar, root) {
+  const zip = new AdmZip(jar);
+  const read = n => { try { const e = zip.getEntry(n); return e ? JSON.parse(zip.readAsText(e)) : null; } catch { return null; } };
+  const libs = [];
+  for (const j of [read('install_profile.json'), read('version.json')]) if (j && Array.isArray(j.libraries)) libs.push(...j.libraries);
+  const base = path.resolve(root, 'libraries') + path.sep;
+  const out = [];
+  for (const l of libs) {
+    const a = l && l.downloads && l.downloads.artifact;
+    if (!a || !a.url || !a.path || !/^https:\/\//.test(a.url)) continue;   // пустой url — файл лежит внутри установщика
+    const dest = path.resolve(root, 'libraries', a.path);
+    if (!dest.startsWith(base)) continue;
+    out.push({ url: a.url, dest, sha1: a.sha1, size: a.size, verify: true });
+  }
+  return out;
+}
+
 // Полное имя версии Forge в Maven. У старых версий в конце есть ветка: 1.7.10-10.13.4.1614-1.7.10.
 // Сборки (CurseForge, Modrinth) пишут короткое «10.13.4.1614» — ищем полное в списке Forge.
 async function forgeFullVersion(mc, lv) {
@@ -202,6 +220,13 @@ async function ensureLoader(root, loader, mc, loaderVersion, progress, onLog) {
 
   progress(loader === 'forge' ? 'Скачиваю Forge' : 'Скачиваю NeoForge', 0, 1);
   await downloadAll([{ url, dest: jar }]);
+
+  // Библиотеки ядра качаем сами (с запасным зеркалом и проверкой SHA-1) — тогда установщику ничего не нужно
+  // скачивать из интернета, и он не падает, если сервер NeoForge/Forge у игрока не открывается
+  try {
+    const libTasks = installerLibraries(jar, root);
+    if (libTasks.length) await downloadAll(libTasks, (d, t) => progress(loader === 'forge' ? 'Библиотеки Forge' : 'Библиотеки NeoForge', d, t), 8);
+  } catch (e) { if (e && e.cancelled) throw e; onLog && onLog('[Komori] Не все библиотеки ядра скачались заранее: ' + (e && e.message || e) + '\n'); }
 
   if (loader === 'forge') {
     progress('Устанавливаю Forge', 0, 0);

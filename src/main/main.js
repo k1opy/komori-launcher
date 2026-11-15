@@ -45,6 +45,8 @@ CONFIG.serverManifestFallback = /^https:\/\//.test(String(CONFIG.serverManifestF
 CONFIG.trustedHosts = Array.isArray(CONFIG.trustedHosts) ? CONFIG.trustedHosts.filter(h => /^[A-Za-z0-9.\-]+$/.test(String(h))) : [];
 curseforge.setKey(CONFIG.curseforgeApiKey);
 curseforge.setProxy(CONFIG.curseforgeProxy === undefined ? 'https://komori.fun/api/cf' : CONFIG.curseforgeProxy);
+// Запасное зеркало для NeoForge и Forge (komori.fun/mvn). Пустая строка в конфиге — отключить
+require('./net').setMirrorBase(CONFIG.mavenMirror === undefined ? (CONFIG.websiteUrl || 'https://komori.fun') : CONFIG.mavenMirror);
 
 // ===== Ссылки: Discord (п.4), сайт (п.5), соцсети (п.6) =====
 // Берутся только из komori.config.json, только https. В интерфейс уходят id/название/иконка,

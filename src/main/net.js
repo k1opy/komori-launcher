@@ -6,8 +6,45 @@ const crypto = require('crypto');
 
 const UA = 'KomoriLauncher/0.8';
 
+// ----- Зеркало для NeoForge и Forge -----
+// У части игроков (например, из России) их сервер не открывается. Тогда качаем через komori.fun/mvn,
+// который берёт файлы с того же официального сервера. Хэши SHA-1 при этом проверяются как обычно.
+let mirrorBase = '';
+const MIRRORED = { 'maven.neoforged.net': 'neoforged', 'maven.minecraftforge.net': 'forge' };
+const badHosts = new Set();   // хосты, которые уже не открылись — дальше сразу через зеркало
+function setMirrorBase(b) { mirrorBase = /^https:\/\/[^\s]+$/.test(String(b || '')) ? String(b).replace(/\/+$/, '') : ''; }
+function mirrorUrl(url) {
+  try {
+    const u = new URL(url);
+    const k = MIRRORED[u.hostname];
+    return k && mirrorBase ? `${mirrorBase}/mvn/${k}${u.pathname}` : null;
+  } catch { return null; }
+}
+// fetch с запасным путём: ждём ответа не дольше 20 с (заблокированный сервер обычно просто молчит),
+// при ошибке сети, таймауте или 403/451/5xx пробуем зеркало
+async function fetchSmart(url, opts = {}) {
+  const alt = mirrorUrl(url);
+  const host = (() => { try { return new URL(url).hostname; } catch { return ''; } })();
+  const direct = async () => {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 20000);
+    const signal = opts.signal ? AbortSignal.any([opts.signal, ac.signal]) : ac.signal;
+    try { return await fetch(url, Object.assign({}, opts, { signal })); } finally { clearTimeout(timer); }
+  };
+  if (!alt) return fetch(url, opts);
+  if (!badHosts.has(host)) {
+    try {
+      const r = await direct();
+      if (r.ok || r.status === 404) return r;
+      if (![403, 451].includes(r.status) && r.status < 500) return r;
+    } catch (e) { if (opts.signal && opts.signal.aborted) throw e; }
+    badHosts.add(host);
+  }
+  return fetch(alt, opts);
+}
+
 async function fetchJson(url, opts = {}) {
-  const res = await fetch(url, Object.assign({ headers: { 'User-Agent': UA } }, opts));
+  const res = await fetchSmart(url, Object.assign({ headers: { 'User-Agent': UA } }, opts));
   if (!res.ok) throw new Error(`HTTP ${res.status} при запросе ${url}`);
   return res.json();
 }
@@ -41,7 +78,7 @@ async function downloadOne(t, tries = 3, tok) {
   for (let i = 0; i < tries; i++) {
     if (tok && tok.cancelled) throw cancelled();
     try {
-      const res = await fetch(t.url, { headers: { 'User-Agent': UA }, signal: tok && tok.ac ? tok.ac.signal : undefined });
+      const res = await fetchSmart(t.url, { headers: { 'User-Agent': UA }, signal: tok && tok.ac ? tok.ac.signal : undefined });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${t.url}`);
       const buf = Buffer.from(await res.arrayBuffer());
       if (t.sha1) {
@@ -85,4 +122,4 @@ async function downloadAll(tasks, onProgress, concurrency = 16, tok) {
   return total;
 }
 
-module.exports = { fetchJson, downloadAll, sha1File, setVerifyAll, UA };
+module.exports = { fetchJson, fetchSmart, setMirrorBase, downloadAll, sha1File, setVerifyAll, UA };

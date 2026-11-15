@@ -63,6 +63,21 @@ export default {
   }
 };
 
+// ===== Зеркало Maven для лаунчера: NeoForge и Forge, если их сервер недоступен у игрока (например, из России) =====
+// Только чтение, только два официальных репозитория и только файлы сборки — не открытый прокси. База KV не трогается.
+const MAVENS = { neoforged: 'https://maven.neoforged.net', forge: 'https://maven.minecraftforge.net' };
+async function mavenMirror(p) {
+  const mm = /^\/mvn\/(neoforged|forge)(\/[A-Za-z0-9._+\-\/]{1,300})$/.exec(p);
+  if (!mm || p.includes('..') || p.includes('//') || !/\.(jar|pom|xml|json|sha1|sha256|sha512|md5|lzma|zip|txt|tsrg|srg|csv|module)$/i.test(mm[2])) return text('Not found', 404);
+  const meta = /maven-metadata\.xml$/i.test(mm[2]);
+  const ttl = meta ? 600 : 30 * 86400;
+  const r = await fetch(MAVENS[mm[1]] + mm[2], { headers: { 'user-agent': 'KomoriMirror/1.0' }, cf: { cacheEverything: true, cacheTtl: ttl, cacheTtlByStatus: { '200-299': ttl, '404': 60, '500-599': 0 } } });
+  if (!r.ok) return text('Upstream ' + r.status, r.status === 404 ? 404 : 502);
+  const h = new Headers({ 'cache-control': 'public, max-age=' + ttl, 'access-control-allow-origin': '*' });
+  for (const k of ['content-type', 'content-length', 'last-modified', 'etag']) if (r.headers.get(k)) h.set(k, r.headers.get(k));
+  return new Response(r.body, { status: 200, headers: h });
+}
+
 let ROLE_MAP = {};
 async function route(req, env, ctx) {
   try { ROLE_MAP = JSON.parse(env.ROLE_BADGES || '{}'); } catch { ROLE_MAP = {}; }
@@ -78,6 +93,7 @@ async function route(req, env, ctx) {
   if (m === 'GET' && p === '/komori-dc.js') return new Response(RUNTIME, { headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=300' } });
   if (m === 'GET' && p.startsWith('/assets/')) return asset(p.slice(8));
   if (m === 'GET' && p === '/robots.txt') return text('User-agent: *\nAllow: /\n');
+  if (m === 'GET' && p.startsWith('/mvn/')) return mavenMirror(p);
   if (m === 'GET' && p === '/download') return Response.redirect((await siteCfg(env)).links.launcher, 302);
 
   // ----- вход через Discord -----
