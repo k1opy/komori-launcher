@@ -237,12 +237,12 @@ function homeDaily() {
   if (!D || D.loading) body = '<div class="dgrid">' + Array.from({ length: 4 }, () => '<div class="dcard sk"><div class="pc-img"></div><div class="pc-body"><span class="skl w80"></span><span class="skl w40"></span></div></div>').join('') + '</div>';
   else if (D.error) body = `<div class="empty-box"><span class="note">Подборка не загрузилась: ${esc(D.error)}</span><button type="button" class="btn2" data-act="dailyReload">Повторить</button></div>`;
   else body = '<div class="dgrid">' + D.hits.map(h => {
-    const busy = S.mods.busy[h.id];
+    const busy = S.mods.busy[h.id], inst = packProfile(h, 'modrinth');
     const meta = [h.mcv, (h.loaders || []).filter(l => LOADER_NAMES[l]).map(loaderLabel).join(' / ')].filter(Boolean).join(' · ');
-    return `<div class="dcard"><div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0))}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}</div>
+    return `<div class="dcard ${inst ? 'is-inst' : ''}"><div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0))}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}${inst ? INST_BADGE : ''}</div>
       <div class="pc-body"><div class="pc-head">${modIcon(h.icon, h.title)}<div class="t"><button type="button" class="mtitle" data-act="dailyOpen" data-id="${esc(h.slug)}">${esc(h.title)}</button><span class="mby">${fmtNum(h.downloads)} загрузок</span></div></div>
       <span class="pc-desc">${esc(h.description)}</span>
-      <button type="button" class="btn" data-act="dailyInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button></div></div>`;
+      ${inst ? packPlayBtn(inst) : `<button type="button" class="btn" data-act="dailyInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button>`}</div></div>`;
   }).join('') + '</div>';
   return `<div class="sec-head"><h2>Сборки дня <span class="h-sub">новая подборка каждый день</span></h2><button type="button" class="link-btn" data-act="dailyAll">Все сборки</button></div>${S.busy && S.mods.busy && D && D.hits && D.hits.some(h => S.mods.busy[h.id]) ? progressHtml() : ''}${body}`;
 }

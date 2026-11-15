@@ -74,7 +74,10 @@ function cleanProfile(p) {
   const mcVersion = String(p.mcVersion || '').replace(/[^A-Za-z0-9._\- ]/g, '').slice(0, 64) || 'latest-release';
   const loaderVersion = String(p.loaderVersion || '').replace(/[^A-Za-z0-9._+\-]/g, '').slice(0, 64);
   const ram = p.ram ? Math.max(1, Math.min(32, Math.round(Number(p.ram)))) : 0;
-  return { name, icon, loader, mcVersion, loaderVersion, ram };
+  const out = { name, icon, loader, mcVersion, loaderVersion, ram };
+  // Откуда сборка (чтобы в каталоге пометить её «Установлена»). Только если передали — правка сборки её не стирает
+  if (p.pack && /^(modrinth|curseforge)$/.test(p.pack.source) && /^[A-Za-z0-9]{1,40}$/.test(String(p.pack.projectId))) out.pack = { source: p.pack.source, projectId: String(p.pack.projectId) };
+  return out;
 }
 
 function saveProfile(p) {

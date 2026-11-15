@@ -138,7 +138,14 @@ function progressHtml() {
   const p = S.prog || { stage: 'Подготовка', done: 0, total: 0 };
   const pct = p.total ? Math.floor(p.done / p.total * 100) : 0;
   const txt = p.total ? `${p.stage}: ${p.done} из ${p.total}` : p.stage + '…';
-  return `<div class="progress"><div class="row"><b>${esc(txt)}</b><span>${pct}%</span></div><div class="bar"><div style="width:${pct}%"></div></div></div>`;
+  const stop = S.packBusy ? `<button type="button" class="btn2 prog-stop" data-act="packCancel" ${S.packCancelling ? 'disabled' : ''}>${S.packCancelling ? 'Останавливаю…' : 'Остановить'}</button>` : '';
+  return `<div class="progress ${stop ? 'with-stop' : ''}"><div class="prog-main"><div class="row"><b>${esc(txt)}</b><span>${pct}%</span></div><div class="bar"><div style="width:${pct}%"></div></div></div>${stop}</div>`;
+}
+// Установлена ли сборка из каталога: по источнику и id, а у старых сборок — по названию
+function packProfile(h, source) {
+  const t = String(h.title || '').trim().slice(0, 32).toLowerCase();
+  return S.profiles.list.find(p => p.pack && p.pack.source === source && p.pack.projectId === String(h.id))
+    || S.profiles.list.find(p => !p.pack && !p.managed && String(p.name || '').trim().toLowerCase() === t) || null;
 }
 
 // Komori-сервер первым в списке; если его сборки ещё нет — пункт «Установить и играть»
@@ -194,12 +201,13 @@ function viewProfiles() {
     ${profIcon(p.icon, 52)}
     <div class="t"><b>${esc(p.name)}${p.managed ? ' <span class="tag ok">Сервер</span>' : ''}${S.running.includes(p.id) ? ' <span class="tag warn">Запущен</span>' : ''}</b><span>${esc(profMeta(p))}</span><small>${p.managed ? 'Сборку задают админы, обновляется сама' : 'Последний запуск: ' + esc(ago(p.lastPlayed))}</small></div>
     ${p.managed ? '' : `<button type="button" class="icon-btn" data-act="editProfile" data-id="${esc(p.id)}" aria-label="Изменить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>`}
+    <button type="button" class="icon-btn" data-act="repairProfile" data-id="${esc(p.id)}" aria-label="Починить «${esc(p.name)}»" title="Починить: проверить файлы и перекачать повреждённые" ${S.busy || S.running.includes(p.id) ? 'disabled' : ''}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></button>
     <button type="button" class="icon-btn" data-act="openProfileDir" data-id="${esc(p.id)}" aria-label="Открыть папку"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h6l2 2h10v11H3z"/></svg></button>
     ${S.running.includes(p.id) || S.busyTarget === p.id
       ? `<button type="button" class="icon-btn" data-act="stopGame" data-id="${esc(p.id)}" aria-label="${S.busyTarget === p.id ? 'Отменить запуск' : 'Закрыть игру'}" title="${S.busyTarget === p.id ? 'Отменить запуск' : 'Закрыть игру'}"><svg width="13" height="13" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>`
       : `<button type="button" class="icon-btn primary" data-act="playProfile" data-id="${esc(p.id)}" aria-label="Играть"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z" fill="currentColor"/></svg></button>`}
   </div>`).join('');
-  return `<section class="page"><div class="page-head"><h1>Сборки</h1><button type="button" class="btn" data-act="newProfile">+ Новая сборка</button></div><div class="grid3">${cards}</div></section>`;
+  return `<section class="page"><div class="page-head"><h1>Сборки</h1><button type="button" class="btn" data-act="newProfile">+ Новая сборка</button></div>${S.repairing ? progressHtml() : ''}<div class="grid3">${cards}</div></section>`;
 }
 
 function versionsFiltered() {
@@ -275,18 +283,60 @@ function tagPills(h, max) {
   return `<span class="tags">${shown.map(k => `<button type="button" class="tg ${M.cats.includes(k) ? 'on' : ''}" data-act="mTagAdd" data-id="${esc(k)}" title="Показать только «${esc(tagLabel(k))}»">${esc(tagLabel(k))}</button>`).join('')}${known.length > n ? `<span class="tg more">+${known.length - n}</span>` : ''}</span>`;
 }
 
+const LIST_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
+// Кнопка «Версии»: открывает список всех версий проекта
+function verBtn(src, id, type, title, cur) {
+  return `<button type="button" class="icon-btn ver-btn" data-act="vdOpen" data-id="${esc(id)}" data-src="${esc(src)}" data-type="${esc(type)}" data-title="${esc(title)}" data-cur="${esc(cur || '')}" aria-label="Выбрать версию «${esc(title)}»" title="Выбрать версию">${LIST_SVG}</button>`;
+}
+const KIND_NAMES = { beta: 'бета', alpha: 'альфа' };
+function renderVersions() {
+  const m = $('#vdlg'), D = S.vd;
+  if (!D) { m.classList.add('hidden'); m.innerHTML = ''; return; }
+  const isPack = D.type === 'modpack', p = !isPack && modsProfile();
+  let body;
+  if (D.error) body = `<div class="empty">${esc(D.error)}</div>`;
+  else if (!D.list) body = '<div class="empty">Загружаю версии…</div>';
+  else if (!D.list.length) body = `<div class="empty">${D.all ? 'У проекта нет версий' : 'Нет версий для этой сборки.'}${D.all ? '' : '<br><br><button type="button" class="btn2" data-act="vdAll">Показать все версии</button>'}</div>`;
+  else body = '<div class="vd-list">' + D.list.map(v => {
+    const cur = D.cur && D.cur === v.id;
+    const mc = v.mc.slice(0, 3).join(', ') + (v.mc.length > 3 ? ' +' + (v.mc.length - 3) : '');
+    return `<div class="vd-row ${cur ? 'cur' : ''}"><div class="t"><b>${esc(v.name)}${KIND_NAMES[v.kind] ? ` <span class="vd-kind ${v.kind}">${KIND_NAMES[v.kind]}</span>` : ''}</b>
+      <span>${esc([mc, v.loaders.map(loaderLabel).join(' / ')].filter(Boolean).join(' · '))}${v.date ? ' · ' + esc(fmtDate(v.date)) : ''}</span></div>
+      ${cur ? '<span class="vd-cur">Стоит сейчас</span>' : `<button type="button" class="btn2" data-act="vdInstall" data-id="${esc(v.id)}" ${D.busy || S.busy ? 'disabled' : ''}>${D.busy === v.id ? 'Ставлю…' : D.cur ? 'Поставить' : 'Установить'}</button>`}</div>`;
+  }).join('') + '</div>';
+  const filter = isPack ? '' : `<label class="vd-all"><input type="checkbox" id="vdAllCb" ${D.all ? 'checked' : ''}> Показать все версии, а не только для ${esc(p ? p.name : 'сборки')}</label>`;
+  m.innerHTML = `<div class="dialog vd" role="dialog" aria-label="Версии ${esc(D.title)}" style="width:620px">
+    <div class="dialog-head"><h2>Версии: ${esc(D.title)}</h2><button type="button" class="icon-btn" data-act="vdClose" aria-label="Закрыть"><svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.8"/></svg></button></div>
+    ${filter}${body}
+    ${D.all && !isPack ? '<span class="note">Версия не для твоей сборки может не запуститься.</span>' : ''}</div>`;
+  m.classList.remove('hidden');
+}
+async function loadVersionsList() {
+  const D = S.vd; if (!D) return;
+  D.list = null; D.error = null; renderVersions();
+  try { const l = await K.mods.versions(D.src, D.type === 'modpack' ? null : S.mods.profileId, D.id, D.type, D.all); if (S.vd === D) D.list = l; }
+  catch (e) { if (S.vd === D) D.error = errText(e); }
+  renderVersions();
+}
+const INST_BADGE = '<span class="pc-inst"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square"><path d="M5 12l5 5L20 7"/></svg>Установлена</span>';
+// У установленной сборки вместо «Установить» — «Играть» (выбирает её и запускает)
+function packPlayBtn(p) {
+  const run = S.running.includes(p.id);
+  return `<button type="button" class="btn" data-act="playProfile" data-id="${esc(p.id)}" ${S.busy || run ? 'disabled' : ''}>${run ? 'В игре' : '▶ Играть'}</button>`;
+}
 // Карточка сборки: картинка из галереи, иконка, версия и ядро, теги
 function packCard(h) {
-  const M = S.mods, busy = M.busy[h.id];
+  const M = S.mods, busy = M.busy[h.id], inst = packProfile(h, M.source);
   const meta = [h.mcv, (h.loaders || []).filter(l => LOADER_NAMES[l]).map(loaderLabel).join(' / ')].filter(Boolean).join(' · ');
-  return `<div class="packc">
-    <div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0).toUpperCase())}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}</div>
+  return `<div class="packc ${inst ? 'is-inst' : ''}">
+    <div class="pc-img">${h.image ? `<img src="${esc(h.image)}" alt="" loading="lazy">` : `<span class="pc-ph">${esc((h.title || '?').charAt(0).toUpperCase())}</span>`}${meta ? `<span class="pc-meta">${esc(meta)}</span>` : ''}${inst ? INST_BADGE : ''}</div>
     <div class="pc-body">
       <div class="pc-head">${modIcon(h.icon, h.title)}<div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="modpack" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
         <span class="mby">${esc(h.author)} · ${fmtNum(h.downloads)} загрузок</span></div></div>
       <span class="pc-desc">${esc(h.description)}</span>
       ${tagPills(h, 3)}
-      <button type="button" class="btn" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button>
+      <div class="pc-actions">${inst ? packPlayBtn(inst) : `<button type="button" class="btn" data-act="mInstall" data-id="${esc(h.id)}" data-title="${esc(h.title)}" ${busy || S.busy ? 'disabled' : ''}>${busy ? esc(busy) : 'Установить'}</button>`}
+        ${verBtn(M.source, h.id, 'modpack', h.title, '')}</div>
     </div></div>`;
 }
 
@@ -356,8 +406,9 @@ function modsProfile() { return S.profiles.list.find(p => p.id === S.mods.profil
 function viewMods() {
   const M = S.mods;
   const p = modsProfile();
-  if (!p) return `<section class="page"><h1>Каталог</h1><div class="soon">Сначала создай сборку.</div></section>`;
-  const options = S.profiles.list.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? 'selected' : ''}>${esc(x.name)} — ${esc(profMeta(x))}</option>`).join('');
+  // Искать сборки можно и без своих сборок, а моды — только для какой-то сборки
+  if (!p && M.type !== 'modpack') return `<section class="page"><h1>Моды и ресурспаки</h1><div class="soon">Сначала создай или установи сборку.</div></section>`;
+  const options = S.profiles.list.map(x => `<option value="${esc(x.id)}" ${p && x.id === p.id ? 'selected' : ''}>${esc(x.name)} — ${esc(profMeta(x))}</option>`).join('');
   const installedKeys = new Set(M.items.filter(i => i.projectId).map(i => i.projectId));
   const tabs = `<div class="tabs" role="tablist">
     <button type="button" role="tab" aria-selected="${M.tab === 'catalog'}" class="${M.tab === 'catalog' ? 'on' : ''}" data-act="mTab" data-id="catalog">Каталог</button>
@@ -387,10 +438,11 @@ function viewMods() {
           <div class="t"><button type="button" class="mtitle" data-act="mOpen" data-id="${esc(h.slug)}" data-type="${esc(h.type)}" data-url="${esc(h.website || '')}">${esc(h.title)}</button>
           <span class="mby">${h.note ? esc(h.note) : `${esc(h.author)} · ${fmtNum(h.downloads)} загрузок${h.loaders && h.loaders.length && M.type === 'shader' ? ' · ' + h.loaders.map(loaderLabel).join(', ') : ''}`}</span>
           <span class="mdesc">${esc(h.description)}</span>${tagPills(h)}</div>
-          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-src="${esc(h.src || '')}" data-title="${esc(h.title)}" ${inst || busy ? 'disabled' : ''}>${label}</button></div>`;
+          <button type="button" class="${inst ? 'btn-inst' : 'btn'}" data-act="mInstall" data-id="${esc(h.id)}" data-src="${esc(h.src || '')}" data-title="${esc(h.title)}" ${inst || busy ? 'disabled' : ''}>${label}</button>
+          ${M.serverList ? '' : verBtn(h.src || M.source, h.id, M.type, h.title, '')}</div>`;
       }).join('') + more;
     }
-    const forWhat = M.type === 'mod' ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
+    const forWhat = M.type === 'mod' && p ? `${LOADER_NAMES[p.loader]} ${M.mc}` : `Minecraft ${M.mc}`;
     const hint = M.serverList ? `<span class="note">Это сборка сервера: моды — только те, что разрешили админы, остальные лаунчер отключит перед входом. Шейдеры и ресурспаки — любые.</span>` : '';
     const found = !M.error && !M.needKey && M.hits.length ? `<span class="found">${M.serverList ? 'Разрешено' : 'Найдено'}: ${fmtCount(M.total)}</span>` : '';
     body = `<div class="cat-bar">${typeSeg}<span class="grow"></span>
@@ -415,6 +467,7 @@ function viewMods() {
       return `<div class="mrow ${it.enabled ? '' : 'off'}">${modIcon(it.icon, it.title)}
         <div class="t"><b class="mtitle-static">${esc(it.title)}</b><span class="mby">${esc(MTYPE_ONE[it.type])}${it.version ? ' · ' + esc(it.version) : ''} · ${esc(SOURCE_NAMES[it.source] || 'вручную')}</span><span class="mdesc">${esc(it.file)}</span></div>
         ${u ? `<button type="button" class="btn" data-act="mUpdate" data-id="${esc(it.key)}" ${busy ? 'disabled' : ''}>${busy ? 'Обновляю…' : 'Обновить до ' + esc(u.to)}</button>` : ''}
+        ${it.projectId && it.source !== 'manual' ? verBtn(it.source, it.projectId, it.type, it.title, it.versionId) : ''}
         ${sw(it.enabled, 'mToggle').replace('data-act="mToggle"', `data-act="mToggle" data-id="${esc(it.key)}" aria-label="Включён"`)}
         <button type="button" class="icon-btn" data-act="mRemove" data-id="${esc(it.key)}" aria-label="Удалить"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--danger-text)" stroke-width="2.2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
     }).join('') : `<div class="empty">Пока ничего не установлено. Найди моды во вкладке «Каталог».</div>`;
@@ -439,12 +492,12 @@ let modsSearchTimer = null;
 async function modsSearch(reset) {
   const M = S.mods;
   const p = modsProfile();
-  if (!p) return;
-  M.profileId = p.id;
+  if (!p && M.type !== 'modpack') return;
+  if (p) M.profileId = p.id;
   if (reset) { M.offset = 0; M.hits = []; S._resetScroll = true; }
   M.loading = true; M.error = null; render();
   // Сборка сервера Komori: вместо всего Modrinth — только то, что разрешили админы
-  if (S.info.serverManifest && p.id === S.info.serverProfileId && M.type === 'mod') {   // шейдеры и ресурспаки — свободно
+  if (S.info.serverManifest && p && p.id === S.info.serverProfileId && M.type === 'mod') {   // шейдеры и ресурспаки — свободно
     try {
       if (!M.allowedAt || Date.now() - M.allowedAt > 60000) { const st = await K.server.status(); M.allowed = st.manifest ? st.manifest.allowed : null; M.allowedAt = Date.now(); }
     } catch { M.allowed = null; }
@@ -459,7 +512,7 @@ async function modsSearch(reset) {
   }
   M.serverList = false;
   try {
-    const r = await K.mods.search({ source: M.source, profileId: p.id, query: M.query, type: M.type, sort: M.sort, offset: M.offset, categories: catList() ? M.cats : [],
+    const r = await K.mods.search({ source: M.source, profileId: p ? p.id : null, query: M.query, type: M.type, sort: M.sort, offset: M.offset, categories: catList() ? M.cats : [],
       mc: M.type === 'modpack' ? M.packMc : '', loader: M.type === 'modpack' ? M.packLoader : '' });
     M.needLoader = !!r.needLoader; M.needKey = !!r.needKey; M.mc = r.mc || M.mc; M.total = r.total;
     M.hits = reset ? r.hits : M.hits.concat(r.hits);
@@ -470,12 +523,13 @@ async function modsSearch(reset) {
 // Установка сборки: новый профиль, прогресс в каталоге, список ручных загрузок при необходимости.
 async function installPack(run, busyId) {
   if (S.busy) return;
-  S.busy = true; S.prog = { stage: 'Скачиваю сборку', done: 0, total: 0 };
+  S.busy = true; S.packBusy = true; S.packCancelling = false; S.prog = { stage: 'Скачиваю сборку', done: 0, total: 0 };
   if (busyId) S.mods.busy[busyId] = 'Устанавливаю…';
   render();
   try {
     const r = await run();
-    if (r) {
+    if (r && r.cancelled) { S.profiles = r.profiles; toast('Установка остановлена, всё скачанное удалено', true); }
+    else if (r) {
       S.profiles = r.profiles;
       S.mods.profileId = r.profileId;
       toast('Сборка «' + r.name + '» установлена и выбрана', true);
@@ -483,7 +537,7 @@ async function installPack(run, busyId) {
       modsLoadInstalled();
     }
   } catch (e) { toast(errText(e)); }
-  S.busy = false; S.prog = null;
+  S.busy = false; S.prog = null; S.packBusy = false; S.packCancelling = false;
   if (busyId) delete S.mods.busy[busyId];
   render(); renderManual();
 }
@@ -1003,6 +1057,35 @@ const ACTIONS = {
   mTagAdd: (id) => { const M = S.mods; if (!M.cats.includes(id)) { M.cats = M.cats.concat(id).slice(0, 10); modsSearch(true); } },
   mLoader: (id) => { S.mods.packLoader = id === 'any' ? '' : id; modsSearch(true); },
   mUnset: (id) => { const M = S.mods; if (id === 'q') M.query = ''; else if (id === 'mc') M.packMc = ''; else if (id === 'loader') M.packLoader = ''; else M.cats = M.cats.filter(c => c !== id); modsSearch(true); },
+  vdOpen: (id, el) => { S.vd = { id, src: el.dataset.src || S.mods.source, type: el.dataset.type || S.mods.type, title: el.dataset.title || '', cur: el.dataset.cur || '', all: false, list: null, busy: null }; loadVersionsList(); },
+  vdClose: () => { S.vd = null; renderVersions(); },
+  vdAll: () => { if (S.vd) { S.vd.all = true; loadVersionsList(); } },
+  vdInstall: async (versionId) => {
+    const D = S.vd; if (!D || D.busy) return;
+    if (D.type === 'modpack') { S.vd = null; renderVersions(); return installPack(() => K.mods.installPack(D.src, D.id, D.title, { versionId }), D.id); }
+    D.busy = versionId; renderVersions();
+    try {
+      const r = await K.mods.install(D.src, S.mods.profileId, D.id, D.type, versionId);
+      S.mods.items = r.items;
+      if (S.mods.updates) S.mods.updates = S.mods.updates.filter(u => !r.items.some(i => i.projectId === D.id && i.key === u.key));
+      toast(r.changed ? 'Версия «' + D.title + '» сменена' : 'Установлен «' + D.title + '»', true);
+      if (r.manual && r.manual.length) openManual(S.mods.profileId, 'Скачай вручную');
+      S.vd = null;
+    } catch (e) { D.busy = null; toast(errText(e)); }
+    renderVersions(); render(); renderManual();
+  },
+  repairProfile: async (id) => {
+    if (S.busy) return;
+    const p = S.profiles.list.find(x => x.id === id);
+    S.busy = true; S.repairing = id; S.prog = { stage: 'Проверяю игру', done: 0, total: 0 }; render();
+    try {
+      const r = await K.profiles.repair(id);
+      if (r.fixed) toast(`«${p ? p.name : 'Сборка'}» починена: перекачано файлов — ${r.fixed}` + (r.manual.length ? `. Скачай вручную: ${r.manual.slice(0, 3).join(', ')}` : ''), true);
+      else toast(r.manual.length ? 'Не удалось перекачать: ' + r.manual.slice(0, 3).join(', ') : `Всё в порядке: файлы игры и ${r.checked} файлов сборки целы`, !r.manual.length);
+    } catch (e) { if (!e || !/отмен/i.test(errText(e))) toast(errText(e)); }
+    S.busy = false; S.repairing = null; S.prog = null; render();
+  },
+  packCancel: () => { if (!S.packBusy || S.packCancelling) return; S.packCancelling = true; render(); K.mods.cancelPack(); },
   mClear: () => { const M = S.mods; M.cats = []; M.query = ''; M.packMc = ''; M.packLoader = ''; M.tagQ = ''; modsSearch(true); },
   mShaderMod: (id) => { const M = S.mods; M.type = 'mod'; M.cats = []; M.query = id; modsSearch(true); },
   mRetry: () => modsSearch(true),
@@ -1217,6 +1300,7 @@ document.addEventListener('change', async (ev) => {
   if (ev.target.id === 'ram') { S.settings = await K.settings.set({ ram: Number(ev.target.value) }); }
   if (ev.target.id === 'modsProfile') { S.mods.profileId = ev.target.value; S.mods.updates = null; modsLoadInstalled(); modsSearch(true); }
   if (ev.target.id === 'modsSort') { S.mods.sort = ev.target.value; modsSearch(true); }
+  if (ev.target.id === 'vdAllCb' && S.vd) { S.vd.all = ev.target.checked; loadVersionsList(); }
   if (ev.target.id === 'packMc') { S.mods.packMc = ev.target.value; modsSearch(true); }
   if (ev.target.id === 'srvProfile') { S.srv.profileId = ev.target.value; S.srv.built = null; render(); }
   if (ev.target.id === 'capeSel') { const a = selectedAccount(); const v = ev.target.value; if (a) skinAction(() => K.accounts.capeSet(a.id, v)); }
@@ -1228,6 +1312,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && ev.target.id === 'frAdd') ACTIONS.frAdd();
   if (ev.key === 'Enter' && ev.target.id === 'obNick') ACTIONS.obGo();
   if (ev.key === 'Escape' && S.fdlg) ACTIONS.frClose();
+  if (ev.key === 'Escape' && S.vd) ACTIONS.vdClose();
   if (ev.key === 'Enter' && ['yggLogin', 'yggPass', 'yggUrl'].includes(ev.target.id)) ACTIONS.yggLogin();
   if (ev.key === 'Enter' && ev.target.id === 'newNick' && S.renaming) ACTIONS.renameSave(S.renaming);
 });

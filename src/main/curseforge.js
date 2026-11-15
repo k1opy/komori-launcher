@@ -133,7 +133,7 @@ async function bestFile(modId, type, ctx) {
 async function getMod(modId) { return (await api(`/mods/${encodeURIComponent(modId)}`)).data; }
 
 // Установка в профиль. Возвращает { installed: [названия], manual: [{ title, url }] }.
-async function install(dir, modId, type, ctx, onStep) {
+async function install(dir, modId, type, ctx, onStep, fileId) {
   const meta = mr.readMeta(dir);
   const installed = [];
   const manual = [];
@@ -145,7 +145,9 @@ async function install(dir, modId, type, ctx, onStep) {
     seen.add(id);
     if (Object.values(meta.items).some(x => String(x.projectId) === id && x.source === 'curseforge')) return;
     if (depth > 0 && ctx.skip && ctx.skip.has('cf' + id)) return;   // уже есть в сборке сервера
-    const [mod, file] = await Promise.all([getMod(id), bestFile(id, type, ctx)]);
+    // Выбранная игроком версия — только для самого мода, зависимости подбираются как обычно
+    const pick = depth === 0 && fileId ? api(`/mods/${encodeURIComponent(id)}/files/${encodeURIComponent(fileId)}`).then(r => r.data) : bestFile(id, type, ctx);
+    const [mod, file] = await Promise.all([getMod(id), pick]);
     if (!file) {
       if (depth === 0) throw new Error(`Нет файла для ${ctx.loader === 'vanilla' ? 'Minecraft' : ctx.loader} ${ctx.mc}`);
       return;
@@ -262,4 +264,21 @@ async function fileInfo(modId, fileId) {
   return { url: f.downloadUrl, sha1: sha1Of(f), size: f.fileLength, filename: mr.safeName(f.fileName) };
 }
 
-module.exports = { setKey, setProxy, fingerprint, identify, hasKey, search, install, checkUpdates, update, modpackFile, resolvePackFiles, getMod, mapMod, fileInfo };
+const CF_LOADERS = { forge: 'forge', neoforge: 'neoforge', fabric: 'fabric', quilt: 'quilt' };
+// Все файлы проекта (для выбора версии). all=false — только подходящие под версию и ядро сборки
+async function versions(modId, type, ctx, all) {
+  const p = new URLSearchParams({ pageSize: '50' });
+  if (!all && ctx && ctx.mc && type !== 'modpack') {
+    if (type !== 'shader') p.set('gameVersion', ctx.mc);
+    if (type === 'mod' && LOADER_TYPE[ctx.loader]) p.set('modLoaderType', String(LOADER_TYPE[ctx.loader]));
+  }
+  const r = await api(`/mods/${encodeURIComponent(modId)}/files?${p}`);
+  return (r.data || []).sort((a, b) => new Date(b.fileDate) - new Date(a.fileDate)).map(f => ({
+    id: String(f.id), name: f.displayName || f.fileName, title: f.fileName,
+    mc: (f.gameVersions || []).filter(v => /^\d+\.\d+(\.\d+)?$/.test(v)),
+    loaders: (f.gameVersions || []).map(v => CF_LOADERS[String(v).toLowerCase()]).filter(Boolean),
+    date: f.fileDate || '', kind: ['', 'release', 'beta', 'alpha'][f.releaseType] || 'release'
+  }));
+}
+
+module.exports = { versions, setKey, setProxy, fingerprint, identify, hasKey, search, install, checkUpdates, update, modpackFile, resolvePackFiles, getMod, mapMod, fileInfo };

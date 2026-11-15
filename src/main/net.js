@@ -19,21 +19,29 @@ function sha1File(p) {
   });
 }
 
+// «Починить сборку»: на время проверки сверяем SHA-1 у всех файлов, а не только размер
+let verifyAll = false;
+function setVerifyAll(v) { verifyAll = !!v; }
+
 // Нужно ли качать файл: нет файла, другой размер или (если verify) другой SHA-1.
 async function needsDownload(t) {
   try {
     const st = await fs.promises.stat(t.dest);
     if (t.size && st.size !== t.size) return true;
-    if (t.verify && t.sha1) return (await sha1File(t.dest)) !== t.sha1;
+    if ((t.verify || verifyAll) && t.sha1) return (await sha1File(t.dest)) !== t.sha1;
     return false;
   } catch { return true; }
 }
 
-async function downloadOne(t, tries = 3) {
+function cancelled() { const e = new Error('Загрузка отменена'); e.cancelled = true; return e; }
+
+// tok — необязательный { cancelled, ac: AbortController }: по «Остановить» загрузка рвётся сразу
+async function downloadOne(t, tries = 3, tok) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
+    if (tok && tok.cancelled) throw cancelled();
     try {
-      const res = await fetch(t.url, { headers: { 'User-Agent': UA } });
+      const res = await fetch(t.url, { headers: { 'User-Agent': UA }, signal: tok && tok.ac ? tok.ac.signal : undefined });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${t.url}`);
       const buf = Buffer.from(await res.arrayBuffer());
       if (t.sha1) {
@@ -46,6 +54,7 @@ async function downloadOne(t, tries = 3) {
       await fs.promises.rename(tmp, t.dest);
       return;
     } catch (e) {
+      if (tok && tok.cancelled) throw cancelled();
       lastErr = e;
       await new Promise(r => setTimeout(r, 600 * (i + 1)));
     }
@@ -54,7 +63,7 @@ async function downloadOne(t, tries = 3) {
 }
 
 // tasks: [{ url, dest, sha1?, size?, verify? }]; onProgress(done, total)
-async function downloadAll(tasks, onProgress, concurrency = 16) {
+async function downloadAll(tasks, onProgress, concurrency = 16, tok) {
   const seen = new Set();
   const unique = tasks.filter(t => (seen.has(t.dest) ? false : (seen.add(t.dest), true)));
   const todo = [];
@@ -65,8 +74,9 @@ async function downloadAll(tasks, onProgress, concurrency = 16) {
   let next = 0;
   async function worker() {
     while (next < todo.length) {
+      if (tok && tok.cancelled) throw cancelled();
       const t = todo[next++];
-      await downloadOne(t);
+      await downloadOne(t, 3, tok);
       done++;
       if (onProgress) onProgress(done, total);
     }
@@ -75,4 +85,4 @@ async function downloadAll(tasks, onProgress, concurrency = 16) {
   return total;
 }
 
-module.exports = { fetchJson, downloadAll, sha1File, UA };
+module.exports = { fetchJson, downloadAll, sha1File, setVerifyAll, UA };

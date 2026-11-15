@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('komori', {
     save: (p) => ipcRenderer.invoke('profiles:save', p),
     remove: (id) => ipcRenderer.invoke('profiles:delete', id),
     select: (id) => ipcRenderer.invoke('profiles:select', id),
+    repair: (id) => ipcRenderer.invoke('profiles:repair', id),
     openDir: (id) => ipcRenderer.invoke('profiles:openDir', id)
   },
   versions: {
@@ -58,8 +59,10 @@ contextBridge.exposeInMainWorld('komori', {
   },
   mods: {
     search: (q) => ipcRenderer.invoke('catalog:search', q),
-    install: (source, profileId, projectId, type) => ipcRenderer.invoke('catalog:install', { source, profileId, projectId, type }),
+    install: (source, profileId, projectId, type, versionId) => ipcRenderer.invoke('catalog:install', { source, profileId, projectId, type, versionId }),
+    versions: (source, profileId, projectId, type, all) => ipcRenderer.invoke('catalog:versions', { source, profileId, projectId, type, all }),
     open: (source, slug, type, url) => ipcRenderer.invoke('catalog:open', { source, slug, type, url }),
+    cancelPack: () => ipcRenderer.invoke('modpack:cancel'),
     installPack: (source, projectId, title, pref) => ipcRenderer.invoke('modpack:install', Object.assign({ source, projectId, title }, pref || {})),
     importPack: () => ipcRenderer.invoke('modpack:import'),
     list: (profileId) => ipcRenderer.invoke('mods:list', profileId),

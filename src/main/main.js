@@ -9,7 +9,7 @@ const versions = require('./versions');
 const { ensureJava, componentFor } = require('./java');
 const { buildArgs, launch } = require('./launch');
 const auth = require('./auth');
-const { downloadAll } = require('./net');
+const { setVerifyAll, downloadAll } = require('./net');
 const loaders = require('./loaders');
 const modrinth = require('./modrinth');
 const curseforge = require('./curseforge');
@@ -228,6 +228,32 @@ ipcMain.handle('profiles:delete', async (e, id) => {
   return store.deleteProfile(id);
 });
 ipcMain.handle('profiles:select', (e, id) => store.selectProfile(id));
+// «Починить»: сверяем SHA-1 у файлов игры, ядра и всего, что ставил лаунчер, и перекачиваем повреждённое
+ipcMain.handle('profiles:repair', async (e, id) => {
+  if (busyIds().has(id)) throw new Error('Сначала закрой эту сборку');
+  const root = store.getSettings().gameDir;
+  let profile = store.getProfiles().list.find(x => x.id === id);
+  if (!profile) throw new Error('Сборка не найдена');
+  const tok = { cancelled: false };
+  preparing.set(id, tok);
+  setVerifyAll(true);
+  try {
+    const progress = makeProgress(tok);
+    progress('Проверяю игру', 0, 0);
+    if (profile.managed && CONFIG.serverManifestUrl) {
+      const m = await serverpack.fetchManifest(CONFIG.serverManifestUrl, root, CONFIG.trustedHosts, CONFIG.serverManifestFallback);
+      await serverpack.sync(root, m, progress, store.instanceDir(profile));
+    }
+    const mc = await versions.resolveId(root, profile.mcVersion);
+    const vid = await loaders.ensureLoader(root, profile.loader, mc, profile.loaderVersion, progress, text => send('game:log', text));
+    const install = await versions.installVersion(root, vid, store.instanceDir(profile), progress);
+    await ensureJava(root, componentFor(install.version), (d, t) => progress('Java', d, t));
+    const r = await modrinth.repairContent(store.instanceDir(profile), progress, async it =>
+      it.source === 'curseforge' ? curseforge.fileInfo(it.projectId, it.versionId) : modrinth.versionFile(it.versionId));
+    send('game:progress', { stage: 'Готово', done: 1, total: 1 });
+    return r;
+  } finally { setVerifyAll(false); preparing.delete(id); }
+});
 ipcMain.handle('profiles:openDir', (e, id) => {
   const p = store.getProfiles().list.find(x => x.id === id);
   if (!p) throw new Error('Сборка не найдена');
@@ -510,10 +536,27 @@ ipcMain.handle('catalog:search', async (e, q) => {
   return Object.assign(r, { mc: ctx.mc, loader: ctx.loader });
 });
 
-ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId, type }) => {
+// Список версий проекта для окна «Версии»
+ipcMain.handle('catalog:versions', async (e, { source: src, profileId, projectId, type, all }) => {
   if (!/^[A-Za-z0-9]+$/.test(String(projectId))) throw new Error('Неверный проект');
+  const t = TYPES.includes(type) || type === 'modpack' ? type : 'mod';
+  const ctx = t === 'modpack' || !profileId ? null : await profileCtx(profileId);
+  return source(src === 'curseforge' ? 'curseforge' : 'modrinth').versions(projectId, t, ctx, !!all || !ctx);
+});
+
+ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId, type, versionId }) => {
+  if (!/^[A-Za-z0-9]+$/.test(String(projectId))) throw new Error('Неверный проект');
+  if (versionId != null && !/^[A-Za-z0-9]+$/.test(String(versionId))) throw new Error('Неверная версия');
   const ctx = await profileCtx(profileId);
   const t = TYPES.includes(type) ? type : 'mod';
+  // Выбрана версия, а мод уже стоит — просто меняем его версию
+  if (versionId) {
+    const cur = modrinth.list(ctx.dir).find(x => x.projectId === String(projectId) && x.source === (src === 'curseforge' ? 'curseforge' : 'modrinth'));
+    if (cur) {
+      const items = await source(src).update(ctx.dir, cur.key, String(versionId));
+      return { installed: [cur.title], manual: [], items, changed: true };
+    }
+  }
   const step = title => send('mods:step', { projectId, title });
   if (t === 'mod' && ctx.profile.id === serverpack.SERVER_PROFILE_ID && CONFIG.serverManifestUrl) {
     // Сборка сервера (только моды; шейдеры и ресурспаки ставятся свободно): свои моды — только из списка, который разрешили админы; то, что уже есть в сборке, не дублируем
@@ -523,11 +566,11 @@ ipcMain.handle('catalog:install', async (e, { source: src, profileId, projectId,
     ctx.skip = new Set(m.files.map(f => f.projectId || (/\/data\/([A-Za-z0-9]+)\//.exec(f.url) || [])[1]).filter(Boolean));
   }
   if (src === 'curseforge') {
-    const r = await curseforge.install(ctx.dir, projectId, t, ctx, step);
+    const r = await curseforge.install(ctx.dir, projectId, t, ctx, step, versionId || null);
     if (r.manual.length) manual.add(ctx.dir, r.manual);
     return { installed: r.installed, manual: r.manual, items: modrinth.list(ctx.dir) };
   }
-  const names = await modrinth.install(ctx.dir, projectId, t, ctx, step);
+  const names = await modrinth.install(ctx.dir, projectId, t, ctx, step, versionId || null);
   return { installed: names, manual: [], items: modrinth.list(ctx.dir) };
 });
 
@@ -554,26 +597,54 @@ ipcMain.handle('mods:update', async (e, { profileId, key, versionId, source: src
 });
 
 // ---------- сборки ----------
-async function installPackFile(file, extra) {
+// Установка сборки, которую можно остановить: недокачанная сборка удаляется целиком
+let packJob = null;   // { cancelled, ac, profileId, dir, prevSelected }
+async function runPackJob(fn) {
+  if (packJob) throw new Error('Уже устанавливается другая сборка');
+  const job = packJob = { cancelled: false, ac: new AbortController(), profileId: null, dir: null, prevSelected: store.getProfiles().selected };
+  try { return await fn(job); }
+  catch (e) {
+    if (!job.cancelled) throw e;
+    // Отмена: убираем сборку из списка и всё, что успело скачаться
+    if (job.profileId) { try { store.deleteProfile(job.profileId); } catch {} }
+    // Удаляем папку, только если она внутри instances и её не использует другая сборка
+    const inst = path.join(store.getSettings().gameDir, 'instances') + path.sep;
+    const other = store.getProfiles().list.some(p => path.resolve(store.instanceDir(p)) === path.resolve(job.dir || ''));
+    if (job.dir && path.resolve(job.dir).startsWith(inst) && !other) { try { await fs.promises.rm(job.dir, { recursive: true, force: true }); } catch {} }
+    if (job.prevSelected && store.getProfiles().list.some(p => p.id === job.prevSelected)) store.selectProfile(job.prevSelected);
+    send('game:progress', { stage: 'Отменено', done: 0, total: 0 });
+    return { cancelled: true, profiles: store.getProfiles() };
+  } finally { packJob = null; }
+}
+async function installPackFile(file, extra, job) {
   const root = store.getSettings().gameDir;
-  const progress = makeProgress();
-  const r = await modpacks.installFromFile(file, Object.assign({ root, saveProfile: p => { store.saveProfile(p); return store.syncInstanceDirs(busyIds()); }, dirOf: store.instanceDir, progress }, extra || {}));
+  const progress = makeProgress(job);
+  const r = await modpacks.installFromFile(file, Object.assign({ root, saveProfile: p => { store.saveProfile(p); return store.syncInstanceDirs(busyIds()); }, dirOf: store.instanceDir, progress,
+    tok: job, onProfile: (p, dir) => { if (job) { job.profileId = p.id; job.dir = dir; } } }, extra || {}));
   send('game:progress', { stage: 'Готово', done: 1, total: 1 });
   if (r.manual && r.manual.length) manual.add(store.instanceDir(r.profile), r.manual);
   return { profiles: store.getProfiles(), profileId: r.profile.id, name: r.profile.name, manual: r.manual };
 }
 
-ipcMain.handle('modpack:install', async (e, { source: src, projectId, title, mc, loader }) => {
+ipcMain.handle('modpack:install', (e, { source: src, projectId, title, mc, loader, versionId }) => {
   if (!/^[A-Za-z0-9]+$/.test(String(projectId))) throw new Error('Неверная сборка');
-  const root = store.getSettings().gameDir;
-  const progress = makeProgress();
-  progress('Скачиваю сборку', 0, 1);
-  const pref = { mc: /^\d+\.\d+(\.\d+)?$/.test(String(mc || '')) ? String(mc) : '', loader: ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader) ? loader : '' };
-  const f = src === 'curseforge' ? await curseforge.modpackFile(projectId, null, pref) : await modrinth.modpackFile(projectId, null, pref);
-  const dest = path.join(root, 'cache', 'modpacks', f.filename);
-  await downloadAll([{ url: f.url, dest, sha1: f.sha1, size: f.size, verify: true }]);
-  return installPackFile(dest, { nameHint: title ? String(title).slice(0, 32) : '' });
+  if (versionId != null && !/^[A-Za-z0-9]+$/.test(String(versionId))) throw new Error('Неверная версия');
+  if (!['modrinth', 'curseforge'].includes(src)) throw new Error('Неверный источник');
+  return runPackJob(async job => {
+    const root = store.getSettings().gameDir;
+    const progress = makeProgress(job);
+    progress('Скачиваю сборку', 0, 1);
+    const pref = { mc: /^\d+\.\d+(\.\d+)?$/.test(String(mc || '')) ? String(mc) : '', loader: ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader) ? loader : '' };
+    const f = src === 'curseforge' ? await curseforge.modpackFile(projectId, versionId || null, pref) : await modrinth.modpackFile(projectId, versionId || null, pref);
+    const dest = path.join(root, 'cache', 'modpacks', f.filename);
+    try { await downloadAll([{ url: f.url, dest, sha1: f.sha1, size: f.size, verify: true }], null, 1, job); }
+    catch (err) { if (job.cancelled) { try { fs.rmSync(dest, { force: true }); fs.rmSync(dest + '.part', { force: true }); } catch {} } throw err; }
+    progress('Скачиваю сборку', 1, 1);
+    return installPackFile(dest, { nameHint: title ? String(title).slice(0, 32) : '', pack: { source: src, projectId: String(projectId) } }, job);
+  });
 });
+// «Остановить» во время установки сборки
+ipcMain.handle('modpack:cancel', () => { if (!packJob) return false; packJob.cancelled = true; try { packJob.ac.abort(); } catch {} return true; });
 
 ipcMain.handle('modpack:import', async () => {
   const r = await dialog.showOpenDialog(win, {
@@ -581,7 +652,7 @@ ipcMain.handle('modpack:import', async () => {
     filters: [{ name: 'Сборки Modrinth и CurseForge', extensions: ['mrpack', 'zip'] }]
   });
   if (r.canceled || !r.filePaths[0]) return null;
-  return installPackFile(r.filePaths[0]);
+  return runPackJob(job => installPackFile(r.filePaths[0], null, job));
 });
 
 // ---------- сборка сервера (редактор только в DEV-сборке) ----------

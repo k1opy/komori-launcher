@@ -93,7 +93,7 @@ async function downloadVersionFile(dir, type, version) {
 }
 
 // Установка проекта с обязательными зависимостями. Возвращает список установленных названий.
-async function install(dir, projectId, type, ctx, onStep) {
+async function install(dir, projectId, type, ctx, onStep, versionId) {
   const meta = readMeta(dir);
   const installed = [];
   const visiting = new Set();
@@ -125,7 +125,7 @@ async function install(dir, projectId, type, ctx, onStep) {
     }
   }
 
-  await one(projectId, null, 0);
+  await one(projectId, versionId || null, 0);
   return installed;
 }
 
@@ -144,7 +144,7 @@ function list(dir) {
       out.push({
         key: `${type}/${base}`, type, file: name, enabled,
         title: m.title || base.replace(/\.(jar|zip)$/i, ''), icon: m.icon || '', version: m.versionNumber || '',
-        projectId: m.projectId ? String(m.projectId) : '', slug: m.slug || '',
+        projectId: m.projectId ? String(m.projectId) : '', versionId: m.versionId ? String(m.versionId) : '', slug: m.slug || '',
         source: m.projectId ? (m.source || 'modrinth') : 'manual', fromModrinth: !!m.projectId && m.source !== 'curseforge'
       });
     }
@@ -244,4 +244,51 @@ async function projectInfo(projectId) {
   return { title: p.title, icon: p.icon_url || '', slug: p.slug };
 }
 
-module.exports = { search, install, list, toggle, remove, checkUpdates, update, loadersFor, FOLDERS, readMeta, writeMeta, safeName, modpackFile, projectInfo, versionFile, MR_UA };
+// Все версии проекта (для выбора версии). all=false — только подходящие под версию и ядро сборки
+async function versions(projectId, type, ctx, all) {
+  const p = new URLSearchParams();
+  if (!all && ctx && ctx.mc && type !== 'modpack') {
+    p.set('game_versions', JSON.stringify([ctx.mc]));
+    if (type === 'mod') p.set('loaders', JSON.stringify(loadersFor(ctx.loader)));
+  }
+  const list = await api(`${API}/project/${encodeURIComponent(projectId)}/version?${p}`);
+  return list.slice(0, 80).map(v => ({
+    id: v.id, name: v.version_number || v.name, title: v.name || '', mc: (v.game_versions || []).slice().reverse(),
+    loaders: (v.loaders || []).filter(l => !['minecraft', 'datapack'].includes(l)), date: v.date_published || '', kind: v.version_type || 'release'
+  }));
+}
+
+// «Починить»: проверяем файлы, которые лаунчер ставил сам (моды, ресурспаки, шейдеры, файлы сборки),
+// и перекачиваем повреждённые или пропавшие. progress(stage, done, total), getUrl(item) -> { url, sha1 } | null
+async function repairContent(dir, progress, resolve) {
+  const meta = readMeta(dir);
+  const checks = [];
+  for (const [key, it] of Object.entries(meta.items || {})) {
+    if (!it.file || !FOLDERS[it.type]) continue;
+    const on = path.join(dir, FOLDERS[it.type], it.file), off = on + '.disabled';
+    checks.push({ key, it, on, off });
+  }
+  for (const f of meta.pack || []) {
+    const on = path.resolve(dir, String(f.path || ''));
+    if (on.startsWith(path.resolve(dir) + path.sep) && /^https:\/\/cdn\.modrinth\.com\//.test(String(f.url))) checks.push({ pack: f, on, off: null });
+  }
+  let done = 0, fixed = 0;
+  const manual = [];
+  for (const c of checks) {
+    progress('Проверяю файлы', done++, checks.length);
+    const cur = fs.existsSync(c.on) ? c.on : (c.off && fs.existsSync(c.off) ? c.off : null);
+    const sha1 = c.pack ? c.pack.sha1 : c.it.sha1;
+    if (cur && (!sha1 || (await sha1File(cur)) === sha1)) continue;
+    // Отключённый мод чиним «на месте», чтобы он остался отключённым
+    const dest = cur || c.on;
+    let src = c.pack ? { url: c.pack.url, sha1: c.pack.sha1, size: c.pack.size } : await resolve(c.it).catch(() => null);
+    if (!src) { manual.push(c.it ? c.it.title || c.it.file : c.pack.path); continue; }
+    try { fs.rmSync(dest, { force: true }); } catch {}
+    await downloadAll([{ url: src.url, dest, sha1: src.sha1, size: src.size, verify: true }]);
+    fixed++;
+  }
+  progress('Проверяю файлы', checks.length, checks.length);
+  return { checked: checks.length, fixed, manual };
+}
+
+module.exports = { versions, repairContent, search, install, list, toggle, remove, checkUpdates, update, loadersFor, FOLDERS, readMeta, writeMeta, safeName, modpackFile, projectInfo, versionFile, MR_UA };

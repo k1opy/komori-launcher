@@ -70,10 +70,11 @@ async function installFromFile(zipPath, deps) {
 }
 
 function createProfile(deps, name, loader, loaderVersion, mc) {
-  const data = deps.saveProfile({ name: String(name || 'Сборка').slice(0, 32), icon: deps.icon || 'chest', loader, loaderVersion, mcVersion: mc });
+  const data = deps.saveProfile({ name: String(name || 'Сборка').slice(0, 32), icon: deps.icon || 'chest', loader, loaderVersion, mcVersion: mc, pack: deps.pack || null });
   const profile = data.list.find(p => p.id === data.selected);
   const dir = deps.dirOf ? deps.dirOf(profile) : path.join(deps.root, 'instances', profile.id);
   fs.mkdirSync(dir, { recursive: true });
+  if (deps.onProfile) deps.onProfile(profile, dir);   // чтобы при отмене можно было удалить недокачанное
   return { profile, dir };
 }
 
@@ -93,7 +94,11 @@ async function installMrpack(zip, idx, deps) {
   }
   const { profile, dir } = createProfile(deps, deps.nameHint || idx.name, loader, lv, mc);
   const tasks = files.map(({ f, url }) => ({ url, dest: safeJoin(dir, f.path), sha1: f.hashes && f.hashes.sha1, size: f.fileSize, verify: true }));
-  await downloadAll(tasks, (d, t) => deps.progress('Файлы сборки', d, t), 8);
+  await downloadAll(tasks, (d, t) => deps.progress('Файлы сборки', d, t), 8, deps.tok);
+  // Запоминаем файлы сборки — по ним работает «Починить»
+  const meta = mr.readMeta(dir);
+  meta.pack = files.map(({ f, url }) => ({ path: String(f.path), url, sha1: f.hashes && f.hashes.sha1, size: f.fileSize }));
+  mr.writeMeta(dir, meta);
   extractFolder(zip, 'overrides', dir);
   extractFolder(zip, 'client-overrides', dir);
   return { profile, manual: [] };
@@ -107,6 +112,7 @@ async function installCfPack(zip, m, deps) {
   const entries = (m.files || []).filter(f => f.required !== false && f.projectID && f.fileID);
   deps.progress('Список файлов CurseForge', 0, entries.length);
   const files = entries.length ? await cf.resolvePackFiles(entries) : [];
+  deps.progress('Список файлов CurseForge', entries.length, entries.length);   // здесь же проверяется отмена
   const manual = [];
   const tasks = [];
   const meta = mr.readMeta(dir);
@@ -116,7 +122,7 @@ async function installCfPack(zip, m, deps) {
     tasks.push({ url: f.url, dest: path.join(dir, mr.FOLDERS[f.type], name), sha1: f.sha1, size: f.size, verify: true });
     meta.items[`${f.type}/${name}`] = { source: 'curseforge', projectId: String(f.modId), versionId: String(f.fileId), versionNumber: name, file: name, type: f.type, sha1: f.sha1, title: f.title };
   }
-  await downloadAll(tasks, (d, t) => deps.progress('Файлы сборки', d, t), 8);
+  await downloadAll(tasks, (d, t) => deps.progress('Файлы сборки', d, t), 8, deps.tok);
   mr.writeMeta(dir, meta);
   extractFolder(zip, m.overrides || 'overrides', dir);
   return { profile, manual };

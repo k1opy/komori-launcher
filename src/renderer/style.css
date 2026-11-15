@@ -720,3 +720,29 @@ button.tg:hover{border-color:var(--accent);color:var(--title)}
 .pc-head .mtitle{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
 .pc-head .mby{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .packc .btn,.dcard .btn{overflow:hidden;text-overflow:ellipsis}
+
+/* ===== 1.0.3: «Остановить» установку сборки, пометка «Установлена» ===== */
+.progress.with-stop{flex-direction:row;align-items:center;gap:14px;align-self:stretch}
+.prog-main{flex:1;min-width:0}
+.prog-stop{flex:0 0 auto}
+.pc-inst{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:var(--ok);color:#06140c;font-family:'Inter',sans-serif;font-size:12px;font-weight:700}
+.packc.is-inst,.dcard.is-inst{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+.prog-main{display:flex;flex-direction:column;gap:6px}
+
+/* ===== 1.0.3: версии и «Починить» ===== */
+.pc-actions{display:flex;gap:6px;margin-top:auto}
+.pc-actions .btn{flex:1;min-width:0}
+.ver-btn{width:38px;height:38px;flex:0 0 38px;border:2px solid var(--line3);background:var(--tile)}
+.mrow .ver-btn{width:36px;height:36px;flex:0 0 36px}
+.vd{gap:10px;max-height:80vh}
+.vd-all{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.vd-list{display:flex;flex-direction:column;gap:2px;overflow:auto;max-height:56vh;margin:0 -4px}
+.vd-row{display:flex;align-items:center;gap:12px;padding:8px 6px;border:2px solid transparent}
+.vd-row:hover{background:var(--hover)}
+.vd-row.cur{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+.vd-row .t{flex:1;min-width:0;display:flex;flex-direction:column}
+.vd-row .t b{color:var(--title);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vd-row .t span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vd-kind{font-size:11px;font-weight:700;padding:1px 6px;margin-left:4px;background:var(--warnbg);color:var(--warn)}
+.vd-kind.alpha{background:var(--errbg,#2A1518);color:var(--err)}
+.vd-cur{font-size:12px;font-weight:700;color:var(--ok);white-space:nowrap}
