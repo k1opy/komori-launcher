@@ -117,7 +117,7 @@ function presenceGame() {
   return '';
 }
 function presenceNow() { kacc.presence(presenceGame()); }
-setInterval(presenceNow, 120000);
+setInterval(presenceNow, 5 * 60000);   // раз в 5 минут; сайт сам пишет в базу не чаще раза в 10 минут
 let quitPresence = false;
 app.on('before-quit', (e) => {
   playtime.flush();

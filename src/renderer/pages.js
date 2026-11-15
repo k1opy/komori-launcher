@@ -217,9 +217,9 @@ async function friendAct(action, login) {
   F.busy = false; render();
 }
 // Пока открыта главная, список друзей обновляется раз в минуту
-// Друзья обновляются раз в минуту на главной и раз в 3 минуты в других разделах (ради счётчика заявок)
+// Друзья обновляются раз в 2 минуты на главной и раз в 10 минут в других разделах (ради счётчика заявок) — бережём лимиты сайта
 let frTick = 0;
-setInterval(() => { frTick++; if (!document.hidden && (S.screen === 'home' || frTick % 3 === 0)) loadFriends(true); }, 60000);
+setInterval(() => { frTick++; if (!document.hidden && (S.screen === 'home' ? frTick % 2 === 0 : frTick % 10 === 0)) loadFriends(true); }, 60000);
 
 function homeRecent() {
   const list = S.profiles.list.filter(p => p.lastPlayed).sort((x, y) => y.lastPlayed - x.lastPlayed).slice(0, 4);

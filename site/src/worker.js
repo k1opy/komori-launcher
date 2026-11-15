@@ -885,7 +885,11 @@ async function accStats(req, env) {
     const b = await readJson(req);
     const num = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
     if (!b) return json({ error: 'Неверные данные' }, 400);
-    a.stats = { total: num(b.total, 3.2e8), komori: num(b.komori, 3.2e8), launches: num(b.launches, 1e7), at: Date.now() };
+    const st = { total: num(b.total, 3.2e8), komori: num(b.komori, 3.2e8), launches: num(b.launches, 1e7), at: Date.now() };
+    const o = a.stats || {};
+    // Ничего не поменялось — не тратим запись в KV
+    if (o.total === st.total && o.komori === st.komori && o.launches === st.launches) return json({ ok: true });
+    a.stats = st;
     await accPut(env, a);
     return json({ ok: true });
   });
@@ -993,7 +997,7 @@ async function accAdmin(req, env, ctx, action, url) {
 
 // ===== Друзья и «в сети» =====
 // KV: kf:<id> → { f: [id], i: [id входящих заявок], o: [id исходящих] }; kp:<id> → { at, game } (где сейчас игрок, видят только друзья)
-const FR_MAX = 200, FR_PENDING = 50, PRESENCE_ONLINE_MS = 4 * 60 * 1000;
+const FR_MAX = 200, FR_PENDING = 50, PRESENCE_WRITE_MS = 10 * 60 * 1000, PRESENCE_ONLINE_MS = 16 * 60 * 1000;
 async function frGet(env, id) { const d = await env.SITE.get('kf:' + id, { type: 'json' }); return { f: (d && d.f) || [], i: (d && d.i) || [], o: (d && d.o) || [] }; }
 async function frPut(env, id, d) { await env.SITE.put('kf:' + id, JSON.stringify(d)); }
 const frWithout = (arr, id) => arr.filter(x => x !== id);
@@ -1057,8 +1061,13 @@ async function accPresence(req, env) {
   return accAuthed(req, env, async a => {
     const b = await readJson(req) || {};
     const game = typeof b.game === 'string' ? b.game.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40) : '';
+    // Бесплатный KV — 1000 записей в сутки на весь сайт. Поэтому пишем только когда что-то поменялось
+    // (запустил или закрыл игру, вышел из лаунчера) или прошлой отметке больше 10 минут
+    const cur = await env.SITE.get('kp:' + a.id, { type: 'json' });
+    const now = Date.now(), off = !!b.offline;
+    if (cur && !!cur.off === off && (off || (cur.game || '') === game) && now - cur.at < PRESENCE_WRITE_MS) return json({ ok: true });
     // offline — лаунчер закрылся: время запоминаем как «был в сети», но уже не в сети
-    await env.SITE.put('kp:' + a.id, JSON.stringify(b.offline ? { at: Date.now(), off: 1 } : { at: Date.now(), game }), { expirationTtl: 60 * 86400 });
+    await env.SITE.put('kp:' + a.id, JSON.stringify(off ? { at: now, off: 1 } : { at: now, game }), { expirationTtl: 60 * 86400 });
     return json({ ok: true });
   });
 }
